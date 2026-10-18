@@ -4,10 +4,13 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_wayland.h>
 #include <wayland-client.h>
+#include <wayland-client-protocol.h>
+#include "xdg-shell-client-protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <poll.h>
 #include "shaders_spv.h"
 
 #define MAXF 4
@@ -53,13 +56,44 @@ struct vkrend {
     struct wl_registry *wreg;
     struct wl_compositor *comp_;
     struct wl_surface *wsurf;
+    struct xdg_wm_base *wmbase;
+    struct xdg_surface *xsurf;
+    struct xdg_toplevel *xtop;
+    int configured; uint32_t cfgw, cfgh; int quit;
 };
 
+static void xdg_wmbase_ping(void *d, struct xdg_wm_base *b, uint32_t serial)
+{ (void)d; xdg_wm_base_pong(b, serial); }
+static const struct xdg_wm_base_listener wmbase_listener = { xdg_wmbase_ping };
+static void xdg_surf_configure(void *d, struct xdg_surface *xs, uint32_t serial)
+{
+    struct vkrend *v = d;
+    xdg_surface_ack_configure(xs, serial);   /* ack BEFORE any buffer commit */
+    wl_display_flush(v->wdpy);
+    fprintf(stderr, "[wl] xdg_surface configure serial=%u acked\n", serial);
+    v->configured = 1;
+}
+static void xdg_top_configure(void *d, struct xdg_toplevel *t, int32_t w, int32_t h, struct wl_array *st)
+{
+    (void)t; (void)st;
+    struct vkrend *v = d;
+    uint32_t nw = w > 0 ? (uint32_t)w : NG_W * v->scale;
+    uint32_t nh = h > 0 ? (uint32_t)h : NG_H * v->scale;
+    if (v->cfgw && (nw != v->cfgw || nh != v->cfgh)) v->sc_valid = 0;   /* force swapchain rebuild */
+    v->cfgw = nw; v->cfgh = nh;
+    fprintf(stderr, "[wl] toplevel configure %ux%u\n", nw, nh);
+    wl_surface_commit(v->wsurf);
+}
+static void xdg_top_close(void *d, struct xdg_toplevel *t) { (void)t; struct vkrend *v = d; v->quit = 1; }
+static const struct xdg_surface_listener xsurf_listener = { xdg_surf_configure, NULL };
+static const struct xdg_toplevel_listener xtop_listener = { xdg_top_configure, xdg_top_close, NULL, NULL };
 static void registry_get(void *d, struct wl_registry *r, uint32_t name, const char *iface, uint32_t ver)
 {
     struct vkrend *v = d;
     if (!strcmp(iface, "wl_compositor"))
         v->comp_ = wl_registry_bind(r, name, &wl_compositor_interface, ver < 4 ? ver : 4);
+    else if (!strcmp(iface, "xdg_wm_base"))
+        v->wmbase = wl_registry_bind(r, name, &xdg_wm_base_interface, ver < 3 ? ver : 3);
 }
 static void registry_rm(void *d, struct wl_registry *r, uint32_t n) { (void)d;(void)r;(void)n; }
 static const struct wl_registry_listener wreg_listener = { registry_get, registry_rm };
@@ -111,8 +145,14 @@ static int mk_swapchain(struct vkrend *v, uint32_t want_w, uint32_t want_h)
     sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     sci.clipped = VK_TRUE;
-    sci.oldSwapchain = v->sc;
+    VkSwapchainKHR oldsc = v->sc;
+    sci.oldSwapchain = oldsc;
     if (vkCreateSwapchainKHR(v->dev, &sci, NULL, &v->sc) < 0) return -1;
+    if (oldsc) {                       /* release ALL in-flight work, then drop old objects */
+        vkDeviceWaitIdle(v->dev);
+        for (uint32_t i = 0; i < MAXF; i++) if (v->scview[i]) { vkDestroyImageView(v->dev, v->scview[i], NULL); v->scview[i] = VK_NULL_HANDLE; }
+        vkDestroySwapchainKHR(v->dev, oldsc, NULL);
+    }
     v->nscimg = MAXF;
     vkGetSwapchainImagesKHR(v->dev, v->sc, &v->nscimg, NULL);
     if (v->nscimg > MAXF) v->nscimg = MAXF;
@@ -179,7 +219,19 @@ vkrend *vk_init(neogeo *ng, const char *wayland_display, int scale, int scanline
         wl_registry_add_listener(v->wreg, &wreg_listener, v);
         wl_display_roundtrip(v->wdpy);
         if (!v->comp_) { snprintf(err, errsz, "no wl_compositor"); goto fail; }
+        if (!v->wmbase) { snprintf(err, errsz, "no xdg_wm_base"); goto fail; }
         v->wsurf = wl_compositor_create_surface(v->comp_);
+        v->xsurf = xdg_wm_base_get_xdg_surface(v->wmbase, v->wsurf);
+        xdg_surface_add_listener(v->xsurf, &xsurf_listener, v);
+        v->xtop = xdg_surface_get_toplevel(v->xsurf);
+        xdg_toplevel_add_listener(v->xtop, &xtop_listener, v);
+        xdg_toplevel_set_app_id(v->xtop, "com.linoragx.emulator");
+        xdg_toplevel_set_title(v->xtop, "linoragx - Neo Geo");
+        wl_surface_commit(v->wsurf);              /* empty commit: request configure */
+        while (!v->configured || !v->cfgw) {      /* NEVER present a buffer before this */
+            if (wl_display_roundtrip(v->wdpy) < 0) { snprintf(err, errsz, "xdg roundtrip"); goto fail; }
+            if (!v->configured || !v->cfgw) usleep(20000);
+        }
     } else v->headless = 1;
 
     const char *iext[8]; int ni = 0;
@@ -296,7 +348,7 @@ vkrend *vk_init(neogeo *ng, const char *wayland_display, int scale, int scanline
         v->scfmt = sf[0].format;
         for (uint32_t i = 0; i < nf; i++)
             if (sf[i].format == VK_FORMAT_B8G8R8A8_UNORM || sf[i].format == VK_FORMAT_R8G8B8A8_UNORM) { v->scfmt = sf[i].format; break; }
-        if (mk_swapchain(v, 0, 0) < 0) { snprintf(err, errsz, "swapchain"); goto fail; }
+        if (mk_swapchain(v, v->cfgw, v->cfgh) < 0) { snprintf(err, errsz, "swapchain"); goto fail; }
     } else {
         v->scfmt = VK_FORMAT_R8G8B8A8_UNORM;
         v->scext = (VkExtent2D){NG_W*2, NG_H*2};
@@ -512,23 +564,49 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     return vkEndCommandBuffer(cb) < 0 ? -1 : 0;
 }
 
+static void wl_pump_events(struct vkrend *v)
+{
+    wl_display_flush(v->wdpy);
+    struct pollfd pfd = { wl_display_get_fd(v->wdpy), POLLIN, 0 };
+    if (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN))
+        wl_display_dispatch(v->wdpy);          /* read socket + dispatch */
+    wl_display_dispatch_pending(v->wdpy);      /* drain queued */
+}
+
 int vk_pump(vkrend *v)
 {
     if (v->headless) return 0;
-    wl_display_dispatch_pending(v->wdpy);
-    if (wl_display_get_error(v->wdpy)) return 1;   /* compositor closed us */
+    wl_pump_events(v);
+    if (wl_display_get_error(v->wdpy) || v->quit) return 1;   /* compositor closed us */
     return 0;
+}
+
+static void wait_fence_wl(struct vkrend *v, VkFence f)
+{
+    /* keep the Wayland loop alive (xdg pings) while the GPU catches up */
+    while (vkWaitForFences(v->dev, 1, &f, VK_TRUE, 8*1000*1000) == VK_TIMEOUT) {
+        wl_pump_events(v);
+        if (wl_display_get_error(v->wdpy)) return;
+    }
 }
 
 void vk_present(vkrend *v, const uint32_t *fb)
 {
-    if (v->headless) return;
+    if (v->headless || !v->configured) return;
+    if (!v->sc_valid || v->scext.width < 32u) {
+        if (mk_swapchain(v, v->cfgw, v->cfgh) == 0) { v->nfb = v->nscimg; mk_fbs(v); v->sc_valid = 1; }
+    }
     uint32_t i = v->fidx % MAXF; v->fidx++;
-    vkWaitForFences(v->dev, 1, &v->fences[i], VK_TRUE, UINT64_MAX);
+    wait_fence_wl(v, v->fences[i]);
     uint32_t img = 0;
-    VkResult ar = vkAcquireNextImageKHR(v->dev, v->sc, UINT64_MAX, v->imgavail[i], NULL, &img);
+    VkResult ar;
+    for (;;) {
+        ar = vkAcquireNextImageKHR(v->dev, v->sc, 500*1000*1000, v->imgavail[i], NULL, &img);
+        if (ar != VK_TIMEOUT) break;
+        wl_pump_events(v);                       /* stay responsive while compositor is slow */
+    }
     if (ar == VK_ERROR_OUT_OF_DATE_KHR) {
-        if (mk_swapchain(v, 0, 0) < 0) return;
+        if (mk_swapchain(v, v->cfgw, v->cfgh) < 0) return;
         v->nfb = v->nscimg; mk_fbs(v);
         return;
     }
@@ -548,7 +626,7 @@ void vk_present(vkrend *v, const uint32_t *fb)
     pi.swapchainCount = 1; pi.pSwapchains = &v->sc; pi.pImageIndices = &img;
     VkResult pr = vkQueuePresentKHR(v->queue, &pi);
     if (pr == VK_ERROR_OUT_OF_DATE_KHR || pr == VK_SUBOPTIMAL_KHR) {
-        mk_swapchain(v, 0, 0); v->nfb = v->nscimg; mk_fbs(v);
+        mk_swapchain(v, v->cfgw, v->cfgh); v->nfb = v->nscimg; mk_fbs(v);
     }
 }
 

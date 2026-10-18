@@ -184,8 +184,13 @@ int main(int argc, char **argv)
     double t0 = now_s();
     while (!frames || n < frames) {
         if (vk && vk_pump(vk)) break;
-        if (in) { uint32_t sym; int down;
-            while (wl_input_next(in, &sym, &down)) handle_key(ng, sym, down); }
+        if (in) { uint32_t sym; int down; static int mod_alt = 0, mod_ctl = 0;
+            while (wl_input_next(in, &sym, &down)) {
+                if (sym == 0xffe9 || sym == 0xffea) mod_alt = down;
+                else if (sym == 0xffe3 || sym == 0xffe4) mod_ctl = down;
+                else if (down && ((mod_alt && sym == 0xffc1) || (mod_ctl && sym == 'q'))) { n = frames; break; }
+                handle_key(ng, sym, down);
+            } }
         ng_run_frame(ng);
         ng_render(ng, fb);
         if (envf_dbg() && (n % 30 == 29)) {

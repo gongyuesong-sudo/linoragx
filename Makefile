@@ -4,7 +4,8 @@ CFLAGS  = -O3 -march=native -std=gnu11 -w -Isrc -Igenerated -Ivendor
 CXXFLAGS= -O3 -march=native -std=c++17 -w -Ivendor
 LDLIBS  = -lm -lz -lvulkan -lwayland-client -ldl -lstdc++ -lpthread
 SRC     = src/neogeo.c src/video.c src/rom.c src/config.c src/ym2610.c \
-          src/audio.c src/wl_input.c src/render_vulkan.c src/main.c
+          src/audio.c src/wl_input.c src/render_vulkan.c src/main.c \
+          src/xdg-shell-protocol.c
 OBJ     = $(SRC:src/%.c=build/%.o) build/z80_wrap.o build/cpu_z80.o build/m68kcpu.o build/m68kops.o build/softfloat.o
 BIN     = build/linoragx
 
