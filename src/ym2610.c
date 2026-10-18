@@ -43,8 +43,8 @@ void ym_reset(ym2610 *y) { memset(y, 0, sizeof *y); }
 
 void ym_write(ym2610 *y, int chip, uint8_t reg, uint8_t val)
 {
-    if (chip == 2) { /* YM2151 SSG */
-        y->r21[reg & 0x7F] = val;
+    if (chip == 2) { /* YM2151 SSG: real chip ignores writes to reg > 0x7F */
+        if (reg <= 0x7F) y->r21[reg] = val;
         return;
     }
     int c = chip ? 1 : 0;

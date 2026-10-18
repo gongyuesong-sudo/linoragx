@@ -1,4 +1,4 @@
-/* Vulkan renderer: Wayland window surface + offscreen readback mode.
+/* Vulkan renderer: Wayland or X11 window surface + offscreen readback mode.
  * Pipeline: 320x224 texture (per-frame upload) -> scaled quad, nearest filter. */
 #include "linoragx.h"
 #include <vulkan/vulkan.h>
@@ -6,6 +6,10 @@
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 #include "xdg-shell-client-protocol.h"
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
+#include <vulkan/vulkan_xlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +64,13 @@ struct vkrend {
     struct xdg_surface *xsurf;
     struct xdg_toplevel *xtop;
     int configured; uint32_t cfgw, cfgh; int quit;
+
+    /* x11 */
+    Display *xdpy; Window xwin; Atom wm_delete;
+    Atom wm_ping;                   /* _NET_WM_PING: must pong or WM shows not-responding */
+    uint32_t xkeys[512]; int xdown[512]; int xkey_lo, xkey_n;
+    int minimized;                  /* iconified/unmapped: skip present */
+    int dragbtn, dragx, dragy;      /* in-window mouse drag -> WM move */
 };
 
 static void xdg_wmbase_ping(void *d, struct xdg_wm_base *b, uint32_t serial)
@@ -97,6 +108,170 @@ static void registry_get(void *d, struct wl_registry *r, uint32_t name, const ch
 }
 static void registry_rm(void *d, struct wl_registry *r, uint32_t n) { (void)d;(void)r;(void)n; }
 static const struct wl_registry_listener wreg_listener = { registry_get, registry_rm };
+
+/* ---- X11 backend ---- */
+/* wheel-zoom: resize keeping 320:224 aspect, 1x..8x */
+static void x11_zoom(struct vkrend *v, int dir)
+{
+    int w = (int)v->cfgw + dir * NG_W;
+    if (w < NG_W) w = NG_W;
+    if (w > NG_W * 8) w = NG_W * 8;
+    int h = w * NG_H / NG_W;
+    XResizeWindow(v->xdpy, v->xwin, (unsigned)w, (unsigned)h);
+    XFlush(v->xdpy);
+}
+
+static void x11_start_wm_move(struct vkrend *v, int x_root, int y_root, int button)
+{
+    /* EWMH: ask the WM to grab and move the window (works on xfwm4/mutter/etc) */
+    Atom msg = XInternAtom(v->xdpy, "_NET_WM_MOVERESIZE", False);
+    XEvent ev; memset(&ev, 0, sizeof ev);
+    ev.xclient.type = ClientMessage;
+    ev.xclient.window = RootWindow(v->xdpy, DefaultScreen(v->xdpy));
+    ev.xclient.message_type = msg;
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = x_root;
+    ev.xclient.data.l[1] = y_root;
+    ev.xclient.data.l[2] = 8;          /* _NET_WM_MOVERESIZE_WINDOW_MOVE */
+    ev.xclient.data.l[3] = button;
+    ev.xclient.data.l[4] = 1;          /* normal source */
+    XSendEvent(v->xdpy, ev.xclient.window, False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &ev);
+    XFlush(v->xdpy);
+}
+
+static void x11_pump(struct vkrend *v)
+{
+    while (XEventsQueued(v->xdpy, QueuedAfterReading) > 0) {
+        XEvent ev;
+        XNextEvent(v->xdpy, &ev);
+        switch (ev.type) {
+        case ConfigureNotify: {
+            uint32_t nw = (uint32_t)ev.xconfigure.width, nh = (uint32_t)ev.xconfigure.height;
+            if (nw && nh && v->cfgw && (nw != v->cfgw || nh != v->cfgh)) v->sc_valid = 0;
+            if (nw && nh) { v->cfgw = nw; v->cfgh = nh; }
+            v->configured = 1;
+            break;
+        }
+        case Expose:
+            v->configured = 1;
+            break;
+        case ClientMessage:
+            if ((Atom)ev.xclient.data.l[0] == v->wm_delete) { v->quit = 1; break; }
+            if (v->wm_ping && ev.xclient.message_type == v->wm_ping) {
+                /* EWMH ping: echo the same message back to the root as a pong */
+                XEvent pong = ev;
+                pong.xclient.send_event = True;
+                XSendEvent(v->xdpy, RootWindow(v->xdpy, DefaultScreen(v->xdpy)), False,
+                           SubstructureRedirectMask | SubstructureNotifyMask, &pong);
+                XFlush(v->xdpy);
+            }
+            break;
+        case UnmapNotify:
+            v->minimized = 1;             /* iconified: stop presenting */
+            break;
+        case MapNotify:
+            if (v->minimized) { v->minimized = 0; v->sc_valid = 0; v->configured = 1; }
+            break;
+        case ButtonPress:
+            if (ev.xbutton.button == 4) { x11_zoom(v, +1); break; }   /* wheel up: bigger */
+            if (ev.xbutton.button == 5) { x11_zoom(v, -1); break; }   /* wheel down: smaller */
+            v->dragbtn = ev.xbutton.button;
+            v->dragx = ev.xbutton.x_root; v->dragy = ev.xbutton.y_root;
+            XGrabPointer(v->xdpy, v->xwin, False,
+                         ButtonReleaseMask | PointerMotionMask,
+                         GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+            break;
+        case ButtonRelease:
+            if (v->dragbtn) { XUngrabPointer(v->xdpy, CurrentTime); v->dragbtn = 0; }
+            break;
+        case MotionNotify:
+            if (v->dragbtn &&
+                (abs(ev.xmotion.x_root - v->dragx) > 8 || abs(ev.xmotion.y_root - v->dragy) > 8)) {
+                XUngrabPointer(v->xdpy, CurrentTime);
+                x11_start_wm_move(v, ev.xmotion.x_root, ev.xmotion.y_root, v->dragbtn);
+                v->dragbtn = 0;
+            }
+            break;
+        case KeyPress:
+        case KeyRelease: {
+            KeySym ks = XLookupKeysym(&ev.xkey, 0);
+            if (ks >= 'A' && ks <= 'Z') ks += 32;      /* kmap uses lowercase */
+            int slot = (v->xkey_lo + v->xkey_n) % 512;
+            v->xkeys[slot] = (uint32_t)ks;
+            v->xdown[slot] = (ev.type == KeyPress);
+            if (v->xkey_n < 512) v->xkey_n++;
+            break;
+        }
+        default: break;
+        }
+    }
+}
+
+static int x11_create(struct vkrend *v, int scale, char *err, size_t errsz)
+{
+    v->xdpy = XOpenDisplay(NULL);
+    if (!v->xdpy) { snprintf(err, errsz, "XOpenDisplay failed (no DISPLAY?)"); return -1; }
+    int scr = DefaultScreen(v->xdpy);
+    Window root = RootWindow(v->xdpy, scr);
+    uint32_t w = NG_W * (scale < 1 ? 1 : scale), h = NG_H * (scale < 1 ? 1 : scale);
+    XSetWindowAttributes wa;
+    memset(&wa, 0, sizeof wa);
+    wa.background_pixel = BlackPixel(v->xdpy, scr);
+    wa.event_mask = ExposureMask | StructureNotifyMask | KeyPressMask | KeyReleaseMask |
+                    ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
+    v->xwin = XCreateWindow(v->xdpy, root, 0, 0, (int)w, (int)h, 0,
+                            DefaultDepth(v->xdpy, scr), InputOutput,
+                            DefaultVisual(v->xdpy, scr),
+                            CWBackPixel | CWEventMask, &wa);
+    XStoreName(v->xdpy, v->xwin, "linoragx - Neo Geo");
+    Atom wmclass = XInternAtom(v->xdpy, "WM_CLASS", False);
+    char clsdata[32];
+    int n0 = (int)strlen("linoragx") + 1;
+    memcpy(clsdata, "linoragx", (size_t)n0);
+    memcpy(clsdata + n0, "Linoragx", 9);
+    XChangeProperty(v->xdpy, v->xwin, wmclass, XA_STRING, 8, PropModeReplace,
+                    (const unsigned char *)clsdata, n0 + 9);
+    v->wm_delete = XInternAtom(v->xdpy, "WM_DELETE_WINDOW", False);
+    v->wm_ping = XInternAtom(v->xdpy, "_NET_WM_PING", False);
+    {
+        Atom protos[2] = { v->wm_delete, v->wm_ping };
+        XSetWMProtocols(v->xdpy, v->xwin, protos, 2);
+    }
+    /* size hints: resizable, fixed 320:224 aspect, 1x..8x */
+    XSizeHints *sh = XAllocSizeHints();
+    if (sh) {
+        sh->flags = PMinSize | PMaxSize | PAspect;
+        sh->min_width = NG_W;  sh->min_height = NG_H;
+        sh->max_width = NG_W * 8; sh->max_height = NG_H * 8;
+        sh->min_aspect.x = NG_W; sh->min_aspect.y = NG_H;
+        sh->max_aspect.x = NG_W; sh->max_aspect.y = NG_H;
+        XSetWMNormalHints(v->xdpy, v->xwin, sh);
+        XFree(sh);
+    }
+    /* advertise full window-action set so the WM decorates with all buttons */
+    {
+        Atom acts[6]; int na = 0;
+        acts[na++] = XInternAtom(v->xdpy, "_NET_WM_ACTION_MOVE", False);
+        acts[na++] = XInternAtom(v->xdpy, "_NET_WM_ACTION_RESIZE", False);
+        acts[na++] = XInternAtom(v->xdpy, "_NET_WM_ACTION_MINIMIZE", False);
+        acts[na++] = XInternAtom(v->xdpy, "_NET_WM_ACTION_MAXIMIZE_HORZ", False);
+        acts[na++] = XInternAtom(v->xdpy, "_NET_WM_ACTION_MAXIMIZE_VERT", False);
+        acts[na++] = XInternAtom(v->xdpy, "_NET_WM_ACTION_CLOSE", False);
+        XChangeProperty(v->xdpy, v->xwin, XInternAtom(v->xdpy, "_NET_WM_ALLOWED_ACTIONS", False),
+                        XA_ATOM, 32, PropModeReplace, (const unsigned char *)acts, na);
+    }
+    XMapWindow(v->xdpy, v->xwin);
+    XFlush(v->xdpy);
+    v->cfgw = w; v->cfgh = h;
+    /* wait for map/configure so the first present has a real window */
+    for (int spin = 0; spin < 500 && !v->configured; spin++) {
+        x11_pump(v);
+        if (!v->configured) usleep(4000);
+    }
+    if (!v->configured) { snprintf(err, errsz, "X11 window never mapped"); return -1; }
+    return 0;
+}
 
 static uint32_t find_mem(VkPhysicalDevice pd, uint32_t bits, VkMemoryPropertyFlags want)
 {
@@ -206,14 +381,15 @@ static int mk_fbs(struct vkrend *v)
     return 0;
 }
 
-vkrend *vk_init(neogeo *ng, const char *wayland_display, int scale, int scanlines, char *err, size_t errsz)
+vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char *err, size_t errsz)
 {
     struct vkrend *v = calloc(1, sizeof *v);
     v->ng = ng; v->scale = scale < 1 ? 1 : scale; v->scanlines = scanlines;
     err[0] = 0;
+    int want_x11 = backend && !strcmp(backend, "x11");
 
-    if (wayland_display) {
-        v->wdpy = wl_display_connect(wayland_display);
+    if (backend && !strcmp(backend, "wayland")) {
+        v->wdpy = wl_display_connect(getenv("WAYLAND_DISPLAY"));
         if (!v->wdpy) { snprintf(err, errsz, "wayland connect failed"); free(v); return NULL; }
         v->wreg = wl_display_get_registry(v->wdpy);
         wl_registry_add_listener(v->wreg, &wreg_listener, v);
@@ -227,26 +403,34 @@ vkrend *vk_init(neogeo *ng, const char *wayland_display, int scale, int scanline
         xdg_toplevel_add_listener(v->xtop, &xtop_listener, v);
         xdg_toplevel_set_app_id(v->xtop, "com.linoragx.emulator");
         xdg_toplevel_set_title(v->xtop, "linoragx - Neo Geo");
+        xdg_toplevel_set_min_size(v->xtop, NG_W, NG_H);
         wl_surface_commit(v->wsurf);              /* empty commit: request configure */
         while (!v->configured || !v->cfgw) {      /* NEVER present a buffer before this */
             if (wl_display_roundtrip(v->wdpy) < 0) { snprintf(err, errsz, "xdg roundtrip"); goto fail; }
             if (!v->configured || !v->cfgw) usleep(20000);
         }
+    } else if (want_x11) {
+        if (x11_create(v, scale, err, errsz) < 0) goto fail;
     } else v->headless = 1;
 
     const char *iext[8]; int ni = 0;
     iext[ni++] = VK_KHR_SURFACE_EXTENSION_NAME;
-    if (!v->headless) iext[ni++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    if (v->wdpy) iext[ni++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    if (v->xdpy) iext[ni++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
     VkApplicationInfo app = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app.apiVersion = VK_API_VERSION_1_1; app.pApplicationName = "linoragx";
     VkInstanceCreateInfo ici = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     ici.pApplicationInfo = &app; ici.enabledExtensionCount = ni; ici.ppEnabledExtensionNames = iext;
     if (vkCreateInstance(&ici, NULL, &v->inst) < 0) { snprintf(err, errsz, "vkCreateInstance (no ICD?)"); goto fail; }
 
-    if (!v->headless) {
+    if (v->wdpy) {
         VkWaylandSurfaceCreateInfoKHR wsci = {VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
         wsci.display = v->wdpy; wsci.surface = v->wsurf;
         if (vkCreateWaylandSurfaceKHR(v->inst, &wsci, NULL, &v->surf) < 0) { snprintf(err, errsz, "wayland surface"); goto fail; }
+    } else if (v->xdpy) {
+        VkXlibSurfaceCreateInfoKHR xsci = {VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR};
+        xsci.dpy = v->xdpy; xsci.window = v->xwin;
+        if (vkCreateXlibSurfaceKHR(v->inst, &xsci, NULL, &v->surf) < 0) { snprintf(err, errsz, "xlib surface (VK_KHR_xlib_surface missing?)"); goto fail; }
     }
 
     uint32_t npd = 0; vkEnumeratePhysicalDevices(v->inst, &npd, NULL);
@@ -464,7 +648,7 @@ vkrend *vk_init(neogeo *ng, const char *wayland_display, int scale, int scanline
         }
     }
     v->sc_valid = !v->headless;
-    if (!v->headless) wl_surface_commit(v->wsurf);
+    if (v->wdpy) wl_surface_commit(v->wsurf);
     return v;
 
 fail:
@@ -512,6 +696,8 @@ void vk_destroy(vkrend *vv)
     if (v->wsurf) wl_surface_destroy(v->wsurf);
     if (v->wreg) wl_registry_destroy(v->wreg);
     if (v->wdpy) wl_display_disconnect(v->wdpy);
+    if (v->xwin) XDestroyWindow(v->xdpy, v->xwin);
+    if (v->xdpy) XCloseDisplay(v->xdpy);
     free(v);
 }
 
@@ -542,7 +728,9 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     rbi.clearValueCount = 1; rbi.pClearValues = &cv;
     vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe);
-    VkViewport vp = {0, 0, (float)v->scext.width, (float)v->scext.height, 0, 1};
+    /* negative viewport height flips Y (VK_KHR_maintenance1): the quad shader
+       maps screen-top to uv.y=1, so without this the window renders upside-down */
+    VkViewport vp = {0, 0, (float)v->scext.width, -(float)v->scext.height, 0, 1};
     vkCmdSetViewport(cb, 0, 1, &vp);
     VkRect2D sc = {{0,0}, v->scext};
     vkCmdSetScissor(cb, 0, 1, &sc);
@@ -576,23 +764,40 @@ static void wl_pump_events(struct vkrend *v)
 int vk_pump(vkrend *v)
 {
     if (v->headless) return 0;
-    wl_pump_events(v);
-    if (wl_display_get_error(v->wdpy) || v->quit) return 1;   /* compositor closed us */
+    if (v->wdpy) {
+        wl_pump_events(v);
+        if (wl_display_get_error(v->wdpy) || v->quit) return 1;   /* compositor closed us */
+    } else if (v->xdpy) {
+        x11_pump(v);
+        if (v->quit) return 1;
+    }
     return 0;
+}
+
+/* pop one queued X11 key event (keysym + pressed); Wayland path uses wl_input */
+int vk_next_key(vkrend *v, uint32_t *sym, int *down)
+{
+    if (!v || !v->xdpy || v->xkey_n <= 0) return 0;
+    *sym = v->xkeys[v->xkey_lo];
+    *down = v->xdown[v->xkey_lo];
+    v->xkey_lo = (v->xkey_lo + 1) % 512;
+    v->xkey_n--;
+    return 1;
 }
 
 static void wait_fence_wl(struct vkrend *v, VkFence f)
 {
-    /* keep the Wayland loop alive (xdg pings) while the GPU catches up */
+    /* keep the window loop alive (xdg pings / X11 events) while the GPU catches up */
     while (vkWaitForFences(v->dev, 1, &f, VK_TRUE, 8*1000*1000) == VK_TIMEOUT) {
-        wl_pump_events(v);
-        if (wl_display_get_error(v->wdpy)) return;
+        if (v->wdpy) { wl_pump_events(v); if (wl_display_get_error(v->wdpy)) return; }
+        else if (v->xdpy) x11_pump(v);
+        else return;
     }
 }
 
 void vk_present(vkrend *v, const uint32_t *fb)
 {
-    if (v->headless || !v->configured) return;
+    if (v->headless || !v->configured || v->minimized) return;
     if (!v->sc_valid || v->scext.width < 32u) {
         if (mk_swapchain(v, v->cfgw, v->cfgh) == 0) { v->nfb = v->nscimg; mk_fbs(v); v->sc_valid = 1; }
     }
@@ -603,7 +808,8 @@ void vk_present(vkrend *v, const uint32_t *fb)
     for (;;) {
         ar = vkAcquireNextImageKHR(v->dev, v->sc, 500*1000*1000, v->imgavail[i], NULL, &img);
         if (ar != VK_TIMEOUT) break;
-        wl_pump_events(v);                       /* stay responsive while compositor is slow */
+        if (v->wdpy) wl_pump_events(v);          /* stay responsive while compositor is slow */
+        else if (v->xdpy) x11_pump(v);
     }
     if (ar == VK_ERROR_OUT_OF_DATE_KHR) {
         if (mk_swapchain(v, v->cfgw, v->cfgh) < 0) return;
@@ -636,8 +842,8 @@ static int write_bmp(const char *path, uint32_t w, uint32_t h, const uint8_t *rg
     if (!f) return -1;
     uint32_t row = ((w*3+3)/4)*4;
     uint32_t fsz = 54 + row*h;
-    uint8_t hdr[54] = {'B','A'};
-    hdr[2]=fsz; hdr[2]>>=0; *(uint32_t*)(hdr+2)=fsz; *(uint32_t*)(hdr+10)=54;
+    uint8_t hdr[54] = {'B','M'};
+    *(uint32_t*)(hdr+2)=fsz; *(uint32_t*)(hdr+10)=54;
     *(uint32_t*)(hdr+14)=40; *(int32_t*)(hdr+18)=w; *(int32_t*)(hdr+22)=h;
     *(uint16_t*)(hdr+26)=1; *(uint16_t*)(hdr+28)=24; *(uint32_t*)(hdr+34)=row*h;
     fwrite(hdr,1,54,f);

@@ -1,10 +1,11 @@
 CC      = gcc
 CXX     = g++
-CFLAGS  = -O3 -march=native -std=gnu11 -w -Isrc -Igenerated -Ivendor
-CXXFLAGS= -O3 -march=native -std=c++17 -w -Ivendor
-LDLIBS  = -lm -lz -lvulkan -lwayland-client -ldl -lstdc++ -lpthread
+CFLAGS  = -O3 -march=native -std=gnu11 -w -Isrc -Igenerated -Ivendor $(EXTRA_CFLAGS)
+CXXFLAGS= -O3 -march=native -std=c++17 -w -Ivendor $(EXTRA_CFLAGS)
+LDFLAGS = $(EXTRA_LDFLAGS)
+LDLIBS  = -lm -lz -lvulkan -lwayland-client -lX11 -lxcb -ldl -lstdc++ -lpthread
 SRC     = src/neogeo.c src/video.c src/rom.c src/config.c src/ym2610.c \
-          src/audio.c src/wl_input.c src/render_vulkan.c src/main.c \
+          src/audio.c src/wl_input.c src/render_vulkan.c src/ctl.c src/main.c \
           src/xdg-shell-protocol.c
 OBJ     = $(SRC:src/%.c=build/%.o) build/z80_wrap.o build/cpu_z80.o build/m68kcpu.o build/m68kops.o build/softfloat.o
 BIN     = build/linoragx
@@ -42,7 +43,7 @@ build/%.o: src/%.c | generated/shaders_spv.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BIN): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDLIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LDLIBS)
 
 clean:
 	rm -rf build generated

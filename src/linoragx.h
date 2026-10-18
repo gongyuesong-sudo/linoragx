@@ -28,6 +28,7 @@ int  rom_load_file(const char *path, uint8_t **out, uint32_t *outsz);
 int  rom_load_zip(const char *zip, const char *member, uint8_t **out, uint32_t *outsz);
 int  rom_load_zip_suffix(const char *zip, const char *suffix, uint8_t **out, uint32_t *outsz);
 uint16_t *ng_vram(neogeo *ng);
+uint16_t *ng_workram(neogeo *ng);
 uint16_t *ng_cram(neogeo *ng);
 uint32_t ng_cram_bank(neogeo *ng);
 int ng_dbg_vbank(neogeo *ng);
@@ -37,6 +38,8 @@ void ng_dbg_pcprof(neogeo *ng, int on);
 uint8_t  *ng_rom(neogeo *ng, uint32_t *sz);
 uint8_t  *ng_fixed(neogeo *ng, uint32_t *sz);
 uint8_t  *ng_sprite8(neogeo *ng, uint32_t *mask);
+uint8_t  *ng_spr_raw(neogeo *ng);
+uint8_t  *ng_spr(neogeo *ng, uint32_t *sz);
 uint8_t  *ng_zoomy(neogeo *ng);
 int       ng_auto_counter(neogeo *ng);
 uint32_t rom_crc32(const uint8_t *d, uint32_t n);
@@ -81,10 +84,17 @@ void       z80w_nmi(void *v);
 int        z80w_save(void *v, void *buf);
 int        z80w_load(void *v, const void *buf);
 
+/* ctl channel (LINORAGX_CTL=<port>, localhost TCP line protocol) */
+int  ctl_open(int port);
+int  ctl_active(void);
+int  ctl_poll(neogeo *ng, const uint32_t *fb);   /* bit0 quit, bit1 skip-frame */
+
 /* vulkan renderer */
 typedef struct vkrend vkrend;
-vkrend *vk_init(neogeo *ng, const char *wayland_display, int scale, int scanlines, char *err, size_t errsz);
+/* backend: "wayland" | "x11" | NULL (headless) */
+vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char *err, size_t errsz);
 void   vk_destroy(vkrend *v);
 int    vk_pump(vkrend *v);                    /* handle events; 0=ok, 1=close */
+int    vk_next_key(vkrend *v, uint32_t *sym, int *down);  /* X11 key events; 1=popped */
 void   vk_present(vkrend *v, const uint32_t *fb);
 int    vk_offscreen_dump(vkrend *v, const uint32_t *fb, const char *bmp_path);

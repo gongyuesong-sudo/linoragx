@@ -106,6 +106,7 @@ int main(int argc, char **argv)
 
     const char *bios = NULL, *game = NULL, *ini = NULL;
     const char *dump = NULL, *state = NULL, *save_state = NULL;
+    const char *backend_opt = NULL;
     int frames = 0, headless = 0, no_audio = 0;
     int scale = -1, scanl = -1;
 
@@ -114,6 +115,7 @@ int main(int argc, char **argv)
         else if ((!strcmp(argv[i],"--game") || !strcmp(argv[i],"--rom")) && i+1<argc) game = argv[++i];
         else if (!strcmp(argv[i],"--ini") && i+1<argc) ini = argv[++i];
         else if (!strcmp(argv[i],"--scale") && i+1<argc) scale = atoi(argv[++i]);
+        else if (!strcmp(argv[i],"--backend") && i+1<argc) backend_opt = argv[++i];
         else if (!strcmp(argv[i],"--frames") && i+1<argc) frames = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--dump")) dump = i+1<argc ? argv[++i] : "frame.bmp";
         else if (!strcmp(argv[i],"--state") && i+1<argc) state = argv[++i];
@@ -122,11 +124,12 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i],"--no-audio")) no_audio = 1;
         else if (!strcmp(argv[i],"--scanlines")) scanl = 1;
         else if (!strcmp(argv[i],"--help")) {
-            printf("linoragx — Neo Geo emulator (NeoRageX rewrite), Wayland+Vulkan\n"
+            printf("linoragx — Neo Geo emulator (NeoRageX rewrite), Wayland/X11+Vulkan\n"
                    "  --bios DIR     BIOS dir (default /home/gill/neoragex)\n"
                    "  --game F.zip   game zip with .p1/.c1/.s1 members (alias: --rom)\n"
                    "  --ini FILE     neorage.ini-style config\n"
                    "  --scale N      window scale (default 2)\n"
+                   "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
                    "  --headless     no window; use with --frames/--dump\n"
                    "  --frames N     run N frames then exit\n"
@@ -163,34 +166,55 @@ int main(int argc, char **argv)
     double samp_acc = 0;
     if (cfg.audio && !headless) audio_init(44100);
 
-    /* renderer */
+    /* renderer: pick window backend (wayland > x11 > headless) */
     const char *wdisp = getenv("WAYLAND_DISPLAY");
-    vkrend *vk = NULL;
-    if (headless || !wdisp) {
-        vk = vk_init(ng, NULL, cfg.scale, cfg.scanlines, err, sizeof err);
-        if (!vk) fprintf(stderr, "[vk] headless init: %s\n", err);
-    } else {
-        vk = vk_init(ng, wdisp, cfg.scale, cfg.scanlines, err, sizeof err);
-        if (!vk) {
-            fprintf(stderr, "[vk] window init failed (%s), trying headless\n", err);
-            vk = vk_init(ng, NULL, cfg.scale, cfg.scanlines, err, sizeof err);
-        }
+    const char *backend = NULL;
+    if (!headless) {
+        if (backend_opt) backend = (!strcmp(backend_opt,"headless")) ? NULL : backend_opt;
+        else if (wdisp) backend = "wayland";
+        else if (getenv("DISPLAY")) backend = "x11";
     }
-    wl_input *in = (!headless && wdisp) ? wl_input_create(wdisp) : NULL;
+    vkrend *vk = NULL;
+    vk = vk_init(ng, backend, cfg.scale, cfg.scanlines, err, sizeof err);
+    if (!vk && backend) {
+        fprintf(stderr, "[vk] %s window init failed (%s), trying headless\n", backend, err);
+        backend = NULL;
+        vk = vk_init(ng, NULL, cfg.scale, cfg.scanlines, err, sizeof err);
+    } else if (!vk) {
+        fprintf(stderr, "[vk] headless init: %s\n", err);
+    }
+    if (vk && backend) fprintf(stderr, "[vk] window backend: %s\n", backend);
+    wl_input *in = (backend && !strcmp(backend,"wayland")) ? wl_input_create(wdisp) : NULL;
 
     uint32_t *fb = malloc(NG_W*NG_H*4);
+    if (getenv("LINORAGX_CTL")) {
+        int cp = atoi(getenv("LINORAGX_CTL"));
+        if (cp > 0 && ctl_open(cp) != 0) fprintf(stderr, "[ctl] open failed on port %d\n", cp);
+    }
     int n = 0;
     if (envf_prof()) prof_start();
     double t0 = now_s();
     while (!frames || n < frames) {
         if (vk && vk_pump(vk)) break;
-        if (in) { uint32_t sym; int down; static int mod_alt = 0, mod_ctl = 0;
-            while (wl_input_next(in, &sym, &down)) {
+        if (in || vk) {
+            uint32_t sym; int down; static int mod_alt = 0, mod_ctl = 0;
+            while ((in ? wl_input_next(in, &sym, &down) : vk_next_key(vk, &sym, &down))) {
                 if (sym == 0xffe9 || sym == 0xffea) mod_alt = down;
                 else if (sym == 0xffe3 || sym == 0xffe4) mod_ctl = down;
                 else if (down && ((mod_alt && sym == 0xffc1) || (mod_ctl && sym == 'q'))) { n = frames; break; }
                 handle_key(ng, sym, down);
-            } }
+            }
+            if (in && vk) { while (vk_next_key(vk, &sym, &down)) handle_key(ng, sym, down); }
+        }
+        if (ctl_active()) {
+            int cr = ctl_poll(ng, fb);
+            if (cr & 1) break;
+            if (cr & 2) {   /* paused: keep window alive, no emulation */
+                if (vk) vk_present(vk, fb);
+                struct timespec ts = {0, 10*1000*1000}; nanosleep(&ts, NULL);
+                continue;
+            }
+        }
         ng_run_frame(ng);
         ng_render(ng, fb);
         if (envf_dbg() && (n % 30 == 29)) {

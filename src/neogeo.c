@@ -102,6 +102,7 @@ struct neogeo {
     uint64_t wd_last;        /* mc_cycles at last watchdog feed ($300001 odd write) */
     int wd_armed;
     int ym_irq_prev;
+    int irq_sound;            /* IRQ_SOUND: set by Z80 soundlatch2 write, acked on AUDIO_COIN read */
     unsigned long hit_a, hit_b, hit_c;
     int cart_audio;   /* HC259 ch5: 0=sm1 BIOS sound, 1=cart m1 */
     uint8_t zbank[4];         /* f000,e000,c000,8000 entries */
@@ -119,6 +120,7 @@ struct neogeo {
     int      mc_tp;
     uint8_t  adpcm_a[4];
     uint8_t  adpcm_b[4];
+    uint8_t  ym_reg[2];          /* YM2610 A/B register latch (two-port protocol) */
     int      pcprof;
     unsigned long pcprof_tot;
     /* ctrlsel */
@@ -136,7 +138,7 @@ static void synth_zoomy(neogeo *ng)
 {
     for (int zy = 0; zy < 0x100; zy++)
         for (int l = 0; l < 0x100; l++) {
-            int s = (l * 256) / (zy + 1);
+            int s = (l * 256) / (zy + 1);   /* fallback only; real 000-lo.lo is loaded when present */
             if (s > 0xFF) s = 0xFF;
             ng->zoomy[(zy<<8)|l] = (uint8_t)s;
         }
@@ -160,7 +162,7 @@ static void ds_run(void *a, uint32_t lo, uint32_t hi)
     ds_ctx *c = (ds_ctx *)a;
     for (uint32_t i = lo; i < hi; i += 0x80) {
         const uint8_t *src = c->spr + i;
-        uint8_t *dest = c->dst + i;
+        uint8_t *dest = c->dst + (i << 1);   /* 4bpp src 0x80 -> 8bpp out 0x100 */
         for (int y = 0; y < 16; y++) {
             for (int x = 0; x < 8; x++)
                 *(dest++) = (BIT(src[0x43|(y<<2)],x)<<3) | (BIT(src[0x41|(y<<2)],x)<<2)
@@ -321,11 +323,13 @@ static void z_out(uint32_t p, uint8_t v, void *c)
 {
     neogeo *ng = (neogeo*)c;
     switch (p & 0xFF) {
-    case 0x04: ym_write(ng->ym, 0, v, 0); break;
-    case 0x05: ym_write(ng->ym, 0, 0, v); break;
-    case 0x06: ym_write(ng->ym, 1, v, 0); break;
-    case 0x07: ym_write(ng->ym, 1, 0, v); break;
-    case 0x0C: ng->soundlatch2 = v; if (ng->dbg_z80==3) fprintf(stderr, "S2W %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame); ym_write(ng->ym, 2, v, 0); break;
+    case 0x04: ng->ym_reg[0] = v; break;                    /* YM2610 A: register latch (YM2151 shares bus) */
+    case 0x05: ym_write(ng->ym, 0, ng->ym_reg[0], v);       /* YM2610 A: data write */
+               ym_write(ng->ym, 2, ng->ym_reg[0], v); break;/* YM2151 mirror (ignores reg>0x7F) */
+    case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
+    case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
+    case 0x0C: ng->soundlatch2 = v; ng->irq_sound = 1; m68k_set_virq(2, 1);   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
+               if (ng->dbg_z80==3) fprintf(stderr, "S2W %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame); break;
     case 0x08: ng->z80_nmi_en = 1; break;
     case 0x18: ng->z80_nmi_en = 0; break;
     case 0x80: case 0x81: case 0x82: case 0x83:   /* ADPCM-A bank/vol: stored, no playback yet */
@@ -485,6 +489,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         if (ng->mc_bitcnt || ng->mc_readphase) { if (ng->mc_tp) lo |= 0x40; }
         else if ((ng->frame / 30) & 1) lo |= 0x40;
         lo |= 0x80;
+        /* reading AUDIO_COIN acks IRQ_SOUND (MAME audio_coin_r) */
+        if (ng->irq_sound) { ng->irq_sound = 0; if (!ng->raster_pending) m68k_set_virq(2, 0); }
         return (ng->soundlatch2<<8) | lo;
     }
     if (a < 0x340002) {                     /* P2 */
@@ -514,7 +520,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return (w<<8)|w;
     }
     if (a < 0x400000) return 0xFFFF;
-    if (a < 0x420000) return ng->cram[(((a>>1)&0xFFF) | ng->cram_bank) & 0x1FFF];
+    if (a < 0x420000) return ng->cram[(a>>1)&0x1FFF];
     if (a < 0xC00000)                       /* JEIDA memcard: 0xFF00|data when unlocked */
         return (!ng->mc_lock1 && ng->mc_unlock2 && ng->mc_regsel)
              ? (0xFF00 | ng->mc_data[(a >> 1) & 0x7FF]) : 0xFFFF;
@@ -758,7 +764,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 now=%d f=%d\n", ng->cart_audio, ng->frame);
             break; }
         case 6: ng->sram_unlocked = v; break;  /* SRAM unlock (CE gate) */
-        case 7: ng->cram_bank  = v ? 0x1000 : 0; break;
+        case 7: break;  /* CRAM is 8K words direct-addressed; no bank register */
         default: break;
         }
         return;
@@ -805,7 +811,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         return;
     }
     if (a < 0x420000) {                     /* CRAM */
-        uint32_t o = (((a>>1)&0xFFF) | ng->cram_bank) & 0x1FFF;
+        uint32_t o = (a>>1)&0x1FFF;
         if (ng->dbg_z80==4 && ng->cramw<4000 && m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000) { ng->cramw++;
             fprintf(stderr, "CRAMW a=%06x o=%04x d=%04x m=%04x pc=%08x\n", a, o, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
         if (mem_mask & 0xFF00) ng->cram[o] = (ng->cram[o]&0x00FF)|(d&0xFF00);
@@ -2583,10 +2589,13 @@ void ng_run_frame(neogeo *ng)
 
 /* ---- accessors for video.c ---- */
 uint16_t *ng_vram(neogeo *ng) { return ng->vram; }
+uint16_t *ng_workram(neogeo *ng) { return ng->workram; }
 uint16_t *ng_cram(neogeo *ng) { return ng->cram; }
 uint8_t  *ng_fixed(neogeo *ng, uint32_t *sz) { *sz = ng->fixed_size; return ng->fixed; }
 int       ng_fixed_bank_type(neogeo *ng) { return ng->fixed_bank_type; }
 uint8_t  *ng_sprite8(neogeo *ng, uint32_t *mask) { *mask = ng->sprite8_mask; return ng->sprite8; }
+uint8_t  *ng_spr_raw(neogeo *ng) { return ng->spr; }
+uint8_t  *ng_spr(neogeo *ng, uint32_t *sz) { *sz = ng->spr_size; return ng->spr; }
 uint8_t  *ng_zoomy(neogeo *ng) { return ng->zoomy; }
 int       ng_auto_counter(neogeo *ng) { return ng->auto_counter & 7; }
 void      ng_set_button(neogeo *ng, int p, int bit, int down)

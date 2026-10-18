@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 static int envf_vdbg(void){ static int v=-1; if(v<0) v=getenv("VDBG")?1:0; return v; }
+static int envf_nofix(void){ static int v=-1; if(v<0) v=getenv("NOFIX")?1:0; return v; }
+static int envf_nosp(void){ static int v=-1; if(v<0) v=getenv("NOSP")?1:0; return v; }
 
 
 uint16_t *ng_vram(neogeo *ng);
@@ -29,12 +31,35 @@ static const uint16_t zoom_x_tables[16] =
 
 static inline uint32_t cram24(uint16_t c)
 {
-    /* bit15 = brightness-reduction ("dark") flag, NOT blank */
+    /* Neo Geo CRAM word: XRRRRRGG GGGBBBBB (MAME: R=bits10-14, G=5-9, B=0-4) */
     uint32_t dark = (c >> 15) & 1;
-    uint32_t r = c & 0x1F, g = (c >> 5) & 0x1F, b = (c >> 10) & 0x1F;
+    uint32_t r = (c >> 10) & 0x1F, g = (c >> 5) & 0x1F, b = c & 0x1F;
     r = (r << 3) | (r >> 2); g = (g << 3) | (g >> 2); b = (b << 3) | (b >> 2);
     if (dark) { r >>= 1; g >>= 1; b >>= 1; }
     return 0xFF000000 | (r << 16) | (g << 8) | b;
+}
+
+/* MAME parse_sprites: the priority lists are built by the emulator each frame
+   (games never write them) — objects in table order, max 110 per line. */
+#define MAX_SPRITES_PER_SCREEN 381
+#define MAX_SPRITES_PER_LINE   110
+static void parse_sprites(uint16_t *vram, int scanline)
+{
+    uint16_t *list = &vram[(scanline & 1) ? 0x8680 : 0x8600];
+    uint16_t *dst = list;
+    int y = 0, rows = 0, cnt = 0;
+    for (int n = 0; n < MAX_SPRITES_PER_SCREEN; n++) {
+        uint16_t yc = vram[0x8200 | n];
+        if (!(yc & 0x40)) {                 /* not chained: fresh y/rows */
+            y = 0x200 - (yc >> 7);
+            rows = yc & 0x3F;
+        }
+        if (rows == 0) continue;
+        if (!(rows >= 0x20 || ((scanline - y) & 0x1FF) < rows * 0x10)) continue;
+        *dst++ = n;
+        if (++cnt == MAX_SPRITES_PER_LINE) break;
+    }
+    memset(dst, 0, (MAX_SPRITES_PER_LINE - cnt + 1) * 2);
 }
 
 void ng_render(neogeo *ng, uint32_t *fb)
@@ -68,6 +93,7 @@ void ng_render(neogeo *ng, uint32_t *fb)
     memset(fb, 0, NG_W*NG_H*4);
 
     /* ---- fix layer ---- */
+    if (!envf_nofix())
     for (int ty = 0; ty < 28; ty++) {
         for (int tx = 0; tx < 40; tx++) {
             uint16_t e = vram[0x7000 + ty + 0x20*tx];
@@ -101,42 +127,21 @@ void ng_render(neogeo *ng, uint32_t *fb)
             e0, c0, p0, bank, ps[3], (unsigned)cram24(ps[3]), (c0<<5)&fix_mask, fixed[((c0<<5)&fix_mask)+0x10]);
         fprintf(stderr, "VDBG fb0=%08x active?\n", (unsigned)fb[0]);
     }
-    if (!spr8) return;
+    if (!spr8 || envf_nosp()) return;
 
     /* ---- sprites, per scanline ---- */
     for (int line = 0; line < NG_H; line++) {
-        uint16_t *list = &vram[0x8600 | (line & 1) ? 0 : 0x80];  /* parity lists */
-        (void)list;
-        int x = 0, zoom_x = 0, y = 0, rows = 0;
-        int count = 0;
-        uint16_t active[MAX_SPRITES_PER_LINE];
+        parse_sprites(vram, line);
+        uint16_t *list = &vram[(line & 1) ? 0x8680 : 0x8600];  /* MAME: odd scanline -> 0x8680 */
+        int maxsi = MAX_SPRITES_PER_LINE - 1;
+        while (maxsi >= 0 && list[maxsi] == 0) maxsi--;
+        if (maxsi != MAX_SPRITES_PER_LINE - 1) maxsi++;
+        int x = 0, zoom_x = 0, y = 0, rows = 0, zoom_y = 0;
 
-        /* parse_sprites */
-        for (int n = 0; n < MAX_SPRITES_PER_SCREEN && count < MAX_SPRITES_PER_LINE; n++) {
-            uint16_t yc = vram[0x8200 | n];
-            if (!(yc & 0x40)) {                     /* new block */
-                y = 0x200 - (yc >> 7);
-                rows = yc & 0x3F;
-            }
-            if (rows == 0) continue;
-            int sl = (line - y) & 0x1FF;
-            if (sl >= rows * 16) continue;          /* sprite_on_scanline */
-            active[count++] = n;
-        }
-        if (envf_vdbg() && line == 0) {
-            fprintf(stderr, "VDBG line0 active=%d ytab[0..3]=%04x %04x %04x %04x\n", count,
-                vram[0x8200], vram[0x8201], vram[0x8202], vram[0x8203]);
-            for (int z=0; z<count && z<6; z++) {
-                int n=active[z];
-                fprintf(stderr, "  act[%d] n=%d yc=%04x zc=%04x xc=%04x\n", z, n,
-                    vram[0x8200|n], vram[0x8000|n], vram[0x8400|n]);
-            }
-        }
-
-        /* draw_sprites */
-        x = 0; zoom_x = 0;
-        for (int i = 0; i < count; i++) {
-            int n = active[i];
+        /* draw_sprites: iterate the priority list; chain state machine must
+           see every entry (even off-screen ones) exactly like MAME */
+        for (int si = 0; si <= maxsi; si++) {
+            int n = list[si] & 0x1FF;
             uint16_t yc = vram[0x8200 | n];
             uint16_t zc = vram[0x8000 | n];
             if (yc & 0x40) {                        /* chained */
@@ -145,15 +150,17 @@ void ng_render(neogeo *ng, uint32_t *fb)
             } else {
                 y = 0x200 - (yc >> 7);
                 x = vram[0x8400 | n] >> 7;
+                zoom_y = zc & 0xFF;
                 zoom_x = (zc >> 8) & 0x0F;
+                rows = yc & 0x3F;
             }
-            int zoom_y = zc & 0xFF;
-            rows = yc & 0x3F;
             if (x >= 0x140 && x <= 0x1F0) continue;
+            if (!(rows == 0 || rows >= 0x20 || ((line - y) & 0x1FF) < rows * 16)) continue;
 
             int sprite_line = (line - y) & 0x1FF;
             int zoom_line = sprite_line & 0xFF;
             int invert = (sprite_line >> 8) & 1;
+            if (invert) zoom_line ^= 0xFF;          /* MAME: vertical flip of zoom line */
             if (rows > 0x20) {
                 zoom_line = zoom_line % ((zoom_y + 1) << 1);
                 if (zoom_line > zoom_y) {
@@ -177,6 +184,20 @@ void ng_render(neogeo *ng, uint32_t *fb)
             uint32_t gfx = ((code << 8) | (sprite_y << 4)) & spr_mask;
             int x_inc = 1;
             if (attr & 0x01) { gfx += 0x0F; x_inc = -1; }   /* hflip */
+
+            static int sprdbg_line = -2;
+            if (sprdbg_line == -2) { const char *e = getenv("SPRDBG"); sprdbg_line = e ? atoi(e) : -1; }
+            if (line == sprdbg_line && si < 3) {
+                const uint8_t *gd = spr8 + gfx;
+                const uint8_t *raw = ng_spr_raw(ng);
+                fprintf(stderr, "SPRDBG l=%d si=%d n=%d tile=%d sy=%d code=%x attr=%x gfx=%x "
+                    "bytes=%02x %02x %02x %02x %02x %02x %02x %02x raw=%02x %02x %02x %02x %02x %02x %02x %02x pens=%04x %04x %04x\n",
+                    line, si, n, tile, sprite_y, (unsigned)code, attr, (unsigned)gfx,
+                    gd[0],gd[1],gd[2],gd[3],gd[4],gd[5],gd[6],gd[7],
+                    raw[(gfx>>1)&0x1FFFFFF],raw[(gfx>>1)+1&0x1FFFFFF],raw[(gfx>>1)+2&0x1FFFFFF],raw[(gfx>>1)+3&0x1FFFFFF],
+                    raw[(gfx>>1)+4&0x1FFFFFF],raw[(gfx>>1)+5&0x1FFFFFF],raw[(gfx>>1)+6&0x1FFFFFF],raw[(gfx>>1)+7&0x1FFFFFF],
+                    pens[1], pens[2], pens[3]);
+            }
 
             uint16_t zt = zoom_x_tables[zoom_x];
             int dx = x;
