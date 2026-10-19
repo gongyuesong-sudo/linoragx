@@ -202,20 +202,39 @@ void ng_render(neogeo *ng, uint32_t *fb)
             }
 
             uint16_t zt = zoom_x_tables[zoom_x];
-            int dx = x;
             const uint8_t *g = spr8 + gfx;
-            for (int px = 0; px < 16; px++) {
-                if (zt & 0x8000) {
-                    if (dx >= 0x200) dx -= 0x200;    /* wrap */
-                    if (dx < NG_W) {
-                        uint8_t p = g[0];
-                        if (p) fb[line*NG_W + dx] = cram24(pens[p]);
+            if (x <= 0x1F0) {                       /* MAME: no wrap-around */
+                int dx = x;
+                for (int px = 0; px < 16; px++) {
+                    if (zt & 0x8000) {
+                        if (dx < NG_W) {
+                            uint8_t p = g[0];
+                            if (p) fb[line*NG_W + dx] = cram24(pens[p]);
+                        }
+                        dx++;
                     }
-                    dx++;
+                    zt <<= 1;
+                    if (!zt) break;
+                    g += x_inc;
                 }
-                zt <<= 1;
-                if (!zt) break;
-                g += x_inc;
+            } else {                                /* MAME: wrap-around */
+                int xw = x;
+                int dx = 0;
+                for (int px = 0; px < 16; px++) {
+                    if (zt & 0x8000) {
+                        if (xw >= 0x200) {
+                            if (dx < NG_W) {
+                                uint8_t p = g[0];
+                                if (p) fb[line*NG_W + dx] = cram24(pens[p]);
+                            }
+                            dx++;
+                        }
+                        xw++;
+                    }
+                    zt <<= 1;
+                    if (!zt) break;
+                    g += x_inc;
+                }
             }
         }
     }
