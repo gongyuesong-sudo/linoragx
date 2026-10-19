@@ -215,6 +215,21 @@ int main(int argc, char **argv)
                 continue;
             }
         }
+        /* scripted input: LINORAGX_INPUT="frame:bit:hold,..." (P1) */
+        {
+            struct injev { int f, b, down; };
+            static struct injev evs[128]; static int nevs = -1, ei = 0;
+            if (nevs == -1) {
+                nevs = 0; const char *s = getenv("LINORAGX_INPUT");
+                while (s && *s && nevs + 1 < 128) { int a,b,c;
+                    if (sscanf(s,"%d:%d:%d",&a,&b,&c)==3) {
+                        evs[nevs++]=(struct injev){a,b,1}; evs[nevs++]=(struct injev){a+c,b,0}; }
+                    s = strchr(s, ','); if (s) s++; }
+                for (int i=0;i<nevs;i++) for (int j=i+1;j<nevs;j++)
+                    if (evs[j].f < evs[i].f) { struct injev t=evs[i]; evs[i]=evs[j]; evs[j]=t; }
+            }
+            while (ei < nevs && evs[ei].f <= n) { ng_set_button(ng, 0, evs[ei].b, evs[ei].down); ei++; }
+        }
         ng_run_frame(ng);
         ng_render(ng, fb);
         if (envf_dbg() && (n % 30 == 29)) {
