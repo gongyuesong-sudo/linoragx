@@ -110,7 +110,7 @@ void ng_render(neogeo *ng, uint32_t *fb)
             uint32_t *drow = &fb[y*NG_W];
             for (int x = 0; x < NG_W; x++) {
                 int cx = (x + scrollx) & 0xFF;
-                uint16_t e = vram[0x9000 + row + (cx >> 3)];   /* word 0x9000 = byte 0x12000 */
+                uint16_t e = vram[0x4800 + row + (cx >> 3)];   /* byte 0x9000 = word 0x4800 (sprite tables live at word 0x8000+) */
                 uint8_t d = fixed[( (((e & 0xFFF) << 5) | ry) & fix_mask ) | pbyte[cx & 7]];
                 uint8_t p = (cx & 1) ? (d >> 4) : (d & 0x0F);
                 if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank]);
