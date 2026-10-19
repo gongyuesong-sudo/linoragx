@@ -66,7 +66,7 @@ void ng_render(neogeo *ng, uint32_t *fb)
 {
     uint16_t *vram = ng_vram(ng);
     uint16_t *cram = ng_cram(ng);
-    uint32_t bank = ng_cram_bank(ng);
+    uint32_t bank = ng_cram_bank_render(ng);
     uint32_t fix_sz, spr_mask;
     uint8_t *fixed = ng_fixed(ng, &fix_sz);
     uint8_t *spr8  = ng_sprite8(ng, &spr_mask);
@@ -90,34 +90,10 @@ void ng_render(neogeo *ng, uint32_t *fb)
         }
     }
 
-    memset(fb, 0, NG_W*NG_H*4);
-
-    /* ---- fix layer ---- */
-    if (!envf_nofix())
-    for (int ty = 0; ty < 28; ty++) {
-        for (int tx = 0; tx < 40; tx++) {
-            uint16_t e = vram[0x7000 + ty + 0x20*tx];
-            int code = e & 0xFFF, pal = e >> 12;
-            if (fix_banked) {
-                if (fbtype == 1)
-                    code += 0x1000 * (garouoffsets[(ty - 2) & 31] ^ 3);
-                else
-                    code += 0x1000 * (((vram[0x7500 + ((ty - 1) & 31) + 32*(tx/6)] >> (5 - (tx % 6))*2) & 3) ^ 3);
-            }
-            const uint16_t *pens = &cram[(pal<<4) | bank];
-            for (int y = 0; y < 8; y++) {
-                int dy = ty*8 + y;
-                if (dy >= NG_H) continue;
-                uint32_t base = ((code<<5) | y) & fix_mask;
-                const uint8_t *g = fixed + base;
-                uint32_t *row = &fb[dy*NG_W + tx*8];
-                uint8_t d;
-                d = g[0x10]; if (d&0x0F) row[0]=cram24(pens[d&0x0F]); if (d&0xF0) row[1]=cram24(pens[d>>4]);
-                d = g[0x18]; if (d&0x0F) row[2]=cram24(pens[d&0x0F]); if (d&0xF0) row[3]=cram24(pens[d>>4]);
-                d = g[0x00]; if (d&0x0F) row[4]=cram24(pens[d&0x0F]); if (d&0xF0) row[5]=cram24(pens[d>>4]);
-                d = g[0x08]; if (d&0x0F) row[6]=cram24(pens[d&0x0F]); if (d&0xF0) row[7]=cram24(pens[d>>4]);
-            }
-        }
+    /* MAME: bitmap.fill(bg_pen) — background colour is CRAM[bank|0xFFF] */
+    {
+        uint32_t bg = cram24(cram[bank | 0xFFF]);
+        for (int i = 0; i < NG_W*NG_H; i++) fb[i] = bg;
     }
 
     if (envf_vdbg()) {
@@ -127,9 +103,10 @@ void ng_render(neogeo *ng, uint32_t *fb)
             e0, c0, p0, bank, ps[3], (unsigned)cram24(ps[3]), (c0<<5)&fix_mask, fixed[((c0<<5)&fix_mask)+0x10]);
         fprintf(stderr, "VDBG fb0=%08x active?\n", (unsigned)fb[0]);
     }
-    if (!spr8 || envf_nosp()) return;
 
-    /* ---- sprites, per scanline ---- */
+    /* ---- sprites, per scanline (MAME draws sprites BEFORE the fix layer:
+       the fix layer's non-pen0 pixels overwrite sprites) ---- */
+    if (spr8 && !envf_nosp())
     for (int line = 0; line < NG_H; line++) {
         static int nolist = -2;
         if (nolist == -2) nolist = getenv("NOPLIST") ? 1 : 0;
@@ -235,6 +212,35 @@ void ng_render(neogeo *ng, uint32_t *fb)
                     if (!zt) break;
                     g += x_inc;
                 }
+            }
+        }
+    }
+
+    /* ---- fix layer, drawn LAST: its non-pen0 pixels overwrite sprites
+       (MAME screen_update: draw_sprites then draw_fixed_layer) ---- */
+    if (!envf_nofix())
+    for (int ty = 0; ty < 28; ty++) {
+        for (int tx = 0; tx < 40; tx++) {
+            uint16_t e = vram[0x7000 + ty + 0x20*tx];
+            int code = e & 0xFFF, pal = e >> 12;
+            if (fix_banked) {
+                if (fbtype == 1)
+                    code += 0x1000 * (garouoffsets[(ty - 2) & 31] ^ 3);
+                else
+                    code += 0x1000 * (((vram[0x7500 + ((ty - 1) & 31) + 32*(tx/6)] >> (5 - (tx % 6))*2) & 3) ^ 3);
+            }
+            const uint16_t *pens = &cram[(pal<<4) | bank];
+            for (int y = 0; y < 8; y++) {
+                int dy = ty*8 + y;
+                if (dy >= NG_H) continue;
+                uint32_t base = ((code<<5) | y) & fix_mask;
+                const uint8_t *g = fixed + base;
+                uint32_t *row = &fb[dy*NG_W + tx*8];
+                uint8_t d;
+                d = g[0x10]; if (d&0x0F) row[0]=cram24(pens[d&0x0F]); if (d&0xF0) row[1]=cram24(pens[d>>4]);
+                d = g[0x18]; if (d&0x0F) row[2]=cram24(pens[d&0x0F]); if (d&0xF0) row[3]=cram24(pens[d>>4]);
+                d = g[0x00]; if (d&0x0F) row[4]=cram24(pens[d&0x0F]); if (d&0xF0) row[5]=cram24(pens[d>>4]);
+                d = g[0x08]; if (d&0x0F) row[6]=cram24(pens[d&0x0F]); if (d&0xF0) row[7]=cram24(pens[d>>4]);
             }
         }
     }

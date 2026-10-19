@@ -31,6 +31,7 @@ uint16_t *ng_vram(neogeo *ng);
 uint16_t *ng_workram(neogeo *ng);
 uint16_t *ng_cram(neogeo *ng);
 uint32_t ng_cram_bank(neogeo *ng);
+uint32_t ng_cram_bank_render(neogeo *ng);
 int ng_dbg_vbank(neogeo *ng);
 void ng_dbg_z80(neogeo *ng, int on);
 void ng_dbg_btn(neogeo *ng, int p, int mask);

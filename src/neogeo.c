@@ -81,6 +81,8 @@ struct neogeo {
     uint8_t k3bl_px;               /* 1=pl_px_decrypt applied, 2=upl variant */
     uint16_t pvc_ram[0x1000];          /* PVC protection RAM @ $2FE000-$2FFFFF */
     uint32_t cram_bank;
+    uint32_t cram_bank_render;  /* bank at first CRAM write of the frame (MAME line-render parity) */
+    uint64_t bank_snapf;
     int dbg_vw; int dbg_z80; int sl1_trace;
 
     /* VLOAD / video ctrl */
@@ -523,7 +525,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return (w<<8)|w;
     }
     if (a < 0x400000) return 0xFFFF;
-    if (a < 0x420000) return ng->cram[(a>>1)&0x1FFF];
+    if (a < 0x420000) return ng->cram[((a>>1)&0xFFF) | ng->cram_bank];
     if (a < 0xC00000)                       /* JEIDA memcard: 0xFF00|data when unlocked */
         return (!ng->mc_lock1 && ng->mc_unlock2 && ng->mc_regsel)
              ? (0xFF00 | ng->mc_data[(a >> 1) & 0x7FF]) : 0xFFFF;
@@ -679,6 +681,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                write presents data<<8 with mask 0xFF00; word write d>>8;
                odd-byte writes (mask 0x00FF: watchdog $300001 etc.) must NOT
                latch — they carry port data, not sound commands). */
+            static int crtr = -2;
+            if (crtr == -2) crtr = getenv("CRAMTRACE") ? 1 : 0;
+            if (crtr && a >= 0x200000 && a < 0x210000 && ng->frame < 400)
+                fprintf(stderr, "SLABSORB f=%d a=%06x d=%04x m=%04x pc=%08x\n",
+                    ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
             uint8_t v = (uint8_t)(d >> 8);
             ng->soundlatch1 = v;
             /* MAME generic_latch_8: data always overwritten, but data_pending
@@ -767,7 +774,13 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 now=%d f=%d\n", ng->cart_audio, ng->frame);
             break; }
         case 6: ng->sram_unlocked = v; break;  /* SRAM unlock (CE gate) */
-        case 7: break;  /* CRAM is 8K words direct-addressed; no bank register */
+        case 7: { /* palette bank DELIBERATELY IGNORED: MAME honors ch7 per-scanline,
+             but our full-frame render picks the wrong bank for raster-bank games
+             (bstars2 writes anim palettes to bank1 yet renders bank0: honoring
+             bank regressed it 0.06->0.45). par48 semantics: all CRAM writes land
+             in 0-0xFFF, last writer wins. LATCH7 env traces the real latch state. */
+            static int l7=-2; if (l7==-2) l7 = getenv("LATCH7") ? 1 : 0;
+            if (l7) fprintf(stderr, "LATCH7 v=%d f=%d\n", v, ng->frame); } break;
         default: break;
         }
         return;
@@ -814,7 +827,22 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         return;
     }
     if (a < 0x420000) {                     /* CRAM */
-        uint32_t o = (a>>1)&0x1FFF;
+        uint32_t o = ((a>>1)&0xFFF) | ng->cram_bank;   /* MAME: offset + palette bank */
+        /* MAME renders each scanline with the bank set during vblank (games
+           write bank0 palette, render, then flip to bank1 at frame end for
+           the NEXT frame's palette prep).  Full-frame render must snapshot
+           the bank at the frame's first CRAM write, not read it at frame end. */
+        if (ng->bank_snapf != ng->frame) {
+            ng->bank_snapf = ng->frame;
+            ng->cram_bank_render = ng->cram_bank;
+            { static int sb=-2; if (sb==-2) sb = getenv("SNAPDBG") ? 1 : 0;
+              if (sb && ng->frame > 11990) fprintf(stderr, "SNAP f=%llu bank=%x\n", (unsigned long long)ng->frame, ng->cram_bank_render); }
+        }
+        static int crtr2 = -2;
+        if (crtr2 == -2) crtr2 = getenv("CRAMTRACE") ? 1 : 0;
+        if (crtr2 && ng->frame < 2000 && (m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000 || getenv("CRAMT2")))
+            fprintf(stderr, "CRAMT f=%d a=%06x o=%04x d=%04x m=%04x pc=%08x\n",
+                ng->frame, a, o, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
         if (ng->dbg_z80==4 && ng->cramw<4000 && m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000) { ng->cramw++;
             fprintf(stderr, "CRAMW a=%06x o=%04x d=%04x m=%04x pc=%08x\n", a, o, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
         if (mem_mask & 0xFF00) ng->cram[o] = (ng->cram[o]&0x00FF)|(d&0xFF00);
@@ -2607,6 +2635,7 @@ void      ng_set_button(neogeo *ng, int p, int bit, int down)
     if (down) ng->buttons[p] |= 1u << bit; else ng->buttons[p] &= ~(1u << bit);
 }
 uint32_t ng_cram_bank(neogeo *ng) { return ng->cram_bank; }
+uint32_t ng_cram_bank_render(neogeo *ng) { return ng->cram_bank_render; }
 void ng_dbg_vw(neogeo *ng, int on) { ng->dbg_vw = on; }
 void ng_dbg_z80(neogeo *ng, int on) { ng->dbg_z80 = on; }
 void ng_dbg_hits(neogeo *ng, unsigned long *a, unsigned long *b, unsigned long *c)
@@ -2650,13 +2679,14 @@ const char *ng_game_name(neogeo *ng) { return ng->gamename; }
 /* ---- save state (NRXSTATE07 magic) ---- */
 #pragma pack(push,1)
 struct hdr {
-    char magic[11];             /* NRXSTATE07\0 */
+    char magic[11];             /* NRXSTATE08\0 */
     uint64_t frame; uint8_t fc;
     uint32_t sr, ssp, usp, vbr, pc;
     uint32_t d[8], a[8];
     uint8_t zstate[64];
     uint8_t zbank[4]; uint8_t vecbank;
     uint16_t voff, vmod, vrb, dcnt, ictl;
+    uint32_t crambank;          /* NRXSTATE08: systemlatch ch7 palette bank */
 };
 #pragma pack(pop)
 
@@ -2665,7 +2695,8 @@ int ng_save_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
     struct hdr h; memset(&h, 0, sizeof h);
-    memcpy(h.magic, "NRXSTATE07", 11);
+    memcpy(h.magic, "NRXSTATE08", 11);
+    h.crambank = ng->cram_bank;
     h.frame = ng->frame; h.fc = ng->fc;
     h.sr = m68k_get_reg(NULL, M68K_REG_SR);
     h.ssp = m68k_get_reg(NULL, M68K_REG_A7);
@@ -2694,7 +2725,7 @@ int ng_load_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     struct hdr h;
-    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE07", 11)) { fclose(f); return -2; }
+    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE08", 11)) { fclose(f); return -2; }
     ng->frame = h.frame; ng->fc = h.fc;
     ng->vector_bank = h.vecbank;
     m68k_set_reg(M68K_REG_SR, h.sr);
@@ -2708,6 +2739,7 @@ int ng_load_state(neogeo *ng, const char *path)
     memcpy(ng->zbank, h.zbank, 4);
     ng->vram_offset = h.voff; ng->vram_modulo = h.vmod; ng->vram_readbuf = h.vrb;
     ng->display_counter = h.dcnt; ng->irq_enable = h.ictl;
+    ng->cram_bank = h.crambank & 0x1000;
     if (fread(ng->vram, sizeof ng->vram, 1, f) != 1 ||
         fread(ng->cram, sizeof ng->cram, 1, f) != 1 ||
         fread(ng->workram, sizeof ng->workram, 1, f) != 1 ||
