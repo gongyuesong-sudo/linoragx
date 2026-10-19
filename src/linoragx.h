@@ -88,6 +88,7 @@ int        z80w_load(void *v, const void *buf);
 int  ctl_open(int port);
 int  ctl_active(void);
 int  ctl_poll(neogeo *ng, const uint32_t *fb);   /* bit0 quit, bit1 skip-frame */
+int  dump_bmp(const uint32_t *fb, const char *path);
 
 /* vulkan renderer */
 typedef struct vkrend vkrend;

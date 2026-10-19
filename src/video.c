@@ -131,7 +131,9 @@ void ng_render(neogeo *ng, uint32_t *fb)
 
     /* ---- sprites, per scanline ---- */
     for (int line = 0; line < NG_H; line++) {
-        parse_sprites(vram, line);
+        static int nolist = -2;
+        if (nolist == -2) nolist = getenv("NOPLIST") ? 1 : 0;
+        if (!nolist) parse_sprites(vram, line);
         uint16_t *list = &vram[(line & 1) ? 0x8680 : 0x8600];  /* MAME: odd scanline -> 0x8680 */
         int maxsi = MAX_SPRITES_PER_LINE - 1;
         while (maxsi >= 0 && list[maxsi] == 0) maxsi--;

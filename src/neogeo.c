@@ -177,7 +177,9 @@ static void ds_run(void *a, uint32_t lo, uint32_t hi)
 static void decode_sprites(neogeo *ng)
 {
     if (!ng->spr || !ng->spr_size) { ng->sprite8_mask = 0; return; }
-    uint32_t mask = region_mask_pow2(ng->spr_size);
+    /* predecoded 8bpp plane is 2x the raw size; gfx offsets (code<<8|sy<<4)
+       address it directly, so the mask must cover the doubled span */
+    uint32_t mask = (region_mask_pow2(ng->spr_size) << 1) | 1;
     ng->sprite8 = calloc(mask+1, 1);
     ng->sprite8_mask = mask;
     ds_ctx c = { ng->spr, ng->sprite8, ng->spr_size };
@@ -188,6 +190,7 @@ static void decode_sprites(neogeo *ng)
 extern uint16_t z80w_pc(void*);
 /* cached env-flag accessors: getenv on every hot-path call was ~56% of CPU */
 #define DBGFLAG(name, var) static int var(void) { static int v = -1; if (v < 0) v = getenv(name) ? 1 : 0; return v; }
+DBGFLAG("NOIRQ2", f_noirq2)
 DBGFLAG("ZTRACE",  f_ztrace)
 static int ztf0(void){ static int v=-1; if(v<0){const char*e=getenv("ZTF0"); v=e?atoi(e):3;} return v; }
 static int ztf1(void){ static int v=-1; if(v<0){const char*e=getenv("ZTF1"); v=e?atoi(e):12;} return v; }
@@ -328,7 +331,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
                ym_write(ng->ym, 2, ng->ym_reg[0], v); break;/* YM2151 mirror (ignores reg>0x7F) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; ng->irq_sound = 1; m68k_set_virq(2, 1);   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
+    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
                if (ng->dbg_z80==3) fprintf(stderr, "S2W %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame); break;
     case 0x08: ng->z80_nmi_en = 1; break;
     case 0x18: ng->z80_nmi_en = 0; break;

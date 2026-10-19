@@ -240,8 +240,10 @@ int main(int argc, char **argv)
         }
         n++;
         if (frames && n >= frames) {
-            if (dump && vk) {
-                if (vk_offscreen_dump(vk, fb, dump) == 0)
+            if (dump) {
+                /* write the emulated framebuffer directly: the Vulkan
+                   offscreen readback is viewport-flip sensitive */
+                if (dump_bmp(fb, dump) == 0)
                     fprintf(stderr, "[dump] wrote %s\n", dump);
             }
             break;

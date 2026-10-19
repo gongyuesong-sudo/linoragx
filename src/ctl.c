@@ -61,7 +61,7 @@ static void write_u24(unsigned char *p, unsigned v) { p[0]=v; p[1]=v>>8; p[2]=v>
 static void write_u32(unsigned char *p, unsigned v) { p[0]=v; p[1]=v>>8; p[2]=v>>16; p[3]=v>>24; }
 
 /* 24-bit BMP writer from RGBA8888 fb (bottom-up rows) */
-static int dump_bmp(const uint32_t *fb, const char *path)
+int dump_bmp(const uint32_t *fb, const char *path)
 {
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
@@ -181,6 +181,10 @@ static void handle_cmd(neogeo *ng, const uint32_t *fb, char *cmd)
         char hex[32*5+1] = "";
         for (int i = 0; i < n; i++) sprintf(hex+5*i, "%04x ", cr[(a+i)&0x1FFF]);
         snprintf(resp, sizeof resp, "{\"addr\":\"0x%x\",\"words\":\"%s\",\"bank\":\"0x%x\"}", a, hex, ng_cram_bank(ng));
+    } else if (!strcmp(op, "regs")) {
+        snprintf(resp, sizeof resp, "{\"sr\":\"0x%04x\",\"vbr\":\"0x%08x\",\"usp\":\"0x%08x\"}",
+            m68k_get_reg(NULL, M68K_REG_SR), m68k_get_reg(NULL, M68K_REG_VBR),
+            m68k_get_reg(NULL, M68K_REG_USP));
     } else if (!strcmp(op, "vpeek")) {
         unsigned a = 0; int n = 8;
         sscanf(cmd, "%*s %x %d", &a, &n);
