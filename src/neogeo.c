@@ -103,11 +103,6 @@ struct neogeo {
     int wd_armed;
     int ym_irq_prev;
     int irq_sound;            /* IRQ_SOUND: set by Z80 soundlatch2 write, acked on AUDIO_COIN read */
-    /* 68K on-chip Timer A/B (m68k_timer @0x1003C0-7): A->IRQ1, B->IRQ2 */
-    uint16_t tmr_data;
-    uint8_t  tmr_a_ctl, tmr_b_ctl;
-    int64_t  tmr_a_cnt, tmr_b_cnt, tmr_a_sub, tmr_b_sub;
-    int      tmr_a_pend, tmr_b_pend, vblank_pending, tmr_frac;
     unsigned long hit_a, hit_b, hit_c;
     int cart_audio;   /* HC259 ch5: 0=sm1 BIOS sound, 1=cart m1 */
     uint8_t zbank[4];         /* f000,e000,c000,8000 entries */
@@ -228,7 +223,6 @@ DBGFLAG("CMCTR",   f_cmctr)
 DBGFLAG("SWDBG",   f_swdbg)
 DBGFLAG("DUMPFIX", f_dumpfix)
 DBGFLAG("FD98W", f_fd98w)
-DBGFLAG("TMRW", f_tmrw)
 DBGFLAG("LINORAGX_TRACE_VLOAD", f_vload)
 DBGFLAG("LINORAGX_TRACE_VC", f_vc)
 DBGFLAG("SRAMW", f_sramw)
@@ -293,8 +287,6 @@ static uint8_t z_read(uint32_t a, void *c)
         return (r && b < sz) ? r[b] : 0xFF; }
     return ng->sndram[a & 0x7FF];
 }
-static void irq1_update(neogeo *ng);
-static void irq2_update(neogeo *ng);
 static void z_write(uint32_t a, uint8_t v, void *c)
 {
     neogeo *ng = (neogeo*)c;
@@ -339,7 +331,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
                ym_write(ng->ym, 2, ng->ym_reg[0], v); break;/* YM2151 mirror (ignores reg>0x7F) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; irq2_update(ng); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
+    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
                if (ng->dbg_z80==3) fprintf(stderr, "S2W %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame); break;
     case 0x08: ng->z80_nmi_en = 1; break;
     case 0x18: ng->z80_nmi_en = 0; break;
@@ -370,47 +362,6 @@ static uint32_t sma_bank(int type, uint16_t sel);
 static uint32_t pvc_bank_base(neogeo *ng);
 static void pvc_unpack_color(neogeo *ng);
 static void pvc_pack_color(neogeo *ng);
-
-/* IRQ lines are shared: IRQ1 = vblank | timer A, IRQ2 = raster | soundlatch2 | timer B */
-static void irq1_update(neogeo *ng) { m68k_set_virq(1, ng->vblank_pending || ng->tmr_a_pend); }
-static void irq2_update(neogeo *ng) { m68k_set_virq(2, ng->raster_pending || ng->irq_sound || ng->tmr_b_pend); }
-
-/* m68k_timer tick: timer clock = XTAL/4 = 3.579545MHz vs our 68K timebase
-   (202752 cyc/frame * 60) -> 3.4 CPU cycles per timer tick (fixed point 34/10).
-   prescale from ctl bits5-6: 0=/2 1=/8 else /32; bit7=run, bit0=irq enable. */
-static void tmr_tick(neogeo *ng, int cycles)
-{
-    if (ng->tmr_a_pend) { ng->tmr_a_pend = 0; irq1_update(ng); }
-    if (ng->tmr_b_pend) { ng->tmr_b_pend = 0; irq2_update(ng); }
-    ng->tmr_frac += cycles * 10;
-    int ticks = ng->tmr_frac / 34;
-    if (ticks <= 0) return;
-    ng->tmr_frac -= ticks * 34;
-    if (ng->tmr_a_ctl & 0x80) {
-        int div = ((ng->tmr_a_ctl >> 5) & 3); div = div == 0 ? 2 : div == 1 ? 8 : 32;
-        ng->tmr_a_sub += ticks;
-        int guard = 0;
-        while (ng->tmr_a_sub >= div && guard++ < 200) {
-            ng->tmr_a_sub -= div;
-            if (--ng->tmr_a_cnt <= 0) {
-                ng->tmr_a_cnt = ng->tmr_data ? ng->tmr_data : 1;
-                if (ng->tmr_a_ctl & 1) { ng->tmr_a_pend = 1; irq1_update(ng); }
-            }
-        }
-    }
-    if (ng->tmr_b_ctl & 0x80) {
-        int div = ((ng->tmr_b_ctl >> 5) & 3); div = div == 0 ? 2 : div == 1 ? 8 : 32;
-        ng->tmr_b_sub += ticks;
-        int guard = 0;
-        while (ng->tmr_b_sub >= div && guard++ < 200) {
-            ng->tmr_b_sub -= div;
-            if (--ng->tmr_b_cnt <= 0) {
-                ng->tmr_b_cnt = ng->tmr_data ? ng->tmr_data : 1;
-                if (ng->tmr_b_ctl & 1) { ng->tmr_b_pend = 1; irq2_update(ng); }
-            }
-        }
-    }
-}
 
 static uint16_t r16(neogeo *ng, uint32_t a)
 {
@@ -470,14 +421,6 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                 (unsigned)((ng->rom[a]<<8)|ng->rom[a+1]), m68k_get_reg(NULL,M68K_REG_PC));
         }
         return (ng->rom[a]<<8)|ng->rom[a+1];
-    }
-    if ((a & ~0xFFFFu) == 0x100000 && (a & 0xFFFFu) >= 0x03C0 && (a & 0xFFFFu) <= 0x03C7) {
-        switch (a & 7) {
-        case 0: case 1: return ng->tmr_data;
-        case 4: case 5: return ng->tmr_a_ctl;
-        case 6: case 7: return ng->tmr_b_ctl;
-        default: break;
-        }
     }
     if (a < 0x200000) {
         if (f_pcw() && (a & 0xFFFFFFFE) == 0x100182) {
@@ -550,7 +493,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         else if ((ng->frame / 30) & 1) lo |= 0x40;
         lo |= 0x80;
         /* reading AUDIO_COIN acks IRQ_SOUND (MAME audio_coin_r) */
-        if (ng->irq_sound) { ng->irq_sound = 0; irq2_update(ng); }
+        if (ng->irq_sound) { ng->irq_sound = 0; if (!ng->raster_pending) m68k_set_virq(2, 0); }
         return (ng->soundlatch2<<8) | lo;
     }
     if (a < 0x340002) {                     /* P2 */
@@ -680,33 +623,6 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         return;
     }
     if (a < 0x100000) return;
-    if ((a & ~0xFFFFu) == 0x100000 && (a & 0xFFFFu) >= 0x03C0 && (a & 0xFFFFu) <= 0x03C7) {
-        if (f_tmrw()) fprintf(stderr, "TMRW f=%d a=%06x d=%04x m=%04x pc=%08x\n",
-            ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
-        switch (a & 7) {
-        case 0: case 1:   /* timer data (word): reload both counters */
-            ng->tmr_data = d;
-            ng->tmr_a_cnt = ng->tmr_data ? ng->tmr_data : 1;
-            ng->tmr_b_cnt = ng->tmr_data ? ng->tmr_data : 1;
-            ng->tmr_a_sub = ng->tmr_b_sub = 0;
-            break;
-        case 4: case 5:   /* timer A control: bit7 0->1 starts */
-            if (!(ng->tmr_a_ctl & 0x80) && (d & 0x80)) {
-                ng->tmr_a_cnt = ng->tmr_data ? ng->tmr_data : 1;
-                ng->tmr_a_sub = 0;
-            }
-            ng->tmr_a_ctl = (uint8_t)d;
-            break;
-        case 6: case 7:   /* timer B control */
-            if (!(ng->tmr_b_ctl & 0x80) && (d & 0x80)) {
-                ng->tmr_b_cnt = ng->tmr_data ? ng->tmr_data : 1;
-                ng->tmr_b_sub = 0;
-            }
-            ng->tmr_b_ctl = (uint8_t)d;
-            break;
-        }
-        return;
-    }
     if (a < 0x200000) {
         { static uint32_t tgt = 0xFFFFFFFF; static int ini = 0;
           if (!ini) { const char *e = getenv("RAMWA"); tgt = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; ini = 1; }
@@ -889,11 +805,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             ng->raster_armed = 1;              /* MAME: any lsb write arms timer */
             break;
         case 6:
-            /* ack clears the whole line (original semantics): the game's ISR
-               cannot distinguish IRQ2 sources; a held line would re-enter it
-               forever. A running timer B re-asserts on its next tick. */
-            if (d & 2) { ng->raster_pending = 0; ng->irq_line = 0; ng->tmr_b_pend = 0; m68k_set_virq(2, 0); }
-            if (d & 4) { ng->vblank_pending = 0; ng->tmr_a_pend = 0; m68k_set_virq(1, 0); }  /* vblank */
+            if (d & 2) { ng->raster_pending = 0; ng->irq_line = 0; m68k_set_virq(2, 0); }
+            if (d & 4) { m68k_set_virq(1, 0); }                          /* vblank */
             if (d & 1) { }                                                /* irq3 (cart) */
             break;
         case 7: break;
@@ -2480,7 +2393,7 @@ void ng_run_frame(neogeo *ng)
         else ng->fc--;
     }
     /* vertical interrupt: level 1 (vector 0x64), fires every frame (LSPC auto) */
-    ng->vblank_pending = 1; irq1_update(ng);
+    m68k_set_virq(1, 1);
     if (f_pcw() && ng->frame < 3) {
         static int z1 = 0;
         if (!z1) { z1 = 1;
@@ -2494,7 +2407,6 @@ void ng_run_frame(neogeo *ng)
     if (chunk_max < 0) { const char *e = getenv("NG_CHUNK"); chunk_max = e ? atoi(e) : 16; }
     while (left > 0) {
         int chunk = left > chunk_max ? chunk_max : (int)left;
-        tmr_tick(ng, chunk);
         m68k_execute(chunk);
         { static int lo = -2, hi = -2;
           if (lo == -2) { const char *e = getenv("PCTRACE"); const char *d = e ? strchr(e, '-') : 0;
@@ -2662,7 +2574,7 @@ void ng_run_frame(neogeo *ng)
             int64_t cyc = (int64_t)((CYCLES_PER_FRAME - left)) ;   /* cycles since frame start */
             if (cyc * 2 > (int64_t)ng->display_counter) {          /* pixel ticks */
                 ng->raster_armed = 0; ng->raster_pending = 1;
-                irq2_update(ng);
+                m68k_set_virq(2, 1);
             }
         }
     }
@@ -2672,7 +2584,7 @@ void ng_run_frame(neogeo *ng)
        IRQ-disabled loop across the whole frame (Musashi only samples IRQs at
        m68k_execute entry and set_sr, so a dropped line is lost until the next
        frame — the BIOS coin screen then never reaches its ISR). */
-    if (getenv("VB_CLEAR")) { ng->vblank_pending = 0; irq1_update(ng); }    /* A/B: old frame-end clear */
+    if (getenv("VB_CLEAR")) m68k_set_virq(1, 0);    /* A/B: old frame-end clear */
     if (ng->irq_enable & 5) ng->raster_armed = 1;   /* AUTOLOAD_VBLANK or REPEAT */
     ng->scanline = 0;
     ng->frame++;
