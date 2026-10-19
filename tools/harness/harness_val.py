@@ -88,18 +88,21 @@ def cmd_speed(args):
 
 def cmd_input(args):
     card = args[0] if args else "kof2000"
-    dp0, _ = run_dump(card, 1200, dump="in_plain.bmp")
-    dp1, _ = run_dump(card, 1200, dump="in_inject.bmp",
-                      extra_env={"LINORAGX_INPUT": "120:10:15,300:8:15,600:8:15"})
-    if not (os.path.exists(dp0) and os.path.exists(dp1)):
+    # causal check: identical before the injected press, different after
+    dp0a, _ = run_dump(card, 990, dump="in_pre.bmp")
+    dp0b, _ = run_dump(card, 1200, dump="in_post_plain.bmp")
+    dp1a, _ = run_dump(card, 990, dump="in_pre_inj.bmp",
+                       extra_env={"LINORAGX_INPUT": "1000:9:15"})
+    dp1b, _ = run_dump(card, 1200, dump="in_post_inj.bmp",
+                       extra_env={"LINORAGX_INPUT": "1000:9:15"})
+    if not all(map(os.path.exists, (dp0a, dp0b, dp1a, dp1b))):
         print("missing dump")
         return 1
-    a = open(dp0, "rb").read()
-    b = open(dp1, "rb").read()
-    n1, c1 = bmp_stats(dp1)
-    changed = a != b
-    print(f"screen_changed={changed} inject_colors={c1}")
-    return 0 if changed and c1 > 16 else 1
+    pre_same = open(dp0a, "rb").read() == open(dp1a, "rb").read()
+    post_diff = open(dp0b, "rb").read() != open(dp1b, "rb").read()
+    _, c1 = bmp_stats(dp1b)
+    print(f"pre_press_identical={pre_same} post_press_differs={post_diff} colors={c1}")
+    return 0 if (pre_same and post_diff and c1 > 16) else 1
 
 
 def cmd_audio(args):
