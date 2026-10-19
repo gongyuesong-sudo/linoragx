@@ -268,6 +268,7 @@ int main(int argc, char **argv)
             }
         }
         n++;
+        if (!headless && (n % 60 == 0)) fprintf(stderr, "[fps] n=%d %.1f fps\n", n, n/(now_s()-t0));
         if (frames && n >= frames) {
             if (dump) {
                 /* write the emulated framebuffer directly: the Vulkan

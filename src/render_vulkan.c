@@ -1,6 +1,7 @@
 /* Vulkan renderer: Wayland or X11 window surface + offscreen readback mode.
  * Pipeline: 320x224 texture (per-frame upload) -> scaled quad, nearest filter. */
 #include "linoragx.h"
+#include <time.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_wayland.h>
 #include <wayland-client.h>
@@ -318,7 +319,26 @@ static int mk_swapchain(struct vkrend *v, uint32_t want_w, uint32_t want_h)
     sci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     sci.preTransform = caps.currentTransform;
     sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    /* present mode override for A/B testing: LINORAGX_PRESENT=mailbox|immediate (default fifo) */
     sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    {
+        const char *pm = getenv("LINORAGX_PRESENT");
+        uint32_t npm = 0; VkPresentModeKHR avail[16];
+        vkGetPhysicalDeviceSurfacePresentModesKHR(v->pdev, v->surf, &npm, NULL);
+        if (npm > 16) npm = 16;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(v->pdev, v->surf, &npm, avail);
+        int has_mailbox = 0, has_imm = 0;
+        for (uint32_t q = 0; q < npm; q++) {
+            if (avail[q] == VK_PRESENT_MODE_MAILBOX_KHR) has_mailbox = 1;
+            if (avail[q] == VK_PRESENT_MODE_IMMEDIATE_KHR) has_imm = 1;
+        }
+        if (pm && !strcmp(pm, "mailbox") && has_mailbox) sci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+        else if (pm && !strcmp(pm, "immediate") && has_imm) sci.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        fprintf(stderr, "[vk] present modes: %u avail, mailbox=%d imm=%d, using %s\n",
+                npm, has_mailbox, has_imm,
+                sci.presentMode == VK_PRESENT_MODE_MAILBOX_KHR ? "mailbox" :
+                sci.presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR ? "immediate" : "fifo");
+    }
     sci.clipped = VK_TRUE;
     VkSwapchainKHR oldsc = v->sc;
     sci.oldSwapchain = oldsc;
@@ -347,7 +367,7 @@ static int mk_renderpass(struct vkrend *v)
     VkAttachmentDescription color = {0};
     color.format = v->scfmt;
     color.samples = VK_SAMPLE_COUNT_1_BIT;
-    color.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    color.loadOp = getenv("LINORAGX_CLEARRED") ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     color.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     color.finalLayout = v->headless ? VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
@@ -721,16 +741,24 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     img_barrier(cb, v->tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-    VkClearValue cv = {{{0,0,0,1}}};
+    VkClearValue cv = getenv("LINORAGX_CLEARRED")
+        ? (VkClearValue){{{1.0f, 0.0f, 0.0f, 1.0f}}}
+        : (VkClearValue){{{0.0f, 0.0f, 0.0f, 1.0f}}};
     VkRenderPassBeginInfo rbi = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
     rbi.renderPass = v->rp; rbi.framebuffer = fbo;
     rbi.renderArea = (VkRect2D){{0,0}, v->scext};
     rbi.clearValueCount = 1; rbi.pClearValues = &cv;
     vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe);
-    /* negative viewport height flips Y (VK_KHR_maintenance1): the quad shader
-       maps screen-top to uv.y=1, so without this the window renders upside-down */
-    VkViewport vp = {0, 0, (float)v->scext.width, -(float)v->scext.height, 0, 1};
+    /* negative viewport height flips Y (VK_KHR_maintenance1). The y origin MUST be
+       at height (spec form {0,h,w,-h}); {0,0,w,-h} clamps to zero height on RADV
+       WSI images and the quad silently vanishes. */
+    const char *vpv = getenv("LINORAGX_VP");
+    VkViewport vp = vpv && !strcmp(vpv,"old")
+        ? (VkViewport){0, 0, (float)v->scext.width, -(float)v->scext.height, 0, 1}
+        : vpv && !strcmp(vpv,"pos")
+        ? (VkViewport){0, 0, (float)v->scext.width, (float)v->scext.height, 0, 1}
+        : (VkViewport){0, (float)v->scext.height, (float)v->scext.width, -(float)v->scext.height, 0, 1};
     vkCmdSetViewport(cb, 0, 1, &vp);
     VkRect2D sc = {{0,0}, v->scext};
     vkCmdSetScissor(cb, 0, 1, &sc);
@@ -797,12 +825,23 @@ static void wait_fence_wl(struct vkrend *v, VkFence f)
 
 void vk_present(vkrend *v, const uint32_t *fb)
 {
-    if (v->headless || !v->configured || v->minimized) return;
+    if (v->headless || !v->configured || v->minimized) {
+        static int k=0; if (++k<=5) fprintf(stderr,"[vk] present skip headless=%d configured=%d minimized=%d\n",v->headless,v->configured,v->minimized);
+        return;
+    }
     if (!v->sc_valid || v->scext.width < 32u) {
         if (mk_swapchain(v, v->cfgw, v->cfgh) == 0) { v->nfb = v->nscimg; mk_fbs(v); v->sc_valid = 1; }
     }
     uint32_t i = v->fidx % MAXF; v->fidx++;
+    static double t_prev = 0;
+    static double acc[4] = {0,0,0,0}; static int cnt = 0;
+    struct timespec ts0; clock_gettime(CLOCK_MONOTONIC, &ts0);
+    double t_now = ts0.tv_sec + ts0.tv_nsec/1e9;
+    if (t_prev > 0) acc[0] += t_now - t_prev;
+    t_prev = t_now;
     wait_fence_wl(v, v->fences[i]);
+    clock_gettime(CLOCK_MONOTONIC, &ts0); t_now = ts0.tv_sec + ts0.tv_nsec/1e9;
+    acc[1] += t_now - t_prev; t_prev = t_now;
     uint32_t img = 0;
     VkResult ar;
     for (;;) {
@@ -818,6 +857,8 @@ void vk_present(vkrend *v, const uint32_t *fb)
     }
     if (ar < 0 && ar != VK_SUBOPTIMAL_KHR) return;
     if (img >= v->nfb) return;
+    clock_gettime(CLOCK_MONOTONIC, &ts0); t_now = ts0.tv_sec + ts0.tv_nsec/1e9;
+    acc[2] += t_now - t_prev; t_prev = t_now;   /* acquire time */
     vkResetFences(v->dev, 1, &v->fences[i]);
     if (record_frame(v, fb, v->cmdb[i], v->fb[img]) < 0) return;
     VkPipelineStageFlags waitst = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -831,6 +872,12 @@ void vk_present(vkrend *v, const uint32_t *fb)
     pi.waitSemaphoreCount = 1; pi.pWaitSemaphores = &v->renderdone[i];
     pi.swapchainCount = 1; pi.pSwapchains = &v->sc; pi.pImageIndices = &img;
     VkResult pr = vkQueuePresentKHR(v->queue, &pi);
+    clock_gettime(CLOCK_MONOTONIC, &ts0); t_now = ts0.tv_sec + ts0.tv_nsec/1e9;
+    acc[3] += t_now - t_prev;
+    fprintf(stderr, "[vkt] f=%d ar=%d pr=%d fence=%.1fms acquire=%.1fms submit=%.1fms\n",
+            cnt++, ar, pr, acc[1]*1000, acc[2]*1000, (t_now-t_prev)*1000);
+    acc[1]=acc[2]=0; t_prev = t_now;
+    static int pk=0; if (++pk<=6) fprintf(stderr,"[vk] present#%d acquire=%d img=%u present=%d scext=%ux%u\n",pk,ar,img,pr,v->scext.width,v->scext.height);
     if (pr == VK_ERROR_OUT_OF_DATE_KHR || pr == VK_SUBOPTIMAL_KHR) {
         mk_swapchain(v, v->cfgw, v->cfgh); v->nfb = v->nscimg; mk_fbs(v);
     }
