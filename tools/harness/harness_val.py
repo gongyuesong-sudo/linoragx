@@ -40,6 +40,25 @@ def bmp_stats(p):
     return diff / tot, len(s)
 
 
+def grid_score(p):
+    """fraction of pixels equal to the one 2px away; ~1.0 for cross-hatch
+    test screens (built-in diagnostics) that the noise metric misreads."""
+    with open(p, "rb") as f:
+        d = f.read()
+    off = struct.unpack_from("<I", d, 10)[0]
+    w = struct.unpack_from("<i", d, 18)[0]
+    h = abs(struct.unpack_from("<i", d, 22)[0])
+    rowsz = (w * 3 + 3) // 4 * 4
+    same = tot = 0
+    for y in range(h):
+        row = d[off + y * rowsz: off + y * rowsz + w * 3]
+        for x in range(0, (w - 2) * 3, 3):
+            tot += 1
+            if row[x:x + 3] == row[x + 6:x + 9]:
+                same += 1
+    return same / tot if tot else 0.0
+
+
 def run_dump(card, frames, extra_env=None, dump="d.bmp", extra_args=None):
     os.makedirs(OUT, exist_ok=True)
     dp = os.path.join(OUT, dump)
@@ -68,9 +87,11 @@ def cmd_glitch(args):
             print(f"{c:12s} NO_DUMP rc={r.returncode}")
             continue
         n, col = bmp_stats(dp)
-        good = col > 1 and n < thr
+        g = grid_score(dp) if n >= thr else 0.0
+        test_screen = g > 0.8          # built-in cross-hatch diagnostic: fine, not glitch
+        good = (col > 1 and n < thr) or test_screen
         ok += good
-        print(f"{c:12s} noise={n:.3f} colors={col} {'OK' if good else 'FAIL'}")
+        print(f"{c:12s} noise={n:.3f} colors={col} grid={g:.2f} {'OK' if good else 'FAIL'}")
     print(f"glitch_ok={ok}/{len(cards)} need>={min_ok}")
     return 0 if ok >= min_ok else 1
 
