@@ -61,7 +61,7 @@ struct neogeo {
     int      have_zoom;
 
     /* RAM */
-    uint16_t vram[0x8800];
+    uint16_t vram[0x10000];
     uint16_t cram[0x10000];
     uint16_t workram[0x8000];
     uint8_t  sndram[0x800];
@@ -226,6 +226,7 @@ DBGFLAG("SWDBG",   f_swdbg)
 DBGFLAG("DUMPFIX", f_dumpfix)
 DBGFLAG("FD98W", f_fd98w)
 DBGFLAG("LINORAGX_TRACE_VLOAD", f_vload)
+DBGFLAG("VWDIST", f_vwdist)
 DBGFLAG("LINORAGX_TRACE_VC", f_vc)
 DBGFLAG("SRAMW", f_sramw)
 DBGFLAG("ZNMIT", f_znmit)
@@ -795,15 +796,17 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                                         some docs) is actually a VLOAD mirror write. */
         case 0:
             { static int q=0, tot=0; tot++; if (q<8 && (tot%997)==0) fprintf(stderr, "VOFFS tot=%d last d=%04x pc=%08x\n", tot, d, m68k_get_reg(NULL,M68K_REG_PC)); q++; }
-            ng->vram_offset = (d & 0x8000) ? (d & 0x87FF) : (d & 0x7FFF);
+            ng->vram_offset = d & 0xFFFF;   /* MAME: full 16-bit word offset into 0x10000 words */
             ng->vram_readbuf = ng->vram[ng->vram_offset];   /* read happens right away */
             break;
         case 1:
             if (1) { static int k=0; if (ng->vram_offset>=0xC000 && ng->vram_offset<0xC800 && ++k<=20) fprintf(stderr, "VW off=%04x val=%04x\n", ng->vram_offset, d); }
+            if (f_vwdist()) { static unsigned long hist[64]; static int done=0;
+                hist[(ng->vram_offset>>10)&63]++;
+                if (done++ == 5000) { for (int q=0;q<64;q++) if (hist[q]) fprintf(stderr, "VWDIST %04x-%04x: %lu\n", q<<10, (q<<10)|0x3FF, hist[q]); done=-1; } }
             ng->vram[ng->vram_offset] = d;
             if (f_vload()) ng->vload_count++;
-            ng->vram_offset = (ng->vram_offset & 0x8000) |
-                              ((ng->vram_offset + ng->vram_modulo) & 0x7FFF);
+            ng->vram_offset = (ng->vram_offset + ng->vram_modulo) & 0xFFFF;
             ng->vram_readbuf = ng->vram[ng->vram_offset];   /* prefetch */
             break;
         case 2: ng->vram_modulo = d; break;
@@ -854,6 +857,15 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
     if (a < 0xC00000) {                     /* JEIDA memcard write */
         if (!ng->mc_lock1 && ng->mc_unlock2)
             ng->mc_data[(a >> 1) & 0x7FF] = d & 0xFF;
+        return;
+    }
+    if (a < 0xC40000) {                     /* VRAM direct window (MAME: map(0xC00000,0xC3FFFF)
+                                               writeonly16 -> vram bytes, word index = (a&0x1FFFF)>>1) */
+        uint32_t o = (a & 0x1FFFF) >> 1;
+        if (o < 0x10000) {
+            if (mem_mask & 0xFF00) ng->vram[o] = (ng->vram[o] & 0x00FF) | (d & 0xFF00);
+            if (mem_mask & 0x00FF) ng->vram[o] = (ng->vram[o] & 0xFF00) | (d & 0x00FF);
+        }
         return;
     }
     if (a < 0x420000) {
@@ -2681,14 +2693,14 @@ const char *ng_game_name(neogeo *ng) { return ng->gamename; }
 /* ---- save state (NRXSTATE07 magic) ---- */
 #pragma pack(push,1)
 struct hdr {
-    char magic[11];             /* NRXSTATE08\0 */
+    char magic[11];             /* NRXSTATE09\0 */
     uint64_t frame; uint8_t fc;
     uint32_t sr, ssp, usp, vbr, pc;
     uint32_t d[8], a[8];
     uint8_t zstate[64];
     uint8_t zbank[4]; uint8_t vecbank;
     uint16_t voff, vmod, vrb, dcnt, ictl;
-    uint32_t crambank;          /* NRXSTATE08: systemlatch ch7 palette bank */
+    uint32_t crambank;          /* NRXSTATE09: systemlatch ch7 palette bank */
 };
 #pragma pack(pop)
 
@@ -2697,7 +2709,7 @@ int ng_save_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
     struct hdr h; memset(&h, 0, sizeof h);
-    memcpy(h.magic, "NRXSTATE08", 11);
+    memcpy(h.magic, "NRXSTATE09", 11);
     h.crambank = ng->cram_bank;
     h.frame = ng->frame; h.fc = ng->fc;
     h.sr = m68k_get_reg(NULL, M68K_REG_SR);
@@ -2727,7 +2739,7 @@ int ng_load_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     struct hdr h;
-    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE08", 11)) { fclose(f); return -2; }
+    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE09", 11)) { fclose(f); return -2; }
     ng->frame = h.frame; ng->fc = h.fc;
     ng->vector_bank = h.vecbank;
     m68k_set_reg(M68K_REG_SR, h.sr);

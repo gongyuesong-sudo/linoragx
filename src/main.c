@@ -232,7 +232,8 @@ int main(int argc, char **argv)
                 for (int i=0;i<nevs;i++) for (int j=i+1;j<nevs;j++)
                     if (evs[j].f < evs[i].f) { struct injev t=evs[i]; evs[i]=evs[j]; evs[j]=t; }
             }
-            while (ei < nevs && evs[ei].f <= n) { ng_set_button(ng, 0, evs[ei].b, evs[ei].down); ei++; }
+            while (ei < nevs && evs[ei].f <= n) { ng_set_button(ng, 0, evs[ei].b, evs[ei].down); ei++;
+                if (getenv("INPDBG")) fprintf(stderr, "[inp] f=%d bit=%d down=%d\n", evs[ei-1].f, evs[ei-1].b, evs[ei-1].down); }
         }
         ng_run_frame(ng);
         ng_render(ng, fb);

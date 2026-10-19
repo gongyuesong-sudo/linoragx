@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 static int envf_vdbg(void){ static int v=-1; if(v<0) v=getenv("VDBG")?1:0; return v; }
+static int envf_notile(void){ static int v=-1; if(v<0) v=getenv("NOTILE")?1:0; return v; }
 static int envf_nofix(void){ static int v=-1; if(v<0) v=getenv("NOFIX")?1:0; return v; }
 static int envf_nosp(void){ static int v=-1; if(v<0) v=getenv("NOSP")?1:0; return v; }
 
@@ -94,6 +95,27 @@ void ng_render(neogeo *ng, uint32_t *fb)
     {
         uint32_t bg = cram24(cram[bank | 0xFFF]);
         for (int i = 0; i < NG_W*NG_H; i++) fb[i] = bg;
+    }
+
+    /* ---- tile (background) layer: vram 0x9000-0x9fff, 32x32 grid of 8x8
+       tiles sharing the s1 pattern region, scroll regs at vram[0x84]/[0x85];
+       MAME draws it first (tilemap->draw), pen0 transparent ---- */
+    if (fixed && !envf_notile()) {
+        static const uint8_t pbyte[8] = {0x10,0x10,0x18,0x18,0x00,0x00,0x08,0x08};
+        int scrollx = vram[0x84] & 0x1FF;
+        int scrolly = vram[0x85] & 0x1FF;
+        for (int y = 0; y < NG_H; y++) {
+            int cy = (y + scrolly) & 0xFF;
+            int row = (cy >> 3)*32, ry = cy & 7;
+            uint32_t *drow = &fb[y*NG_W];
+            for (int x = 0; x < NG_W; x++) {
+                int cx = (x + scrollx) & 0xFF;
+                uint16_t e = vram[0x9000 + row + (cx >> 3)];   /* word 0x9000 = byte 0x12000 */
+                uint8_t d = fixed[( (((e & 0xFFF) << 5) | ry) & fix_mask ) | pbyte[cx & 7]];
+                uint8_t p = (cx & 1) ? (d >> 4) : (d & 0x0F);
+                if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank]);
+            }
+        }
     }
 
     if (envf_vdbg()) {
