@@ -4,3 +4,8 @@ build/
 *.rom
 *.ROM
 *.zip
+harness-tasks.json
+harness-tasks.json.bak
+harness-tasks.json.tmp
+harness-progress.txt
+.harness-active
