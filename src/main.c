@@ -106,7 +106,8 @@ int main(int argc, char **argv)
 
     const char *bios = NULL, *game = NULL, *ini = NULL;
     const char *dump = NULL, *state = NULL, *save_state = NULL;
-    const char *backend_opt = NULL;
+    const char *backend_opt = NULL, *dump_audio = NULL;
+    int16_t *wavbuf = NULL; size_t wavn = 0, wavcap = 0;
     int frames = 0, headless = 0, no_audio = 0;
     int scale = -1, scanl = -1;
 
@@ -122,6 +123,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i],"--save-state") && i+1<argc) save_state = argv[++i];
         else if (!strcmp(argv[i],"--headless")) headless = 1;
         else if (!strcmp(argv[i],"--no-audio")) no_audio = 1;
+        else if (!strcmp(argv[i],"--dump-audio") && i+1<argc) dump_audio = argv[++i];
         else if (!strcmp(argv[i],"--scanlines")) scanl = 1;
         else if (!strcmp(argv[i],"--help")) {
             printf("linoragx — Neo Geo emulator (NeoRageX rewrite), Wayland/X11+Vulkan\n"
@@ -137,6 +139,7 @@ int main(int argc, char **argv)
                    "  --state F      load NRXSTATE07 save state\n"
                    "  --save-state F save state at exit\n"
                    "  --no-audio     mute\n"
+                   "  --dump-audio F write mixed PCM of all frames to wav F\n"
                    "keys: arrows/ZXCVBN=P1  space=start  5/6=coins\n");
             return 0;
         }
@@ -147,6 +150,7 @@ int main(int argc, char **argv)
     if (scale >= 0) cfg.scale = scale;
     if (scanl >= 0) cfg.scanlines = scanl;
     if (no_audio) cfg.audio = 0;
+    if (dump_audio) cfg.audio = 1;   /* audio dump forces generation even headless */
     if (!cfg.rompath[0]) snprintf(cfg.rompath, sizeof cfg.rompath, "%s", defbios);
 
     char err[512];
@@ -252,6 +256,15 @@ int main(int argc, char **argv)
         if (cfg.audio) {
             ng_audio(ng, sndbuf, 746);          /* 44100/59.185 */
             audio_submit(sndbuf, 746);
+            if (dump_audio) {
+                size_t need = wavn + 746*2;
+                if (need > wavcap) {
+                    wavcap = need < 1u<<20 ? 1u<<20 : need*2;
+                    wavbuf = realloc(wavbuf, wavcap*2);
+                }
+                memcpy(wavbuf+wavn, sndbuf, 746*2*2);
+                wavn = need;
+            }
         }
         n++;
         if (frames && n >= frames) {
@@ -274,6 +287,23 @@ int main(int argc, char **argv)
         }
     }
     (void)samp_acc;
+    if (dump_audio) {
+        FILE *f = fopen(dump_audio, "wb");
+        if (f) {
+            unsigned ds = (unsigned)(wavn*2), rs = 44100*4, cs = 36+ds;
+            unsigned v;
+            fwrite("RIFF",1,4,f); v=cs; fwrite(&v,4,1,f); fwrite("WAVE",1,4,f);
+            fwrite("fmt ",1,4,f); v=16; fwrite(&v,4,1,f);
+            v=1; fwrite(&v,2,1,f); v=2; fwrite(&v,2,1,f);        /* PCM, stereo */
+            v=44100; fwrite(&v,4,1,f); v=rs; fwrite(&v,4,1,f);
+            v=4; fwrite(&v,2,1,f); v=16; fwrite(&v,2,1,f);
+            fwrite("data",1,4,f); v=ds; fwrite(&v,4,1,f);
+            if (wavn) fwrite(wavbuf,2,wavn,f);
+            fclose(f);
+            fprintf(stderr, "[dump-audio] wrote %s (%u samples)\n", dump_audio, ds/2);
+        } else fprintf(stderr, "[dump-audio] cannot open %s\n", dump_audio);
+    }
+    free(wavbuf);
     if (envf_prof()) prof_dump();
     fprintf(stderr, "[linoragx] ran %d frames (%.1f fps)\n", n, n/(now_s()-t0+1e-9));
     if (save_state) {
