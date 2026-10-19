@@ -177,9 +177,9 @@ static void ds_run(void *a, uint32_t lo, uint32_t hi)
 static void decode_sprites(neogeo *ng)
 {
     if (!ng->spr || !ng->spr_size) { ng->sprite8_mask = 0; return; }
-    /* predecoded 8bpp plane is 2x the raw size; gfx offsets (code<<8|sy<<4)
-       address it directly, so the mask must cover the doubled span */
-    uint32_t mask = (region_mask_pow2(ng->spr_size) << 1) | 1;
+    /* MAME get_region_mask semantics: mask = pow2mask(2*raw_size)-1 already
+       covers the doubled predecoded plane (ds_run writes 2*raw <= mask+1) */
+    uint32_t mask = region_mask_pow2(ng->spr_size);
     ng->sprite8 = calloc(mask+1, 1);
     ng->sprite8_mask = mask;
     ds_ctx c = { ng->spr, ng->sprite8, ng->spr_size };
