@@ -2,7 +2,7 @@ CC      = gcc
 CXX     = g++
 CFLAGS  = -O3 -march=native -std=gnu11 -w -Isrc -Igenerated -Ivendor $(EXTRA_CFLAGS)
 CXXFLAGS= -O3 -march=native -std=c++17 -w -Ivendor $(EXTRA_CFLAGS)
-LDFLAGS = $(EXTRA_LDFLAGS)
+LDFLAGS = $(EXTRA_LDFLAGS) -L$(HOME)/opt/lib/emulink
 LDLIBS  = -lm -lz -lvulkan -lwayland-client -lX11 -lxcb -ldl -lstdc++ -lpthread
 SRC     = src/neogeo.c src/video.c src/rom.c src/config.c src/ym2610.c \
           src/audio.c src/wl_input.c src/render_vulkan.c src/ctl.c src/main.c \
