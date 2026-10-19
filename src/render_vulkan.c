@@ -608,13 +608,11 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
         VkShaderModuleCreateInfo vsi = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
         vsi.codeSize = quad_vert_spv_len; vsi.pCode = quad_vert_spv;
         VkShaderModule vs, fs;
-        vkCreateShaderModule(v->dev, &vsi, NULL, &vs);
         VkShaderModuleCreateInfo fsi = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
         fsi.codeSize = quad_frag_spv_len; fsi.pCode = quad_frag_spv;
-        vkCreateShaderModule(v->dev, &fsi, NULL, &fs);
         VkPipelineShaderStageCreateInfo stg[2] = {{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO},{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO}};
-        stg[0].stage = VK_SHADER_STAGE_VERTEX_BIT; stg[0].module = vs; stg[0].pName = "main";
-        stg[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT; stg[1].module = fs; stg[1].pName = "main";
+        stg[0].stage = VK_SHADER_STAGE_VERTEX_BIT; stg[0].pName = "main";
+        stg[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT; stg[1].pName = "main";
         VkPipelineVertexInputStateCreateInfo vin = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
         VkPipelineInputAssemblyStateCreateInfo ias = {VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
         ias.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
@@ -640,6 +638,7 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
         gpi.layout = v->pl; gpi.renderPass = v->rp;
         VkResult mr1 = vkCreateShaderModule(v->dev, &vsi, NULL, &vs);
         VkResult mr2 = vkCreateShaderModule(v->dev, &fsi, NULL, &fs);
+        stg[0].module = vs; stg[1].module = fs;
         VkResult pr_ = vkCreateGraphicsPipelines(v->dev, NULL, 1, &gpi, NULL, &v->pipe);
         if (mr1) fprintf(stderr, "[vk] vert module %d (len %zu)\n", mr1, vsi.codeSize);
         if (mr2) fprintf(stderr, "[vk] frag module %d (len %zu)\n", mr2, fsi.codeSize);
