@@ -484,6 +484,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
           return (hi<<8) | lo; }
     }
     if (a < 0x320002) {                     /* AUDIO_COIN */
+        if (getenv("COINDBG") && (ng->buttons[0] & 0x400))
+            { static int cd = 0; if (cd++ < 20) fprintf(stderr, "[coindbg] f=%d coin-active read a=%06x\n", ng->frame, a); }
         if (ng->dbg_vw == 3 && ng->frame > 7900) { fprintf(stderr, "COINRD f=%d a=%06x pc=%08x sl2=%02x\n", ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC), ng->soundlatch2); if (++ng->sl1_trace > 40) ng->dbg_vw=0; }
         uint16_t lo = 0x3F;                 /* coins/service inactive */
         if (ng->buttons[0] & 0x400) lo &= ~0x01;
@@ -1064,7 +1066,7 @@ static int load_bios_pref(neogeo *ng, const char *dir, const char *pref)
     }
     if (!f) return -1;
     if (n > 0x100000) n = 0x100000;
-    ng->bios = malloc(n); ng->bios_size = n;
+    ng->bios = calloc(1, n); ng->bios_size = n;
     if (fread(ng->bios,1,n,f) != (size_t)n) { fclose(f); return -2; }
     fclose(f);
     wordswap(ng->bios, n);                  /* MAME: ROM_LOAD16_WORD_SWAP_BIOS */
@@ -1072,7 +1074,7 @@ static int load_bios_pref(neogeo *ng, const char *dir, const char *pref)
     for (int i = 0; sf[i]; i++) {
         snprintf(p, sizeof p, "%s/%s", dir, sf[i]);
         if ((f = fopen(p, "rb"))) {
-            ng->sfix = malloc(0x20000);
+            ng->sfix = calloc(1, 0x20000);
             fseek(f,0,SEEK_END); long m = ftell(f); fseek(f,0,SEEK_SET);
             if (m > 0x20000) m = 0x20000;
             if (fread(ng->sfix,1,m,f) != (size_t)m) {}
@@ -1095,7 +1097,7 @@ static int load_bios_pref(neogeo *ng, const char *dir, const char *pref)
     }
     snprintf(p, sizeof p, "%s/sm1.sm1", dir);
     if ((f = fopen(p, "rb"))) {
-        ng->sm1 = malloc(0x20000);
+        ng->sm1 = calloc(1, 0x20000);
         fseek(f,0,SEEK_END); long m = ftell(f); fseek(f,0,SEEK_SET);
         if (m > 0x20000) m = 0x20000;
         if (fread(ng->sm1,1,m,f) != (size_t)m) {}
@@ -1111,7 +1113,7 @@ static void kof98_decrypt(neogeo *ng)
 {
     if (ng->rom_size < 0x600000) return;
     uint8_t *src = ng->rom;
-    uint8_t *dst = malloc(0x200000);
+    uint8_t *dst = calloc(1, 0x200000);
     if (!dst) return;
     static const uint32_t sec[8] = {0,0x100000,4,0x100004,0x10000a,0xa,0x10000e,0xe};
     static const uint32_t pos[4] = {0x000,0x004,0x00a,0x00e};
@@ -1167,7 +1169,7 @@ static uint32_t bswp(uint32_t v, int n, const int *p)
 }
 static uint16_t rdw(const uint8_t *b, uint32_t wi) { return (uint16_t)((b[2*wi]<<8)|b[2*wi+1]); }
 static void wrw(uint8_t *b, uint32_t wi, uint16_t v) { b[2*wi]=(uint8_t)(v>>8); b[2*wi+1]=(uint8_t)v; }
-static uint8_t *prot_buf(void) { static uint8_t *p; if (!p) p = malloc(0x900000); return p; }
+static uint8_t *prot_buf(void) { static uint8_t *p; if (!p) p = calloc(1, 0x900000); return p; }
 
 static void sma_dec_kof99(uint8_t *R)
 {
@@ -1899,7 +1901,7 @@ static void cmc_p2(void *a, uint32_t lo, uint32_t hi)
 static void cmc_gfx_decrypt(uint8_t *rom, uint32_t rom_size, int extra_xor, const cmc_keys *K)
 {
     uint32_t n = rom_size / 4;
-    uint8_t *buf = malloc(rom_size);
+    uint8_t *buf = calloc(1, rom_size);
     if (!buf) return;
     { cmc_p1_ctx c1 = { rom, buf, K }; parallel_for(cmc_p1, &c1, 0, n, 12); }
     { cmc_p2_ctx c2 = { rom, buf, K, n, extra_xor, rom_size }; parallel_for(cmc_p2, &c2, 0, n, 12); }
@@ -1943,7 +1945,7 @@ static void cmc50_m1_decrypt(uint8_t *crypt, uint32_t crypt_size, uint8_t *snd)
 {
     uint16_t key = 0;
     for (int i = 0; i < 0x10000; i++) key = (uint16_t)(key + crypt[i]);   /* byte sum (verified: word sum breaks kof2000 m1) */
-    uint8_t *buf = malloc(0x80000);
+    uint8_t *buf = calloc(1, 0x80000);
     if (!buf) return;
     /* audiocrypt region may be 128K/256K (rotd/pnyaa-style ENCRYPTED_128K):
        MAME reads the 512K scramble through the smaller region with wrap */
@@ -1968,7 +1970,7 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix)
         if (fsz > 0x80000) fsz = 0x80000;
         if (fsz >= sz) fsz = 0x20000;
         if (!ng->fixed) { ng->fixed = calloc(fsz, 1); ng->fixed_size = fsz; }
-        uint8_t *fxm = malloc(fsz);
+        uint8_t *fxm = calloc(1, fsz);
         if (!fxm) return;
         cmc_sfix_decrypt(ng->spr, sz, fxm, fsz);
         for (uint32_t i = 0; i < fsz && i < ng->fixed_size; i++) ng->fixed[i] |= fxm[i];
@@ -2085,7 +2087,7 @@ static void k2k2_shuffle(neogeo *ng, const int *sec, int nsec, uint32_t src_off)
 {
     uint32_t span = (uint32_t)nsec * 0x80000;
     if (!ng->rom || ng->rom_size < src_off + span) return;
-    uint8_t *buf = malloc(span);
+    uint8_t *buf = calloc(1, span);
     if (!buf) return;
     memcpy(buf, ng->rom + src_off, span);
     for (int i = 0; i < nsec; i++)
