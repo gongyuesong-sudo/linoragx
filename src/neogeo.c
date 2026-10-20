@@ -349,8 +349,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
       if (zio && (p & 0xFF) != 0x0C) fprintf(stderr, "ZIO %02x=%02x\n", p & 0xFF, v); }
     switch (p & 0xFF) {
     case 0x04: ng->ym_reg[0] = v; break;                    /* YM2610 A: register latch (YM2151 shares bus) */
-    case 0x05: ym_write(ng->ym, 0, ng->ym_reg[0], v);       /* YM2610 A: data write */
-               ym_write(ng->ym, 2, ng->ym_reg[0], v); break;/* YM2151 mirror (ignores reg>0x7F) */
+    case 0x05: ym_write(ng->ym, 0, ng->ym_reg[0], v); break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
     case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */

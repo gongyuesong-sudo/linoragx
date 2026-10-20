@@ -34,12 +34,7 @@ struct ym2610 {
     };
 
     LinIntf intf;
-    ymfm::ym2610 chip;                       /* 7 FM channels + ADPCM-A/B */
-
-    /* YM2151 SSG (compact model, bipolar square) */
-    uint8_t r21[0x100];
-    double  ssg_phase[3];
-    int     ssg_out[3];
+    ymfm::ym2610 chip;                       /* OPM FM (YM2151) + SSG + ADPCM-A/B */
 
     /* YM2610 timers (driver-init handshakes poll these) */
     int busy[2];
@@ -104,9 +99,6 @@ void ym_reset(ym2610 *y)
     y->chip.reset();
     y->pend.clear();
     y->frac = 0.0;
-    memset(y->r21, 0, sizeof y->r21);
-    memset(y->ssg_phase, 0, sizeof y->ssg_phase);
-    memset(y->ssg_out, 0, sizeof y->ssg_out);
     memset(&y->busy, 0, (char *)(y->irqen + 2) - (char *)&y->busy);
 }
 
@@ -123,10 +115,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     static int ymdbg = -1;
     if (ymdbg < 0) ymdbg = getenv("YMBDBG") ? 1 : 0;
     if (ymdbg) fprintf(stderr, "YM%c %02x=%02x\n", 'A'+chipno, reg, val);
-    if (chipno == 2) {                       /* YM2151 SSG: real chip ignores reg > 0x7F */
-        if (reg <= 0x7F) y->r21[reg] = val;
-        return;
-    }
+    if (chipno == 2) return;                 /* legacy YM2151 mirror: bank A IS the OPM FM, ymfm handles it */
     int c = chipno ? 1 : 0;
     y->chip.write(c ? 2 : 0, reg);           /* bank A: offset 0/1, bank B: 2/3 */
     y->chip.write(c ? 3 : 1, val);
@@ -199,30 +188,11 @@ uint8_t ym_read(ym2610 *y, int chipno)
 /* ---- sound generation ---- */
 
 /* ym2610 at OPN_FIDELITY_MAX generates at clock/16; output is linearly
- * resampled to 44.1k. YM2151 SSG is generated directly at the output rate. */
+ * resampled to 44.1k. All sound sources (OPM FM / SSG / ADPCM-A/B) live
+ * inside the ymfm chip — no external generators. */
 static const double YM_CLOCK = 3579545.0;
 static const double NAT_RATE = YM_CLOCK / 16.0;
 static const double OUT_RATE = 44100.0;
-
-static void ssg_stream(ym2610 *y, int32_t *buf, int n)
-{
-    for (int i = 0; i < n; i++) {
-        int mix = 0;
-        for (int ch = 0; ch < 3; ch++) {
-            int fn  = ((y->r21[0x20 + ch*8] & 0x0F) << 6) | (y->r21[0x18 + ch*8] & 0x3F);
-            int oct = (y->r21[0x20 + ch*8] >> 4) & 7;
-            int vol = y->r21[0x0E + ch*8] & 0x1F;
-            if (!fn || !vol) continue;
-            /* YM2151 datasheet: f = clock * fn * 2^oct / 2^21 (clock 3.579545MHz) */
-            double f = 3579545.0 * fn * (1 << oct) / 2097152.0;
-            y->ssg_phase[ch] += f / OUT_RATE;
-            if (y->ssg_phase[ch] >= 1.0) { y->ssg_phase[ch] -= 1.0; y->ssg_out[ch] ^= 1; }
-            int amp = vol * 300;                       /* level 0..31, louder = bigger */
-            mix += y->ssg_out[ch] ? amp : -amp;        /* bipolar square: unipolar = DC = harsh buzz */
-        }
-        buf[i] += mix;
-    }
-}
 
 void ym_stream(ym2610 *y, int16_t *stereo, int frames)
 {
@@ -243,24 +213,22 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
         y->pend.push_back(y->obuf[i]);
     }
 
-    std::vector<int32_t> mix(frames, 0);
-    ssg_stream(y, mix.data(), frames);
     { static int ysd = -1; static long ysc = 0;
       if (ysd < 0) ysd = getenv("YMSTREAM") ? 1 : 0;
       if (ysd && (ysc++ % 300) == 0)
-          fprintf(stderr, "[yms] need=%d gen0=%d,%d ssg0=%d pend=%d\n",
+          fprintf(stderr, "[yms] need=%d gen0=%d,%d pend=%d\n",
                   need, need ? (int)y->obuf[0].data[0] : 0, need ? (int)y->obuf[0].data[1] : 0,
-                  mix[0], (int)y->pend.size()); }
+                  (int)y->pend.size()); }
 
     double pos = y->frac;
     for (int i = 0; i < frames; i++, pos += STEP) {
         int j = (int)pos;
         if (j + 1 >= (int)y->pend.size()) j = (int)y->pend.size() - 2;
         double f = pos - j;
-        int32_t l0 = y->pend[j].data[0] + mix[i];
-        int32_t r0 = y->pend[j].data[1] + mix[i];
-        int32_t l1 = y->pend[j+1].data[0] + mix[i];
-        int32_t r1 = y->pend[j+1].data[1] + mix[i];
+        int32_t l0 = y->pend[j].data[0];
+        int32_t r0 = y->pend[j].data[1];
+        int32_t l1 = y->pend[j+1].data[0];
+        int32_t r1 = y->pend[j+1].data[1];
         int32_t L = (int32_t)(l0 * (1.0 - f) + l1 * f);
         int32_t R = (int32_t)(r0 * (1.0 - f) + r1 * f);
         if (L > 32767) L = 32767; if (L < -32768) L = -32768;
