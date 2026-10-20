@@ -706,6 +706,9 @@ unsigned cpu_z80::mz80step()
 	if (m_nmi_pending)
 	{
 		m_nmi_pending = false;
+		{ static int np = -2;
+		  if (np == -2) np = getenv("NMIDISP") ? 1 : 0;
+		  if (np) fprintf(stderr, "NMIDISP pc=%04x -> %04x\n", z80pc, (unsigned)z80nmiAddr); }
 		z80ppc = -1;
 		m_iff1 = 0;
 		IncR();

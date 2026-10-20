@@ -723,6 +723,19 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             /* MAME generic_latch_8: data always overwritten, but data_pending
                (and hence the NMI line) only rises when idle. */
             if (!ng->z80_nmi_pend) ng->z80_nmi_pend = 1;
+            /* Assert the NMI the instant the command lands (level semantics).
+               The frame/chunk-end poll alone loses commands whenever the Z80
+               sits in its di heartbeat: the heartbeat's in(00) clears
+               data_pending before the poll ever fires, so the command sits
+               in the latch with no NMI ever taken (samsho2 cmd 2d: game BGM
+               start command silently swallowed). mz80int_dispatch keeps the
+               NMI line pending until the core actually takes it, so an
+               immediate assert here is race-free even mid-heartbeat. */
+            if (ng->z80_nmi_en && !ng->z80_nmi_asserted) {
+                z80w_nmi(ng->z);
+                ng->nmi_cnt++;
+                ng->z80_nmi_asserted = 1;
+            }
             if (ng->dbg_z80==3) fprintf(stderr, "SL1W %02x a=%06x d=%04x m=%04x pc=%08x zpc=%04x pend=%d en=%d asrt=%d\n", v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC), z80w_pc(ng->z), ng->z80_nmi_pend, ng->z80_nmi_en, ng->z80_nmi_asserted);
             ng->sl1_cnt++;
         }
