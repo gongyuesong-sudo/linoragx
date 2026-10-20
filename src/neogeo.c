@@ -63,6 +63,7 @@ struct neogeo {
     uint8_t *spr;   uint32_t spr_size;    /* c1-c4 byte-interleaved sprite planes */
     uint8_t *sprite8; uint32_t sprite8_mask;  /* predecoded 8bpp sprite gfx */
     uint8_t *sm1;                         /* sound bios (sm1.sm1, 128K) */
+    int ym_rom_set;                       /* audio ROM handed to ymfm once */
     uint8_t *bios;  uint32_t bios_size;   /* 68k bios (NEO-GEO.ROM, 128K) */
     uint8_t *sfix;                        /* fixed bios (NG-SFIX.ROM / sfix.sfix, 128K) */
     uint8_t  zoomy[0x20000];              /* vertical zoom table (real or synthesized) */
@@ -2865,7 +2866,10 @@ unsigned long ng_dbg_hsk(void *v, int i) {
     neogeo *n=(neogeo*)v; return i==0? n->nmi_cnt : i==1? n->p0_cnt : i==2? n->sl1_cnt : n->soundlatch2; }
 int ng_dbg_irqen(void *v) { return ((neogeo*)v)->irq_enable; }
 int ng_dbg_dcnt(void *v)  { return ((neogeo*)v)->display_counter; }
-void ng_audio(neogeo *ng, int16_t *stereo, int frames) { ym_stream(ng->ym, stereo, frames); }
+void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
+    if (ng->ym && ng->snd && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->snd, ng->snd_size); ng->ym_rom_set = 1; }
+    ym_stream(ng->ym, stereo, frames);
+}
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }
 const char *ng_game_name(neogeo *ng) { return ng->gamename; }
 
