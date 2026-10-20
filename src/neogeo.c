@@ -353,7 +353,9 @@ static void z_out(uint32_t p, uint8_t v, void *c)
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
     case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
-               if (ng->dbg_z80==3) fprintf(stderr, "S2W %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame); break;
+              if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
+                  fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
+                      z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
     case 0x08: ng->z80_nmi_en = 1; break;
     case 0x18: ng->z80_nmi_en = 0; break;
     case 0x80: case 0x81: case 0x82: case 0x83:   /* ADPCM-A bank/vol: stored, no playback yet */
@@ -2821,12 +2823,15 @@ void ng_run_frame(neogeo *ng)
                       z80w_peek(ng->z,spn+4), z80w_peek(ng->z,spn+5), z80w_peek(ng->z,spn+6), z80w_peek(ng->z,spn+7));
               }
           }
-          if (f_ztrace() && ng->frame >= 59 && ng->frame <= 62) {
+          if (f_ztrace() && ng->frame >= 59 && ng->frame <= 70) {
               int bit = 1 << (ng->frame - 59);
               if (!(zram_mask & bit)) { zram_mask |= bit;
-                  fprintf(stderr, "ZRAM f=%d ffd=%02x ffe=%02x fff=%02x pc=%04x sp=%04x\n",
+                  fprintf(stderr, "ZRAM f=%d ffd=%02x ffe=%02x fff=%02x fe38=%02x fe18=%02x fc33=%02x pc=%04x sp=%04x ca=%d zr=%02x sm=%02x snd=%p\n",
                       ng->frame, z80w_peek(ng->z,0xfffd), z80w_peek(ng->z,0xfffe),
-                      z80w_peek(ng->z,0xffff), z80w_pc(ng->z), z80w_sp(ng->z)); } } }
+                      z80w_peek(ng->z,0xffff), z80w_peek(ng->z,0xfe38),
+                      z80w_peek(ng->z,0xfe18), z80w_peek(ng->z,0xfc33),
+                      z80w_pc(ng->z), z80w_sp(ng->z),
+                      ng->cart_audio, z_read(0x2106, ng), ng->sm1 ? ng->sm1[0x2106] : 0xEE, (void*)ng->snd); } } }
         { int p = ym_irq_pending(ng->ym);          /* YM2610 timer IRQ -> Z80 INT (IM1 -> 0x38) */
           if (p && !ng->ym_irq_prev) z80w_irq(ng->z, 0xff);
           ng->ym_irq_prev = p; }
