@@ -917,9 +917,15 @@ unsigned cpu_z80::exec_opcode(uint8_t bOpcode)
 		break;
 
 	case 0x20: // jr_nz
+	{	static int pr = -2;
+		if (pr == -2) pr = getenv("PCREPRO") ? 1 : 0;
+		if (pr && z80pc >= 0x1130 && z80pc <= 0x1160)
+			fprintf(stderr, "JR at=%04x Z=%d off=%02x\n", z80pc - 1, (int)((m_regF >> 6) & 1), mz80GetMemory(z80pc));
 		cCycles += 7;
 		cCycles += Jr1(m_regF & Z_FLAG);
+		if (pr && z80pc >= 0x1120 && z80pc <= 0x1160) fprintf(stderr, "JR -> %04x\n", z80pc);
 		break;
+	}
 
 	case 0x21: // ld_hl_word
 		cCycles += 10;
