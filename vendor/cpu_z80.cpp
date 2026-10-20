@@ -727,6 +727,9 @@ unsigned cpu_z80::mz80step()
 	{
 		z80ppc = z80pc;
 		const uint8_t bOpcode = ImmedByte();
+		{	static int op = -2;
+		 if (op == -2) op = getenv("OPFETCH") ? 1 : 0;
+		 if (op && z80pc <= 0x0013) fprintf(stderr, "OPFETCH at=%04x op=%02x\n", z80pc - 1, bOpcode); }
 		//LOG_INFO("OPCode here %x %x pc:%x", m_rgbMemory[z80pc + 1], m_rgbMemory[z80pc + 2], z80pc);
 		cyc += exec_opcode(bOpcode);
 	}
