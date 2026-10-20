@@ -27,7 +27,7 @@ int audio_init(int rate)
     p_prepare = dlsym(hnd, "snd_pcm_prepare");
     p_drop = dlsym(hnd, "snd_pcm_drop");
     if (!p_open || !p_set_hw_params_all || !p_writei) { dlclose(hnd); hnd=0; return -1; }
-    int err = p_open(&pcm, "default", 0 /*SND_PCM_STREAM_PLAYBACK*/, 0 /*blocking*/);
+    int err = p_open(&pcm, "default", 0 /*SND_PCM_STREAM_PLAYBACK*/, 1 /*NONBLOCK: a full buffer must never stall the video frame loop*/);
     if (err < 0) { fprintf(stderr, "[audio] no device (%s), silent\n", strerror(-err)); hnd=0; return -1; }
     /* snd_pcm_set_params(pcm, format, access, channels, rate, soft_resample, latency) */
     err = p_set_hw_params_all(pcm, 2 /*S16_LE*/, 3 /*RW_INTERLEAVED*/, 2, rate, 1, 500000);
@@ -59,5 +59,6 @@ void audio_submit(const int16_t *stereo, int frames)
         conv[i*2+1] = stereo[s*2+1];
     }
     int w = p_writei(pcm, conv, outn);
+    if (w == -11 /*-EAGAIN: buffer full — drop this chunk, keep video pacing*/) return;
     if (w < 0) p_prepare(pcm);
 }

@@ -942,8 +942,9 @@ void vk_present(vkrend *v, const uint32_t *fb)
     VkResult pr = vkQueuePresentKHR(v->queue, &pi);
     clock_gettime(CLOCK_MONOTONIC, &ts0); t_now = ts0.tv_sec + ts0.tv_nsec/1e9;
     acc[3] += t_now - t_prev;
-    fprintf(stderr, "[vkt] f=%d ar=%d pr=%d fence=%.1fms acquire=%.1fms submit=%.1fms\n",
-            cnt++, ar, pr, acc[1]*1000, acc[2]*1000, (t_now-t_prev)*1000);
+    fprintf(stderr, "[vkt] f=%d ar=%d pr=%d dt=%.1fms fence=%.1fms acquire=%.1fms submit=%.1fms\n",
+            cnt++, ar, pr, acc[0]*1000, acc[1]*1000, acc[2]*1000, (t_now-t_prev)*1000);
+    acc[0]=0;
     acc[1]=acc[2]=0; t_prev = t_now;
     static int pk=0; if (++pk<=6) fprintf(stderr,"[vk] present#%d acquire=%d img=%u present=%d scext=%ux%u\n",pk,ar,img,pr,v->scext.width,v->scext.height);
     if (pr == VK_ERROR_OUT_OF_DATE_KHR || pr == VK_SUBOPTIMAL_KHR) {
