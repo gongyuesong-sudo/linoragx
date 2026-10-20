@@ -38,6 +38,8 @@ struct ym2610 {
 
     /* YM2610 timers (driver-init handshakes poll these) */
     int busy[2];
+    unsigned long clk;             /* YM tick clock (for busy auto-clear) */
+    unsigned long busy_at[2];      /* tick at which D7 busy self-clears (~25us) */
     int tcnt[2], tload[2], ten[2], tflag[2], tfrac;
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
 
@@ -120,6 +122,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     y->chip.write(c ? 2 : 0, reg);           /* bank A: offset 0/1, bank B: 2/3 */
     y->chip.write(c ? 3 : 1, val);
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
+    y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
     if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0xFF00) | val; y->tloadb[c] = (y->tloadb[c] & 0x300) | val; }
     if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x00FF) | ((val & 0x03) << 8); y->tloadb[c] = (y->tloadb[c] & 0x0FF) | ((val & 0x03) << 8); }
@@ -138,6 +141,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 void ym_advance(ym2610 *y, int zcycles)
 {
     /* timer A: 1 step / 192 clocks; timer B: 1 step / 80 clocks */
+    y->clk += (unsigned long)zcycles;        /* busy D7 auto-clear clock */
     y->tfrac += zcycles;
     while (y->tfrac >= 192) {
         y->tfrac -= 192;
@@ -180,6 +184,7 @@ uint8_t ym_read(ym2610 *y, int chipno)
 {
     int c = chipno ? 1 : 0;
     uint8_t st = (uint8_t)(y->tflag[c] & 3);
+    if (y->busy[c] && y->clk >= y->busy_at[c]) y->busy[c] = 0;  /* D7 self-clears with time */
     if (y->busy[c]) { st |= 0x80; y->busy[c] = 0; }
     y->tflag[c] = 0;
     return st;
