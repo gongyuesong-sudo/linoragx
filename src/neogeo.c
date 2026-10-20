@@ -264,6 +264,10 @@ static uint8_t z_read(uint32_t a, void *c)
 {
     neogeo *ng = (neogeo*)c;
     a &= 0xFFFF;
+    if (getenv("BLKRD") && a >= 0xfec0 && a < 0xff00) {
+        static long brd = 0;
+        if ((brd++ % 200) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x f=%llu\n", a, z80w_pc(ng->z), (unsigned long long)ng->frame);
+    }
     if (f_ztrace() && a >= 0xFD25 && a <= 0xFD68 && ng->frame > 40 && ng->frame < 60)
         fprintf(stderr, "ZR f=%d a=%04x pc=%04x\n", ng->frame, a, z80w_pc(ng->z));
     /* MAME audio_map parity: 0x0000-0x7FFF = bank_audio_main (entry1=cart
@@ -337,7 +341,7 @@ static uint16_t z_in(uint32_t p, void *c)
            so its track blocks never initialized and BGM stayed silent. */
         extern uint8_t z80w_a(void*);
         ng->zbank[port - 0x08] = z80w_a(ng->z);
-        if (f_ztrace()) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z));
+        { static long zbn = 0; if ((zbn++ % 50) == 0) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
         return 0;
     }
     switch (port) {
@@ -2347,6 +2351,15 @@ void linoragx_z80_step(unsigned int pc)
         }
         /* HACKTEST: force-enable interrupts while wedged in the 24b0 wait loop */
         if (pc == 0x24b0 && g_ng && getenv("FORCEEI")) z80w_force_ei(g_ng->z);
+        if (pc >= 0x1140 && pc <= 0x1148 && g_ng && getenv("M1CHK")) {
+            extern uint8_t z80w_peek(void*, uint32_t);
+            fprintf(stderr, "M1CHK pc=%04x read=%02x snd=%02x sm1=%02x cv=%d m1v=%d sndsz=%u\n",
+                    pc, z80w_peek(g_ng->z, pc),
+                    g_ng->snd ? g_ng->snd[pc] : 0xFF,
+                    g_ng->sm1 ? g_ng->sm1[pc] : 0xFF,
+                    g_ng->snd ? (g_ng->cart_audio || g_ng->m1_view) : 0,
+                    g_ng->m1_view, g_ng->snd_size);
+        }
         fprintf(stderr, "Z %d %04x\n", f, pc);
     }
 }
