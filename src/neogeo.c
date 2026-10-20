@@ -84,8 +84,10 @@ struct neogeo {
     uint16_t kof98_default[2];
     uint16_t sma_rng;                  /* SMA LFSR (init 0x2345) */
     int znmi_t;              /* post-NMI trace countdown */
-    int m1_view;               /* 1 = cart m1 visible in Z80 space (during ch5 pulse or after boot) */
+    int m1_view;               /* 1 = cart m1 visible in Z80 space (during ch5 pulses or after boot) */
     int m1_booted;             /* 1 = game-phase handoff reset done */
+    int ch5_bios_pend;         /* ch5 went 0->1 while 68K still in BIOS: candidate handoff */
+    unsigned long ch5_on_frame;/* frame of that 0->1 (sustained >=3 frames = real handoff, pulse = transient) */
     uint16_t k3bl_overlay;         /* kof2k3bl bootleg overlay register */
     uint8_t k3bl_px;               /* 1=pl_px_decrypt applied, 2=upl variant */
     uint16_t pvc_ram[0x1000];          /* PVC protection RAM @ $2FE000-$2FFFFF */
@@ -227,6 +229,7 @@ DBGFLAG("SCRW",    f_scrw)
 DBGFLAG("LATCH_TR",f_latch_tr)
 DBGFLAG("WDTR",    f_wdtr)
 DBGFLAG("NOCARTAUDIO", f_nocartaudio)
+DBGFLAG("M1BOOT1", f_m1boot1)
 DBGFLAG("ZTRAIL",  f_ztrail)
 DBGFLAG("ZPCHIST", f_zpchist)
 DBGFLAG("ZBC",     f_zbc)
@@ -334,8 +337,14 @@ static uint16_t z_in(uint32_t p, void *c)
                  clear_w drops data_pending (NMI line edge), data itself is kept */
                  if (ng->dbg_z80==3) fprintf(stderr, "P0R %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame);
                  ng->z80_nmi_pend = 0; ng->z80_nmi_asserted = 0; ng->p0_cnt++; return v; }
-    case 0x04: return ym_read(ng->ym, 0);   /* YM2610 A status (timer flags) */
-    case 0x06: return ym_read(ng->ym, 1);   /* YM2610 B status */
+    case 0x04: { uint8_t v = ym_read(ng->ym, 0);
+                 { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
+                   if (st_rd) { static long c4=0; if ((c4++ % 200)==0) fprintf(stderr,"STATRD A=%02x f=%d\n", v, ng->frame); } }
+                 return v; }   /* YM2610 A status (timer flags) */
+    case 0x06: { uint8_t v = ym_read(ng->ym, 1);
+                 { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
+                   if (st_rd) { static long c6=0; if ((c6++ % 200)==0) fprintf(stderr,"STATRD B=%02x f=%d\n", v, ng->frame); } }
+                 return v; }   /* YM2610 B status */
     case 0x05: case 0x07: return 0x00;      /* data read: not modelled */
     case 0xA0: case 0xA1: case 0xA2: case 0xA3:
         return 0x00;                       /* ADPCM-B: always ready (bit0=0) */
@@ -762,7 +771,9 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 v=%d pc=%08x f=%d\n", v, m68k_get_reg(NULL,M68K_REG_PC), ng->frame);
             if (want != ng->cart_audio) {
                 ng->cart_audio = want;
-                if (!want && !ng->m1_booted && !ng->m1_view && ng->snd && ng->sm1) {
+                if (!want) ng->ch5_bios_pend = 0;
+                if (!want && !ng->m1_booted && !ng->m1_view && ng->snd && ng->sm1
+                    && f_m1boot1()) {
                     /* BIOS self-test pulse just ended (0->1->0 within BIOS): boot cart m1
                        NOW so its table init completes BEFORE the test command arrives;
                        the pulse itself was answered by sm1 (no reset at 0->1 in BIOS). */
@@ -795,6 +806,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                     unsigned long pc = (unsigned long)m68k_get_reg(NULL, M68K_REG_PC);
                     int in_bios = (pc >= 0xC00000UL && pc < 0xD00000UL) || pc >= 0xFF8000UL;
                     if (!in_bios) { z80w_reset(ng->z); ng->z80_nmi_asserted = 0; ng->m1_booted = 1; ng->m1_view = 1; }
+                    else { ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
                 }
             }
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 now=%d f=%d\n", ng->cart_audio, ng->frame);
@@ -2293,8 +2305,14 @@ void linoragx_z80_step(unsigned int pc)
 {
     if (g_z80flow_lo < 0) return;
     int f = g_ng ? g_ng->frame : -1;
-    if (f >= g_z80flow_lo && f <= g_z80flow_hi)
+    if (f >= g_z80flow_lo && f <= g_z80flow_hi) {
+        static long zc = 0;
+        if (pc == 0x24cb && (zc++ % 400) == 0 && g_ng) {
+            extern uint8_t z80w_peek(void*, uint32_t);
+            fprintf(stderr, "Z24CB fe3c=%02x fe36=%02x\n", z80w_peek(g_ng->z, 0xfe3c), z80w_peek(g_ng->z, 0xfe36));
+        }
         fprintf(stderr, "Z %d %04x\n", f, pc);
+    }
 }
 
 neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t errsz)
@@ -2860,6 +2878,35 @@ void ng_run_frame(neogeo *ng)
         while (ng->draw_next < NG_H) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
     }
     ng->scanline = 0;
+    if (ng->scanline == 0 && getenv("ZRAMDUMP")) {
+        static int zrd = -2;
+        if (zrd == -2) { const char *e = getenv("ZRAMDUMP"); zrd = e ? atoi(e) : 0; }
+        if (zrd && ng->frame == zrd) {
+            extern uint8_t z80w_peek(void*, uint32_t);
+            fprintf(stderr, "ZRD f=%d zpc=%04x\n", ng->frame, z80w_pc(ng->z));
+            fprintf(stderr, "ZRD fe10:");
+            for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfe10 + q));
+            fprintf(stderr, "\nZRD feb0:");
+            for (int q = 0; q < 0x20; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfeb0 + q));
+            fprintf(stderr, "\nZRD fc30:");
+            for (int q = 0; q < 0x10; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfc30 + q));
+            fprintf(stderr, "\n");
+        }
+    }
+    /* BIOS-phase ch5 handoff: real HC259 q5 drives the Z80 RESET line — a
+       sustained ch5=1 left by the BIOS at the end of its audio init is the
+       handoff to cart m1 (the self-test pulse returns to 0 within the same
+       frame). Without this the Z80 stays on sm1, which does not understand
+       the game's own sound protocol (samsho2 family cmd 2d handshake), and
+       game BGM never starts. */
+    if (ng->ch5_bios_pend && ng->cart_audio && !ng->m1_booted
+        && ng->frame - ng->ch5_on_frame >= 3) {
+        ng->ch5_bios_pend = 0;
+        z80w_reset(ng->z);
+        ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
+        ng->m1_booted = 1; ng->m1_view = 1;
+        if (f_latch_tr()) fprintf(stderr, "CH5HANDOFF f=%llu\n", (unsigned long long)ng->frame);
+    }
     ng->frame++;
 }
 
