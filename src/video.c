@@ -55,7 +55,11 @@ static void parse_sprites(uint16_t *vram, int scanline)
             y = 0x200 - (yc >> 7);
             rows = yc & 0x3F;
         }
-        if (!(rows == 0 || rows >= 0x20 || ((scanline - y) & 0x1FF) < rows * 0x10)) continue;
+        /* MAME parse_sprites skips rows==0 BEFORE sprite_on_scanline: the
+           per-line list never contains 0-row sprites (the rows==0 arm of
+           sprite_on_scanline only matters for the regular draw path). */
+        if (rows == 0) continue;
+        if (!(rows >= 0x20 || ((scanline - y) & 0x1FF) < rows * 0x10)) continue;
         *dst++ = n;
         if (++cnt == MAX_SPRITES_PER_LINE) break;
     }
@@ -101,15 +105,15 @@ void ng_render(neogeo *ng, uint32_t *fb)
        MAME draws it first (tilemap->draw), pen0 transparent ---- */
     if (fixed && !envf_notile()) {
         /* MAME neosprite_base_device::draw_fixed_layer: table at WORD 0x7000,
-           row stride 0x20, 40 cols x 32 rows, NO scroll (the old 0x4800/scroll
-           reading was sprite-table garbage: joyjoy noise 0.353). */
+           COLUMN-major: entry(row,col) = vram[0x7000 + col*0x20 + row]
+           (video_data starts at 0x7000|row and advances +0x20 per column). */
         static const uint8_t pbyte[8] = {0x10,0x10,0x18,0x18,0x00,0x00,0x08,0x08};
         for (int y = 0; y < NG_H; y++) {
             int row = y >> 3;
-            const uint16_t *vd = &vram[0x7000 + row*0x20];
+            const uint16_t *vd = &vram[0x7000 + row];
             uint32_t *drow = &fb[y*NG_W];
             for (int x = 0; x < NG_W; x++) {
-                uint16_t e = vd[x >> 3];
+                uint16_t e = vd[(x >> 3)*0x20];
                 uint32_t code = e & 0xFFF;
                 if (fix_banked) {   /* MAME FIX_BANKTYPE_GAROU / _KOF2000 */
                     if (fbtype == 1) code += 0x1000 * (garouoffsets[(row - 2) & 31] ^ 3);
@@ -160,7 +164,7 @@ void ng_render(neogeo *ng, uint32_t *fb)
                 rows = yc & 0x3F;
             }
             if (x >= 0x140 && x <= 0x1F0) continue;
-            if (!(rows == 0 || rows >= 0x20 || ((line - y) & 0x1FF) < rows * 16)) continue;
+            if (!(rows >= 0x20 || ((line - y) & 0x1FF) < rows * 16)) continue;   /* list never holds rows==0 (parse_sprites) */
 
             int sprite_line = (line - y) & 0x1FF;
             int zoom_line = sprite_line & 0xFF;
@@ -185,7 +189,7 @@ void ng_render(neogeo *ng, uint32_t *fb)
             else if (attr & 0x04) code = (code & ~3u) | (ac & 3);
             if (attr & 0x02) sprite_y ^= 0x0F;      /* vflip */
 
-            const uint16_t *pens = &cram[((attr >> 8) << 4) | bank];
+            const uint16_t *pens = &cram[(attr >> 8) << 4];   /* MAME: no fix-layer bank term for sprites */
             uint32_t gfx = ((code << 8) | (sprite_y << 4)) & spr_mask;
             int x_inc = 1;
             if (attr & 0x01) { gfx += 0x0F; x_inc = -1; }   /* hflip */
@@ -195,12 +199,11 @@ void ng_render(neogeo *ng, uint32_t *fb)
             if (line == sprdbg_line && si < 3) {
                 const uint8_t *gd = spr8 + gfx;
                 const uint8_t *raw = ng_spr_raw(ng);
-                fprintf(stderr, "SPRDBG l=%d si=%d n=%d tile=%d sy=%d code=%x attr=%x gfx=%x "
-                    "bytes=%02x %02x %02x %02x %02x %02x %02x %02x raw=%02x %02x %02x %02x %02x %02x %02x %02x pens=%04x %04x %04x\n",
-                    line, si, n, tile, sprite_y, (unsigned)code, attr, (unsigned)gfx,
+                extern uint64_t ng_frame_no(neogeo *ng);
+                fprintf(stderr, "SPRDBG f=%llu l=%d si=%d x=%x n=%d tile=%d sy=%d code=%x attr=%x gfx=%x "
+                    "bytes=%02x %02x %02x %02x %02x %02x %02x %02x pens=%04x %04x %04x\n",
+                    (unsigned long long)ng_frame_no(ng), line, si, x, n, tile, sprite_y, (unsigned)code, attr, (unsigned)gfx,
                     gd[0],gd[1],gd[2],gd[3],gd[4],gd[5],gd[6],gd[7],
-                    raw[(gfx>>1)&0x1FFFFFF],raw[(gfx>>1)+1&0x1FFFFFF],raw[(gfx>>1)+2&0x1FFFFFF],raw[(gfx>>1)+3&0x1FFFFFF],
-                    raw[(gfx>>1)+4&0x1FFFFFF],raw[(gfx>>1)+5&0x1FFFFFF],raw[(gfx>>1)+6&0x1FFFFFF],raw[(gfx>>1)+7&0x1FFFFFF],
                     pens[1], pens[2], pens[3]);
             }
 
@@ -243,16 +246,17 @@ void ng_render(neogeo *ng, uint32_t *fb)
     }
 
     /* ---- fixed layer drawn ONCE (MAME draw_fixed_layer: table WORD 0x7000,
-       row stride 0x20, 40 cols x 32 rows, no scroll; non-pen0 pixels
-       overwrite sprites; drawn LAST per MAME screen_update) ---- */
+       COLUMN-major entry(row,col)=vram[0x7000+col*0x20+row], 40 cols x 32
+       rows, no scroll; non-pen0 pixels overwrite sprites; drawn LAST per
+       MAME screen_update) ---- */
     if (!envf_nofix()) {
         static const uint8_t pbyte[8] = {0x10,0x10,0x18,0x18,0x00,0x00,0x08,0x08};
         for (int y = 0; y < NG_H; y++) {
             int row = y >> 3;
-            const uint16_t *vd = &vram[0x7000 + row*0x20];
+            const uint16_t *vd = &vram[0x7000 + row];
             uint32_t *drow = &fb[y*NG_W];
             for (int x = 0; x < NG_W; x++) {
-                uint16_t e = vd[x >> 3];
+                uint16_t e = vd[(x >> 3)*0x20];
                 uint32_t code = e & 0xFFF;
                 if (fix_banked) {   /* MAME FIX_BANKTYPE_GAROU / _KOF2000 */
                     if (fbtype == 1) code += 0x1000 * (garouoffsets[(row - 2) & 31] ^ 3);

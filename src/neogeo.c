@@ -6,29 +6,37 @@
 /* ---- tiny parallel-for for bulk decrypt passes (32-core host) ---- */
 #include <pthread.h>
 typedef void (*pf_fn)(void *arg, uint32_t lo, uint32_t hi);
-typedef struct { pf_fn fn; void *arg; uint32_t lo, hi, next; } pf_job;
+typedef struct { pf_fn fn; void *arg; uint32_t lo, hi, next, gran; } pf_job;
 static void *pf_worker(void *p)
 {
     pf_job *j = (pf_job *)p;
     for (;;) {
-        uint32_t lo, step = (j->hi - j->lo) / 32 + 1;
-        __atomic_add_fetch(&j->next, step, __ATOMIC_RELAXED);
-        lo = j->next - step;
+        /* step MUST be a multiple of the worker's block granularity: workers
+           start their loop AT lo, so a misaligned chunk start (e.g. ds_run's
+           0x80 sprite blocks starting at lo+1) decodes garbage and scribbles
+           the predecoded plane from the 2nd chunk onward (mslug5 snow). */
+        uint32_t step = (j->hi - j->lo) / 32 + 1;
+        step = (step + j->gran - 1) & ~(uint32_t)(j->gran - 1);
+        uint32_t lo = __atomic_add_fetch(&j->next, step, __ATOMIC_RELAXED) - step;
         if (lo >= j->hi) break;
         uint32_t hi = lo + step < j->hi ? lo + step : j->hi;
         j->fn(j->arg, lo, hi);
     }
     return NULL;
 }
-static void parallel_for(pf_fn fn, void *arg, uint32_t lo, uint32_t hi, int nthreads)
+static void parallel_for_g(pf_fn fn, void *arg, uint32_t lo, uint32_t hi, int nthreads, uint32_t gran)
 {
     if (hi <= lo + 0x10000 || nthreads < 2) { fn(arg, lo, hi); return; }
     pthread_t th[16];
     if (nthreads > 16) nthreads = 16;
-    pf_job j = { fn, arg, lo, hi, lo };
+    pf_job j = { fn, arg, lo, hi, lo, gran };
     for (int i = 0; i < nthreads - 1; i++) pthread_create(&th[i], NULL, pf_worker, &j);
     pf_worker(&j);
     for (int i = 0; i < nthreads - 1; i++) pthread_join(th[i], NULL);
+}
+static void parallel_for(pf_fn fn, void *arg, uint32_t lo, uint32_t hi, int nthreads)
+{
+    parallel_for_g(fn, arg, lo, hi, nthreads, 1);
 }
 
 #include "m68k.h"
@@ -179,13 +187,16 @@ static void ds_run(void *a, uint32_t lo, uint32_t hi)
 static void decode_sprites(neogeo *ng)
 {
     if (!ng->spr || !ng->spr_size) { ng->sprite8_mask = 0; return; }
-    /* MAME get_region_mask semantics: mask = pow2mask(2*raw_size)-1 already
-       covers the doubled predecoded plane (ds_run writes 2*raw <= mask+1) */
+    /* MAME get_region_mask(rgn, len): mask = smallest pow2-1 covering 2*len-1,
+       using the RAW region length (e.g. mslug5 0x4000001 -> 0x0FFFFFFF).
+       Rounding len down to 0x80 first drops a mask bit (0x07FFFFFF) and folds
+       high CMC sprite codes (code_ext 0x80000 -> bit 27) to wrong gfx planes
+       = full-screen sprite garbling. ds_run writes 2*(len&~0x7f) <= mask+1. */
     uint32_t mask = region_mask_pow2(ng->spr_size);
     ng->sprite8 = calloc(mask+1, 1);
     ng->sprite8_mask = mask;
     ds_ctx c = { ng->spr, ng->sprite8, ng->spr_size };
-    parallel_for(ds_run, &c, 0, ng->spr_size & ~0x7fu, 12);
+    parallel_for_g(ds_run, &c, 0, ng->spr_size & ~0x7fu, 12, 0x80);   /* ds_run blocks at 0x80 granularity */
 }
 
 /* ---- Z80 side ---- */
@@ -2232,7 +2243,8 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                         if (ng->snd) cmc50_m1_decrypt(ng->acrypt, ng->acrypt_size, ng->snd);
                                         if (f_cmctr()) fprintf(stderr, "M1DEC sw=%s acsz=%x snd[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x\n", ctab[ci].f, ng->acrypt_size, ng->snd[0],ng->snd[1],ng->snd[2],ng->snd[3],ng->snd[4],ng->snd[5],ng->snd[6],ng->snd[7]);
                                     }
-                                    cmc_gfx_run(ng, ctab[ci].chip == 50, ctab[ci].key, ctab[ci].sf);
+                                    if (!getenv("LINORAGX_NOCMC"))
+                                        cmc_gfx_run(ng, ctab[ci].chip == 50, ctab[ci].key, ctab[ci].sf);
                                     if (!strcmp(ctab[ci].f, "boot_kf2k3pl\"")) ng->k3bl_px = 1;
                                     else if (!strcmp(ctab[ci].f, "boot_kf2k3upl\"")) ng->k3bl_px = 2;
                                     fprintf(stderr, "CMC %s chip=%d key=%02x sfix=%d m1=%d spr=%x\n",
@@ -2384,6 +2396,19 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
         if (ng->sfix && !cart_has_fix) for (uint32_t i = 0; i < 0x20000; i++) fx[i] = ng->sfix[i];
         for (uint32_t i = 0; i < ng->fixed_size && i < fsz; i++) fx[i] |= ng->fixed[i];
         free(ng->fixed); ng->fixed = fx; ng->fixed_size = fsz;
+        if (getenv("FIXDUMP")) {
+            FILE *df = fopen("/tmp/fixed_plane.bin", "wb");
+            if (df) { fwrite(ng->fixed, 1, fsz, df); fclose(df); }
+            if (ng->spr && getenv("CRDUMP")) {
+                FILE *cf = fopen("/tmp/cdec_head.bin", "wb");
+                if (cf) { fwrite(ng->spr, 1, 0x40000, cf); fclose(cf); }
+                uint64_t ssz = ng->spr_size & ~3ull;
+                if (ssz > 0x40000) {
+                    FILE *ct = fopen("/tmp/cdec_tail.bin", "wb");
+                    if (ct) { fwrite(ng->spr + (ssz - 0x40000), 1, 0x40000, ct); fclose(ct); }
+                }
+            }
+        }
     }
     decode_sprites(ng);
 
