@@ -110,6 +110,7 @@ int main(int argc, char **argv)
     int16_t *wavbuf = NULL; size_t wavn = 0, wavcap = 0;
     int frames = 0, headless = 0, no_audio = 0;
     int scale = -1, scanl = -1, fullscreen = 0;
+    int netmode = 0, netport = 55300; const char *netaddr = NULL;
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i],"--bios") && i+1<argc) bios = argv[++i];
@@ -126,6 +127,11 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i],"--dump-audio") && i+1<argc) dump_audio = argv[++i];
         else if (!strcmp(argv[i],"--scanlines")) scanl = 1;
         else if (!strcmp(argv[i],"--fullscreen")) fullscreen = 1;
+        else if (!strcmp(argv[i],"--net") && i+1<argc) {
+            const char *m = argv[++i];
+            if (!strcmp(m,"host")) { netmode = 1; if (i+1<argc && atoi(argv[i+1])>0) netport = atoi(argv[++i]); }
+            else if (!strcmp(m,"client") && i+1<argc) { netmode = 2; netaddr = argv[++i]; }
+        }
         else if (!strcmp(argv[i],"--help")) {
             printf("linoragx — Neo Geo emulator (NeoRageX rewrite), Wayland/X11+Vulkan\n"
                    "  --bios DIR     BIOS dir (default /home/gill/neoragex)\n"
@@ -135,6 +141,8 @@ int main(int argc, char **argv)
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
                    "  --fullscreen   start fullscreen (toggle: F11 or Alt+Enter)\n"
+                   "  --net host [port]    LAN netplay: host P1, wait for client (55300)\n"
+                   "  --net client IP[:P]  LAN netplay: join host as P2\n"
                    "  --headless     no window; use with --frames/--dump\n"
                    "  --frames N     run N frames then exit\n"
                    "  --dump F.bmp   render last frame offscreen to BMP\n"
@@ -160,6 +168,23 @@ int main(int argc, char **argv)
     neogeo *ng = ng_create(cfg.rompath, cfg.gamezip, err, sizeof err);
     if (err[0]) fprintf(stderr, "[ng] %s\n", err);
     if (!ng) return 1;
+
+    /* LAN netplay: lockstep input exchange (host = local P1, client = local P2) */
+    int netfd = -1, lplayer = 0;
+    if (netmode) {
+        uint32_t gcrc = ng_game_crc(ng);
+        if (netmode == 1) {
+            fprintf(stderr, "[net] hosting on :%d, waiting for client...\n", netport);
+            netfd = net_host(netport, gcrc);
+            lplayer = 0;
+        } else {
+            fprintf(stderr, "[net] connecting to %s...\n", netaddr);
+            netfd = net_connect(netaddr, gcrc);
+            lplayer = 1;
+        }
+        if (netfd < 0) { fprintf(stderr, "[net] link failed (game mismatch? firewall? port busy?)\n"); ng_destroy(ng); return 1; }
+        fprintf(stderr, "[net] linked, local player = P%d\n", lplayer + 1);
+    }
 
     if (state) {
         int r = ng_load_state(ng, state);
@@ -225,21 +250,33 @@ int main(int argc, char **argv)
                 continue;
             }
         }
-        /* scripted input: LINORAGX_INPUT="frame:bit:hold,..." (P1) */
+        /* scripted input: LINORAGX_INPUT="frame:bit:hold,..." (P1) or
+           "frame:player:bit:hold,..." (4-field form, for netplay P2 tests) */
         {
-            struct injev { int f, b, down; };
+            struct injev { int f, p, b, down; };
             static struct injev evs[128]; static int nevs = -1, ei = 0;
             if (nevs == -1) {
                 nevs = 0; const char *s = getenv("LINORAGX_INPUT");
-                while (s && *s && nevs + 1 < 128) { int a,b,c;
-                    if (sscanf(s,"%d:%d:%d",&a,&b,&c)==3) {
-                        evs[nevs++]=(struct injev){a,b,1}; evs[nevs++]=(struct injev){a+c,b,0}; }
+                while (s && *s && nevs + 1 < 128) { int a,b,c,d; int p = 0, bit, hold;
+                    if (sscanf(s,"%d:%d:%d:%d",&a,&b,&c,&d)==4) { p=b; bit=c; hold=d; }
+                    else if (sscanf(s,"%d:%d:%d",&a,&b,&c)==3) { bit=b; hold=c; }
+                    else { bit=-1; hold=0; }
+                    if (bit >= 0) {
+                        evs[nevs++]=(struct injev){a,p,bit,1}; evs[nevs++]=(struct injev){a+hold,p,bit,0}; }
                     s = strchr(s, ','); if (s) s++; }
                 for (int i=0;i<nevs;i++) for (int j=i+1;j<nevs;j++)
                     if (evs[j].f < evs[i].f) { struct injev t=evs[i]; evs[i]=evs[j]; evs[j]=t; }
             }
-            while (ei < nevs && evs[ei].f <= n) { ng_set_button(ng, 0, evs[ei].b, evs[ei].down); ei++;
-                if (getenv("INPDBG")) fprintf(stderr, "[inp] f=%d bit=%d down=%d\n", evs[ei-1].f, evs[ei-1].b, evs[ei-1].down); }
+            while (ei < nevs && evs[ei].f <= n) { ng_set_button(ng, evs[ei].p, evs[ei].b, evs[ei].down); ei++;
+                if (getenv("INPDBG")) fprintf(stderr, "[inp] f=%d p%d bit=%d down=%d\n", evs[ei-1].f, evs[ei-1].p, evs[ei-1].b, evs[ei-1].down); }
+        }
+        if (netfd >= 0) {
+            uint32_t remote;
+            if (net_step(netfd, n, ng_get_buttons(ng, lplayer), &remote) < 0) {
+                fprintf(stderr, "[net] peer lost at frame %d\n", n);
+                break;
+            }
+            ng_set_buttons(ng, 1 - lplayer, remote);
         }
         ng_run_frame(ng);
         if (!vk) ng_render(ng, fb);   /* window mode already drew per line in ng_run_frame */

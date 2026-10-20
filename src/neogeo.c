@@ -2792,6 +2792,11 @@ void ng_run_frame(neogeo *ng)
 /* arm per-line rendering into fb (window mode); NULL disables (headless) */
 void ng_set_fb(neogeo *ng, uint32_t *fb) { ng->fb = fb; }
 
+/* netplay accessors: raw player button masks + game identity for handshake */
+uint32_t ng_get_buttons(neogeo *ng, int p) { return (p == 0 || p == 1) ? ng->buttons[p] : 0; }
+void ng_set_buttons(neogeo *ng, int p, uint32_t mask) { if (p == 0 || p == 1) ng->buttons[p] = mask; }
+uint32_t ng_game_crc(neogeo *ng) { return rom_crc32((const uint8_t *)ng->gamename, (uint32_t)strlen(ng->gamename)); }
+
 /* ---- accessors for video.c ---- */
 uint16_t *ng_vram(neogeo *ng) { return ng->vram; }
 uint16_t *ng_workram(neogeo *ng) { return ng->workram; }

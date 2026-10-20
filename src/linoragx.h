@@ -36,6 +36,14 @@ uint16_t *ng_cram(neogeo *ng);
 uint32_t ng_cram_bank(neogeo *ng);
 uint32_t ng_cram_bank_render(neogeo *ng);
 int ng_dbg_vbank(neogeo *ng);
+/* netplay (src/netplay.c) */
+int  net_host(int port, uint32_t game_crc);
+int  net_connect(const char *hostport, uint32_t game_crc);
+int  net_step(int fd, uint64_t frame, uint32_t local_mask, uint32_t *remote_mask);
+void net_close(int fd);
+uint32_t ng_get_buttons(neogeo *ng, int p);
+void ng_set_buttons(neogeo *ng, int p, uint32_t mask);
+uint32_t ng_game_crc(neogeo *ng);
 void ng_dbg_z80(neogeo *ng, int on);
 void ng_dbg_btn(neogeo *ng, int p, int mask);
 void ng_dbg_pcprof(neogeo *ng, int on);
