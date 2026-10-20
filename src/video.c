@@ -164,7 +164,7 @@ void ng_render(neogeo *ng, uint32_t *fb)
                 rows = yc & 0x3F;
             }
             if (x >= 0x140 && x <= 0x1F0) continue;
-            if (!(rows >= 0x20 || ((line - y) & 0x1FF) < rows * 16)) continue;   /* list never holds rows==0 (parse_sprites) */
+            if (!(rows >= 0x20 || ((line - y) & 0x1FF) < rows * 16)) continue;   /* list never holds rows==0 (parse_sprites); MAME double-check is equivalent here */
 
             int sprite_line = (line - y) & 0x1FF;
             int zoom_line = sprite_line & 0xFF;

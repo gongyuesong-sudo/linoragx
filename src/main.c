@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     const char *backend_opt = NULL, *dump_audio = NULL;
     int16_t *wavbuf = NULL; size_t wavn = 0, wavcap = 0;
     int frames = 0, headless = 0, no_audio = 0;
-    int scale = -1, scanl = -1;
+    int scale = -1, scanl = -1, fullscreen = 0;
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i],"--bios") && i+1<argc) bios = argv[++i];
@@ -125,6 +125,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i],"--no-audio")) no_audio = 1;
         else if (!strcmp(argv[i],"--dump-audio") && i+1<argc) dump_audio = argv[++i];
         else if (!strcmp(argv[i],"--scanlines")) scanl = 1;
+        else if (!strcmp(argv[i],"--fullscreen")) fullscreen = 1;
         else if (!strcmp(argv[i],"--help")) {
             printf("linoragx — Neo Geo emulator (NeoRageX rewrite), Wayland/X11+Vulkan\n"
                    "  --bios DIR     BIOS dir (default /home/gill/neoragex)\n"
@@ -133,6 +134,7 @@ int main(int argc, char **argv)
                    "  --scale N      window scale (default 2)\n"
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
+                   "  --fullscreen   start fullscreen (toggle: F11 or Alt+Enter)\n"
                    "  --headless     no window; use with --frames/--dump\n"
                    "  --frames N     run N frames then exit\n"
                    "  --dump F.bmp   render last frame offscreen to BMP\n"
@@ -188,6 +190,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "[vk] headless init: %s\n", err);
     }
     if (vk && backend) fprintf(stderr, "[vk] window backend: %s\n", backend);
+    if (vk && fullscreen) vk_set_fullscreen(vk, 1);
     wl_input *in = (backend && !strcmp(backend,"wayland")) ? wl_input_create(wdisp) : NULL;
 
     uint32_t *fb = malloc(NG_W*NG_H*4);
@@ -206,6 +209,8 @@ int main(int argc, char **argv)
                 if (sym == 0xffe9 || sym == 0xffea) mod_alt = down;
                 else if (sym == 0xffe3 || sym == 0xffe4) mod_ctl = down;
                 else if (down && ((mod_alt && sym == 0xffc1) || (mod_ctl && sym == 'q'))) { n = frames; break; }
+                else if (down && vk && (sym == 0xffbe || (mod_alt && sym == 0xff0d)))
+                    vk_toggle_fullscreen(vk);   /* F11 / Alt+Enter */
                 handle_key(ng, sym, down);
             }
             if (in && vk) { while (vk_next_key(vk, &sym, &down)) handle_key(ng, sym, down); }

@@ -98,5 +98,8 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
 void   vk_destroy(vkrend *v);
 int    vk_pump(vkrend *v);                    /* handle events; 0=ok, 1=close */
 int    vk_next_key(vkrend *v, uint32_t *sym, int *down);  /* X11 key events; 1=popped */
+void   vk_set_fullscreen(vkrend *v, int on);
+void   vk_toggle_fullscreen(vkrend *v);                  /* F11 / Alt+Enter */
+int    vk_is_fullscreen(vkrend *v);
 void   vk_present(vkrend *v, const uint32_t *fb);
 int    vk_offscreen_dump(vkrend *v, const uint32_t *fb, const char *bmp_path);

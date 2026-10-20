@@ -65,6 +65,7 @@ struct vkrend {
     struct xdg_surface *xsurf;
     struct xdg_toplevel *xtop;
     int configured; uint32_t cfgw, cfgh; int quit;
+    int fullscreen;                 /* windowed<->fullscreen toggle state (both backends) */
 
     /* x11 */
     Display *xdpy; Window xwin; Atom wm_delete;
@@ -119,6 +120,40 @@ static void x11_zoom(struct vkrend *v, int dir)
     if (w > NG_W * 8) w = NG_W * 8;
     int h = w * NG_H / NG_W;
     XResizeWindow(v->xdpy, v->xwin, (unsigned)w, (unsigned)h);
+    XFlush(v->xdpy);
+}
+
+/* EWMH fullscreen: add/remove _NET_WM_STATE_FULLSCREEN on the root.
+ * While fullscreen, relax the strict 320:224 size hints (some WMs clamp or
+ * refuse fullscreen otherwise); restore them on exit. */
+static void x11_set_fullscreen(struct vkrend *v, int on)
+{
+    Atom msg = XInternAtom(v->xdpy, "_NET_WM_STATE", False);
+    Atom fs  = XInternAtom(v->xdpy, "_NET_WM_STATE_FULLSCREEN", False);
+    XEvent ev; memset(&ev, 0, sizeof ev);
+    ev.xclient.type = ClientMessage;
+    ev.xclient.window = v->xwin;
+    ev.xclient.message_type = msg;
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = on ? 1 : 0;    /* 1 = add, 0 = remove */
+    ev.xclient.data.l[1] = (long)fs;
+    ev.xclient.data.l[2] = 0;
+    ev.xclient.data.l[3] = 1;             /* source: application */
+    XSendEvent(v->xdpy, RootWindow(v->xdpy, DefaultScreen(v->xdpy)), False,
+               SubstructureRedirectMask | SubstructureNotifyMask, &ev);
+    XSizeHints *sh = XAllocSizeHints();
+    if (sh) {
+        if (on) { sh->flags = PMinSize; sh->min_width = NG_W; sh->min_height = NG_H; }
+        else {
+            sh->flags = PMinSize | PMaxSize | PAspect;
+            sh->min_width = NG_W; sh->min_height = NG_H;
+            sh->max_width = NG_W * 8; sh->max_height = NG_H * 8;
+            sh->min_aspect.x = NG_W; sh->min_aspect.y = NG_H;
+            sh->max_aspect.x = NG_W; sh->max_aspect.y = NG_H;
+        }
+        XSetWMNormalHints(v->xdpy, v->xwin, sh);
+        XFree(sh);
+    }
     XFlush(v->xdpy);
 }
 
@@ -751,13 +786,19 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe);
     /* negative viewport height flips Y (VK_KHR_maintenance1). The y origin MUST be
        at height (spec form {0,h,w,-h}); {0,0,w,-h} clamps to zero height on RADV
-       WSI images and the quad silently vanishes. */
+       WSI images and the quad silently vanishes.
+       Letterbox: fit 320:224 into the swapchain rect, centered; the black bars
+       stay the renderpass clear color. No shader change (shaders are frozen). */
     const char *vpv = getenv("LINORAGX_VP");
+    uint32_t sw = v->scext.width, sh = v->scext.height;
+    uint32_t vw = sw, vh = sh, vx = 0, vy = 0;
+    if ((uint64_t)sw * NG_H > (uint64_t)sh * NG_W) { vw = (uint32_t)((uint64_t)sh * NG_W / NG_H); vx = (sw - vw) / 2; }
+    else if ((uint64_t)sw * NG_H < (uint64_t)sh * NG_W) { vh = (uint32_t)((uint64_t)sw * NG_H / NG_W); vy = (sh - vh) / 2; }
     VkViewport vp = vpv && !strcmp(vpv,"old")
-        ? (VkViewport){0, 0, (float)v->scext.width, -(float)v->scext.height, 0, 1}
+        ? (VkViewport){0, 0, (float)sw, -(float)sh, 0, 1}
         : vpv && !strcmp(vpv,"pos")
-        ? (VkViewport){0, 0, (float)v->scext.width, (float)v->scext.height, 0, 1}
-        : (VkViewport){0, (float)v->scext.height, (float)v->scext.width, -(float)v->scext.height, 0, 1};
+        ? (VkViewport){0, 0, (float)sw, (float)sh, 0, 1}
+        : (VkViewport){(float)vx, (float)(vy + vh), (float)vw, -(float)vh, 0, 1};
     vkCmdSetViewport(cb, 0, 1, &vp);
     VkRect2D sc = {{0,0}, v->scext};
     vkCmdSetScissor(cb, 0, 1, &sc);
@@ -811,6 +852,25 @@ int vk_next_key(vkrend *v, uint32_t *sym, int *down)
     v->xkey_n--;
     return 1;
 }
+
+/* windowed <-> fullscreen (X11 via EWMH state, Wayland via xdg-toplevel).
+ * The WM/compositor answers with a configure; the existing configure path
+ * rebuilds the swapchain and the letterbox viewport fits 320:224 into it. */
+void vk_set_fullscreen(vkrend *v, int on)
+{
+    if (!v || v->headless) return;
+    v->fullscreen = on ? 1 : 0;
+    if (v->xtop) {
+        if (on) xdg_toplevel_set_fullscreen(v->xtop, NULL);   /* NULL = any output */
+        else    xdg_toplevel_unset_fullscreen(v->xtop);
+        wl_display_flush(v->wdpy);
+    } else if (v->xdpy) {
+        x11_set_fullscreen(v, on);
+    }
+}
+
+void vk_toggle_fullscreen(vkrend *v) { vk_set_fullscreen(v, !v->fullscreen); }
+int  vk_is_fullscreen(vkrend *v) { return v ? v->fullscreen : 0; }
 
 static void wait_fence_wl(struct vkrend *v, VkFence f)
 {
