@@ -708,13 +708,14 @@ unsigned cpu_z80::mz80step()
 		m_nmi_pending = false;
 		{ static int np = -2;
 		  if (np == -2) np = getenv("NMIDISP") ? 1 : 0;
-		  if (np) fprintf(stderr, "NMIDISP pc=%04x -> %04x\n", z80pc, (unsigned)z80nmiAddr); }
-		z80ppc = -1;
-		m_iff1 = 0;
-		IncR();
-		m_fHalt = false;
-		cCycles = 0;
-		Rst(z80nmiAddr);
+		  if (np) { extern unsigned long long z80w_dbg_frame; fprintf(stderr, "NMIDISP f=%llu pc=%04x -> %04x\n", z80w_dbg_frame, z80pc, (unsigned)z80nmiAddr); }
+		  z80ppc = -1;
+		  m_iff1 = 0;
+		  IncR();
+		  m_fHalt = false;
+		  cCycles = 0;
+		  Rst(z80nmiAddr);
+		  if (np) fprintf(stderr, "NMIDISP after rst pc=%04x\n", z80pc); }
 		cyc += cCycles + 11;
 	}
 

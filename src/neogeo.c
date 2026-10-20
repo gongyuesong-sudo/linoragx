@@ -328,8 +328,16 @@ static uint16_t z_in(uint32_t p, void *c)
 {
     neogeo *ng = (neogeo*)c;
     uint32_t port = p & 0xFF;
-    if ((p & 0xFF00) != 0 && port >= 0x08 && port <= 0x0B) {
-        ng->zbank[port - 0x08] = (p >> 8) & 0xFF;   /* bank = port high byte */
+    if (port >= 0x08 && port <= 0x0B) {
+        /* Neo Geo sound bank latch: in a,(08..0B) latches bank[port-8] from
+           the A-bus value the program just loaded (ld a,N; in a,(08)).
+           The old port-high-byte form never fired (Z80 in ports are 8-bit),
+           leaving zbank stuck at 0: samsho2 m1 switches four banks
+           (2e/16/0a/04) to window its song table and read garbage instead,
+           so its track blocks never initialized and BGM stayed silent. */
+        extern uint8_t z80w_a(void*);
+        ng->zbank[port - 0x08] = z80w_a(ng->z);
+        if (f_ztrace()) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z));
         return 0;
     }
     switch (port) {
@@ -736,7 +744,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                 ng->nmi_cnt++;
                 ng->z80_nmi_asserted = 1;
             }
-            if (ng->dbg_z80==3) fprintf(stderr, "SL1W %02x a=%06x d=%04x m=%04x pc=%08x zpc=%04x pend=%d en=%d asrt=%d\n", v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC), z80w_pc(ng->z), ng->z80_nmi_pend, ng->z80_nmi_en, ng->z80_nmi_asserted);
+            if (ng->dbg_z80==3) fprintf(stderr, "SL1W f=%llu %02x a=%06x d=%04x m=%04x pc=%08x zpc=%04x pend=%d en=%d asrt=%d\n", (unsigned long long)ng->frame, v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC), z80w_pc(ng->z), ng->z80_nmi_pend, ng->z80_nmi_en, ng->z80_nmi_asserted);
             ng->sl1_cnt++;
         }
         return;
@@ -2959,6 +2967,7 @@ void ng_run_frame(neogeo *ng)
             }
         } else ng->ch5_on_frame = ng->frame;   /* still in BIOS: keep waiting */
     }
+    { extern unsigned long long z80w_dbg_frame; z80w_dbg_frame = ng->frame; }
     ng->frame++;
 }
 
