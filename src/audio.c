@@ -99,6 +99,9 @@ void audio_submit(const int16_t *stereo, int frames)
     }
     static int audbg = -2; static long acnt = 0;
     if (audbg == -2) audbg = getenv("AUDDBG") ? 1 : 0;
-    if (audbg && (acnt++ % 300) == 0)
-        fprintf(stderr, "[aud] in_frames=%d out=%d queued=%d\n", frames, outn, ring_count);
+    if (audbg && (acnt++ % 300) == 0) {
+        int peak = 0;
+        for (int i = 0; i < outn*2; i++) { int v = conv[i] < 0 ? -conv[i] : conv[i]; if (v > peak) peak = v; }
+        fprintf(stderr, "[aud] in_frames=%d out=%d peak=%d queued=%d\n", frames, outn, peak, ring_count);
+    }
 }

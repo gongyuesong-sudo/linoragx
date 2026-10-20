@@ -2541,6 +2541,8 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     decode_sprites(ng);
 
     ng->ym = ym_create();
+    ym_reset(ng->ym);        /* ymfm requires an explicit reset; new() leaves chip state uninitialized */
+    { const char *zt = getenv("Z80TRACE"); if (zt) ng->dbg_z80 = atoi(zt); }
     g_ng = ng;
     ng->z = z80w_create(ng, z_read, z_write, z_in, z_out);
     m68k_set_cpu_type(M68K_CPU_TYPE_68000);

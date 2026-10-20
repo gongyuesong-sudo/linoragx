@@ -195,7 +195,7 @@ int main(int argc, char **argv)
     /* audio */
     int16_t *sndbuf = malloc(44100*2*2);
     double samp_acc = 0;
-    if (cfg.audio && !headless) audio_init(44100);
+    if (cfg.audio && !headless && !getenv("LINORAGX_NOALSA")) audio_init(44100);
 
     /* renderer: pick window backend (wayland > x11 > headless) */
     const char *wdisp = getenv("WAYLAND_DISPLAY");

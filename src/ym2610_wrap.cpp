@@ -122,7 +122,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 {
     static int ymdbg = -1;
     if (ymdbg < 0) ymdbg = getenv("YMBDBG") ? 1 : 0;
-    if (ymdbg && chipno == 1) fprintf(stderr, "YMB %02x=%02x\n", reg, val);
+    if (ymdbg) fprintf(stderr, "YM%c %02x=%02x\n", 'A'+chipno, reg, val);
     if (chipno == 2) {                       /* YM2151 SSG: real chip ignores reg > 0x7F */
         if (reg <= 0x7F) y->r21[reg] = val;
         return;
@@ -177,10 +177,13 @@ void ym_advance(ym2610 *y, int zcycles)
 
 int ym_irq_pending(ym2610 *y)
 {
-    if ((y->tflag[0] & 1) && (y->irqen[0] & 0x80)) return 1;
-    if ((y->tflag[1] & 1) && (y->irqen[1] & 0x80)) return 1;
-    if ((y->tflag[0] & 2) && (y->irqen[0] & 0x40)) return 1;
-    if ((y->tflag[1] & 2) && (y->irqen[1] & 0x40)) return 1;
+    /* YM2610 reg 0x27: IRQA/IRQB enable bits are ACTIVE LOW (0 = enable).
+     * Timer A -> IRQA (bit6 of 0x27), Timer B -> IRQB (bit7). Getting this
+     * inverted starves the sm1 music sequencer: it is timer-IRQ driven. */
+    if ((y->tflag[0] & 1) && !(y->irqen[0] & 0x40)) return 1;
+    if ((y->tflag[1] & 1) && !(y->irqen[1] & 0x40)) return 1;
+    if ((y->tflag[0] & 2) && !(y->irqen[0] & 0x80)) return 1;
+    if ((y->tflag[1] & 2) && !(y->irqen[1] & 0x80)) return 1;
     return 0;
 }
 
@@ -242,6 +245,12 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
 
     std::vector<int32_t> mix(frames, 0);
     ssg_stream(y, mix.data(), frames);
+    { static int ysd = -1; static long ysc = 0;
+      if (ysd < 0) ysd = getenv("YMSTREAM") ? 1 : 0;
+      if (ysd && (ysc++ % 300) == 0)
+          fprintf(stderr, "[yms] need=%d gen0=%d,%d ssg0=%d pend=%d\n",
+                  need, need ? (int)y->obuf[0].data[0] : 0, need ? (int)y->obuf[0].data[1] : 0,
+                  mix[0], (int)y->pend.size()); }
 
     double pos = y->frac;
     for (int i = 0; i < frames; i++, pos += STEP) {
