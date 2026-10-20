@@ -1991,10 +1991,115 @@ static uint8_t svc_s1_bitswap(uint8_t x)
     return r;
 }
 
+/* ---- MAME-faithful svcpcb chain (neopcb.cpp init_mslug5pcb/init_svcpcb):
+ * svcpcb_gfx_decrypt -> cmc50_gfx_decrypt(kof2000 tables) -> sfix -> s1data.
+ * Tables auto-extracted from MAME prot_cmc.cpp; logic verbatim. ---- */
+#include "cmc_mame_tables.h"
+
+/* MAME bitswap<N>(x, n-1..0): result bit (n-1-i) = x bit p[i] */
+static uint32_t mame_bitswap(uint32_t x, const int8_t *p, int n)
+{
+    uint32_t r = 0;
+    for (int i = 0; i < n; i++)
+        if (x & (1u << p[i])) r |= 1u << (n - 1 - i);
+    return r;
+}
+
+static void svcpcb_gfx_do(uint8_t *rom, uint32_t rom_size)
+{
+    static const uint8_t xorval[4] = { 0x34, 0x21, 0xc4, 0xe9 };
+    static const int8_t b32[32] = { 0x09,0x0d,0x13,0x00,0x17,0x0f,0x03,0x05,
+        0x04,0x0c,0x11,0x1e,0x12,0x15,0x0b,0x06,0x1b,0x0a,0x1a,0x1c,0x14,0x02,
+        0x0e,0x1d,0x18,0x08,0x01,0x10,0x19,0x1f,0x07,0x16 };
+    static const int8_t b24[24] = { 0x17,0x16,0x15,0x04,0x0b,0x0e,0x08,0x0c,
+        0x10,0x00,0x0a,0x13,0x03,0x06,0x02,0x07,0x0d,0x01,0x11,0x09,0x14,0x0f,
+        0x12,0x05 };
+    uint8_t *buf = malloc(rom_size);
+    if (!buf) return;
+    for (uint32_t i = 0; i < rom_size; i++)
+        rom[i] ^= xorval[i & 3];
+    for (uint32_t i = 0; i + 4 <= rom_size; i += 4) {
+        uint32_t v = rom[i] | rom[i+1] << 8 | rom[i+2] << 16 | (uint32_t)rom[i+3] << 24;
+        v = mame_bitswap(v, b32, 32);
+        buf[i] = v & 0xff; buf[i+1] = (v >> 8) & 0xff;
+        buf[i+2] = (v >> 16) & 0xff; buf[i+3] = (v >> 24) & 0xff;
+    }
+    for (uint32_t i = 0; i < rom_size / 4; i++) {
+        uint32_t ofst = mame_bitswap(i & 0x1fffff, b24, 24);
+        ofst ^= 0x0c8923;
+        ofst += i & 0xffe00000;
+        memcpy(rom + i * 4, buf + ofst * 4, 4);
+    }
+    free(buf);
+}
+
+/* MAME cmc_prot_device::decrypt() */
+static void mame_cmc_decrypt(uint8_t *r0, uint8_t *r1, uint8_t c0, uint8_t c1,
+                             const uint8_t *t0hi, const uint8_t *t0lo,
+                             const uint8_t *t1, int base, int invert)
+{
+    uint8_t tmp, xor0, xor1;
+    tmp = t1[(base & 0xff) ^ mame_kof2000_address_0_7_xor[(base >> 8) & 0xff]];
+    xor0 = (t0hi[(base >> 8) & 0xff] & 0xfe) | (tmp & 0x01);
+    xor1 = (tmp & 0xfe) | (t0lo[(base >> 8) & 0xff] & 0x01);
+    if (invert) { *r0 = c1 ^ xor0; *r1 = c0 ^ xor1; }
+    else        { *r0 = c0 ^ xor0; *r1 = c1 ^ xor1; }
+}
+
+/* MAME cmc_prot_device::gfx_decrypt() with kof2000 table set (= cmc50) */
+static void mame_cmc50_gfx_decrypt(uint8_t *rom, uint32_t rom_size, int extra_xor)
+{
+    uint8_t *buf = malloc(rom_size);
+    if (!buf) return;
+    for (uint32_t rpos = 0; rpos + 4 <= rom_size; rpos += 4) {
+        mame_cmc_decrypt(buf+rpos+0, buf+rpos+3, rom[rpos+0], rom[rpos+3],
+            mame_kof2000_type0_t03, mame_kof2000_type0_t12, mame_kof2000_type1_t03,
+            rpos, (rpos >> 8) & 1);
+        mame_cmc_decrypt(buf+rpos+1, buf+rpos+2, rom[rpos+1], rom[rpos+2],
+            mame_kof2000_type0_t12, mame_kof2000_type0_t03, mame_kof2000_type1_t12,
+            rpos, ((rpos >> 16) ^ mame_kof2000_address_16_23_xor2[(rpos >> 8) & 0xff]) & 1);
+    }
+    uint32_t q = rom_size / 4;
+    for (uint32_t rpos = 0; rpos < q; rpos++) {
+        int32_t baser = (int32_t)rpos;
+        baser ^= extra_xor;
+        baser ^= (int32_t)mame_kof2000_address_8_15_xor1[(baser >> 16) & 0xff] << 8;
+        baser ^= (int32_t)mame_kof2000_address_8_15_xor2[baser & 0xff] << 8;
+        baser ^= (int32_t)mame_kof2000_address_16_23_xor1[baser & 0xff] << 16;
+        baser ^= (int32_t)mame_kof2000_address_16_23_xor2[(baser >> 8) & 0xff] << 16;
+        baser ^= (int32_t)mame_kof2000_address_0_7_xor[(baser >> 8) & 0xff];
+        uint32_t b = (uint32_t)baser & (q - 1);   /* pow2 rom sizes here */
+        rom[4*rpos+0] = buf[4*b+0]; rom[4*rpos+1] = buf[4*b+1];
+        rom[4*rpos+2] = buf[4*b+2]; rom[4*rpos+3] = buf[4*b+3];
+    }
+    free(buf);
+}
+
 static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
 {
     uint32_t sz = ng->spr_size & ~3u;   /* odd +1 from load16_byte stride spans */
     if (!ng->spr || sz < 0x80000) return;
+    if (s1data) {
+        /* svcpcb family full chain (MAME init_mslug5pcb/init_svcpcb).
+         * Our spr buffer is bus-order; MAME chain works in region byte
+         * space — wordswap in, decrypt, wordswap back (same trick as pvc_run). */
+        wordswap(ng->spr, sz);
+        svcpcb_gfx_do(ng->spr, sz);
+        mame_cmc50_gfx_decrypt(ng->spr, sz, key);
+        uint32_t fsz = ng->fixed_size ? ng->fixed_size : 0x20000;
+        if (fsz > 0x80000) fsz = 0x80000;
+        if (fsz >= sz) fsz = 0x20000;
+        if (!ng->fixed) { ng->fixed = calloc(fsz, 1); ng->fixed_size = fsz; }
+        uint8_t *fxm = calloc(1, fsz);
+        if (!fxm) { wordswap(ng->spr, sz); return; }
+        cmc_sfix_decrypt(ng->spr, sz, fxm, fsz);
+        for (uint32_t i = 0; i < fsz; i++) fxm[i] = svc_s1_bitswap(fxm[i] ^ 0xd2);
+        wordswap(ng->spr, sz);
+        wordswap(fxm, fsz);
+        for (uint32_t i = 0; i < fsz && i < ng->fixed_size; i++) ng->fixed[i] |= fxm[i];
+        free(fxm);
+        return;
+    }
     cmc_gfx_decrypt(ng->spr, sz, key, is50 ? &cmc50_keys : &cmc42_keys);
     if (sfix) {
         /* MAME: sfix_decrypt(spr, spr_size, fix, FIX_REGION_SIZE) — tail of C */
