@@ -35,8 +35,15 @@ class Emu:
             raise RuntimeError("emulator already running; call quit first")
         self.port = 27600 + (os.getpid() % 400)
         env = dict(os.environ, LINORAGX_CTL=str(self.port))
+        # LINORAGX_BIOS is the emulator's own force-BIOS hook; we pass --bios
+        # instead, so never leak the server-side env var into the child.
+        env.pop("LINORAGX_BIOS", None)
         env.setdefault("LD_LIBRARY_PATH", os.path.expanduser("~/opt/lib/emulink"))
         cmd = [BIN, "--rom", rom, "--bios", bios or BIOS]
+        if not os.path.exists(rom):
+            cand = os.path.join(ROMS, rom if not rom.endswith(".zip") else rom)
+            if os.path.exists(cand):
+                cmd[cmd.index(rom)] = cand
         if headless:
             cmd += ["--headless", "--no-audio"]
         if extra:

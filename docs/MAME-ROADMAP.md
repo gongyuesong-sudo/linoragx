@@ -24,7 +24,7 @@
 
 | # | 维度 | MAME 做法 | 现状 | 差距影响 | 阶段 |
 |---|---|---|---|---|---|
-| G1 | 渲染时机 | screen_device 逐扫描线更新，与 CPU 交织；帧中改 VRAM/CRAM 立即生效 | 帧末整帧渲染 | 分屏卷轴/逐行换色游戏画面撕裂；CRAM bank 无法正确建模（bstars2 类，现故意忽略 bank） | P1 |
+| G1 | 渲染时机 | screen_device 逐扫描线更新（sprite_line_timer→update_partial+parse_sprites），帧中改 VRAM/CRAM 立即生效 | ~~帧末整帧渲染~~ 已改逐行交织（f4f8844） | 光栅效果游戏正确性 | ✅P1 |
 | G2 | 总线解码 | memory_map 声明式（map("maincpu") + bank regions + delegates） | r16/w16 手写大 switch | 可维护性；新保护移植易错 | P3 |
 | G3 | 保护 | 每板独立 device 类（prot_kof98/prot_cmc/pvc MCU 仿真） | ctab 静态解密表近似 | mslug5 等 PVC 卡 fix 层残留花屏（静态表在 C 尾区不准） | P4 |
 | G4 | 音频 | 完整 ym2610 + ym3802 + ym2151 | 177 行简化核 | PCM2 卡（mslug4/rotd/pnyaa）ADPCM-B 无回放；音质 | P2 |
@@ -55,12 +55,19 @@ Neo Geo 是 2 玩家街机板，双机各跑一份确定性仿真、只同步输
 - 掉线保护：对端超时 2s → 打印告警并暂停（不静默改输入）。
 - MCP/CTL 不受影响（单机路径不变）。
 
-## 5. 需求映射
+## 5. 需求映射与实施状态
 
 | 用户需求 | 状态 |
 |---|---|
-| 按 MAME 路线实现 | 本文档 §2/§3；已对齐项见 §2 末 |
-| x11/wayland 窗口 + 全屏可切换 | 窗口已有；全屏 = P0（本轮） |
+| 按 MAME 路线实现 | P1 逐扫描线渲染已落地（f4f8844）；P2-P5 见 §3 |
+| x11/wayland 窗口 + 全屏可切换 | 已落地（e5f12d3）：F11/Alt+Enter 切换、--fullscreen、letterbox 保比例；Wayland 路径为标准 xdg 调用（本机无 Wayland 会话未实测） |
 | Vulkan 加速 | 已有（render_vulkan.c，RADV 实测） |
 | MCP 服务 | 已有（tools/mcp_linoragx.py + CTL 通道） |
-| 多机联网游玩 | P6（设计 §4） |
+| 多机联网游玩 | 已落地（da2a35a）：--net host/client lockstep，本机回环 6200 帧双端像素一致验证 |
+
+## 6. 已落地实施记录
+
+- P0 全屏（e5f12d3）：X11 EWMH `_NET_WM_STATE_FULLSCREEN`（进出时放宽/恢复尺寸约束）；Wayland `xdg_toplevel_set_fullscreen`；letterbox 用 viewport 内缩实现（着色器冻结不可重编译）；实测 2560x1440 全屏黑边正确。
+- P1 逐扫描线渲染（f4f8844）：MAME `sprite_line_timer_callback` 语义——每行开始时画上一行 + parse_sprites 当前行，帧中 VRAM/CRAM 写入即时可见。`ng_set_fb` 装载 fb 后 `ng_run_frame` 在 chunk 边界逐行绘制（fb 行 = scanline-40）；`ng_render` 保留整帧路径给 headless/ctl dump。验证：headless dump md5 与旧版一致；kof2000/sdodgeb 窗口交织 vs headless 整帧像素零差异。顺带删除重复 tile pass。
+- P6 联网（da2a35a）：src/netplay.c，8 字节/帧 {frame,P1,P2}，TCP_NODELAY，握手带游戏 CRC 防错卡，10s 超时判掉线；host=P1/client=P2；LINORAGX_INPUT 加 4 字段形式（frame:player:bit:hold）。回环验证：双端 6200 帧锁步同帧率（773.5fps）、dump 互相一致且区别于无输入基线。
+- 输入注入时机教训：BIOS coin 屏只在 attract 循环相位读投币口（f<100 注入 coin 无效果，f=5000 有效）——测输入因果要用 f≥5000 或 CTL press。
