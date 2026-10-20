@@ -1982,7 +1982,16 @@ static void cmc50_m1_decrypt(uint8_t *crypt, uint32_t crypt_size, uint8_t *snd)
 /* Apply CMC gfx (+optional sfix from decrypted C tail) to the sprite region.
  * sw_build's sprites buf (load16_byte) == MAME region byte space, so decrypt
  * in place; fixed buf likewise matches MAME fixed region (raw s1 / fill). */
-static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix)
+/* svcpcb_s1data_decrypt (MAME neopcb.cpp): s1[i] = bitswap<8>(s1[i]^0xd2, 4,0,7,2,5,1,6,3) */
+static uint8_t svc_s1_bitswap(uint8_t x)
+{
+    static const int p[8] = {3,6,1,5,2,7,0,4};  /* result bit i = src bit p[i] */
+    uint8_t r = 0;
+    for (int i = 0; i < 8; i++) if (x & (1u << p[i])) r |= 1u << i;
+    return r;
+}
+
+static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
 {
     uint32_t sz = ng->spr_size & ~3u;   /* odd +1 from load16_byte stride spans */
     if (!ng->spr || sz < 0x80000) return;
@@ -1996,6 +2005,8 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix)
         uint8_t *fxm = calloc(1, fsz);
         if (!fxm) return;
         cmc_sfix_decrypt(ng->spr, sz, fxm, fsz);
+        if (s1data)
+            for (uint32_t i = 0; i < fsz; i++) fxm[i] = svc_s1_bitswap(fxm[i] ^ 0xd2);
         for (uint32_t i = 0; i < fsz && i < ng->fixed_size; i++) ng->fixed[i] |= fxm[i];
         free(fxm);
     }
@@ -2221,10 +2232,11 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 load_bios_pref(ng, biosdir, "asia-s3.rom");
                             }
                             {   /* CMC42/50 graphics descramble per slot feature (MAME cart devices) */
-                                static const struct { const char *f; uint8_t chip, key, sf, m1; } ctab[] = {
-                                    {"sma_kof99\"",42,0x00,1,0},{"sma_garouh\"",42,0x06,1,0},{"sma_garou\"",42,0x06,1,0},
+                                static const struct { const char *f; uint8_t chip, key, sf, m1, s1; } ctab[] = {
+                                    {"sma_kof99\"",42,0x00,1,0},
+                                    {"sma_garouh\"",42,0x06,1,0},{"sma_garou\"",42,0x06,1,0},
                                     {"sma_mslug3a\"",42,0xad,1,0},{"sma_mslug3\"",42,0xad,1,0},{"sma_kof2k\"",50,0x00,1,1},
-                                    {"pvc_mslug5\"",50,0x19,1,1},{"pvc_svc\"",50,0x57,1,1},
+                                    {"pvc_mslug5\"",50,0x19,1,1,0},{"pvc_svc\"",50,0x57,1,1,0},
                                     {"pvc_kf2k3h\"",50,0x9d,1,1},{"pvc_kf2k3\"",50,0x9d,1,1},
                                     {"cmc42_zupapa\"",42,0xbd,0,0},{"cmc42_mslug3h\"",42,0xad,0,0},{"cmc42_ganryu\"",42,0x07,0,0},
                                     {"cmc42_s1945p\"",42,0x05,0,0},{"cmc42_preisle2\"",42,0x9f,0,0},{"cmc42_bangbead\"",42,0xf8,0,0},
@@ -2244,7 +2256,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                         if (f_cmctr()) fprintf(stderr, "M1DEC sw=%s acsz=%x snd[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x\n", ctab[ci].f, ng->acrypt_size, ng->snd[0],ng->snd[1],ng->snd[2],ng->snd[3],ng->snd[4],ng->snd[5],ng->snd[6],ng->snd[7]);
                                     }
                                     if (!getenv("LINORAGX_NOCMC"))
-                                        cmc_gfx_run(ng, ctab[ci].chip == 50, ctab[ci].key, ctab[ci].sf);
+                                        cmc_gfx_run(ng, ctab[ci].chip == 50, ctab[ci].key, ctab[ci].sf, ctab[ci].s1);
                                     if (!strcmp(ctab[ci].f, "boot_kf2k3pl\"")) ng->k3bl_px = 1;
                                     else if (!strcmp(ctab[ci].f, "boot_kf2k3upl\"")) ng->k3bl_px = 2;
                                     fprintf(stderr, "CMC %s chip=%d key=%02x sfix=%d m1=%d spr=%x\n",
