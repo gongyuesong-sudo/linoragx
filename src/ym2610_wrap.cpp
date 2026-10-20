@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <vector>
 
 #include "ymfm_opn.h"
@@ -49,14 +50,45 @@ struct ym2610 {
 
     std::vector<ymfm::ym2610::output_data> obuf;
 
-    ym2610() : intf(), chip(intf, 0x7f) { intf.y = this; }
+    /* anti-alias filter: 4th-order Butterworth (2 cascaded biquads) LP @18k
+     * in the native 223.7k domain, applied before decimation */
+    struct Biquad {
+        double b0=1,b1=0,b2=0,a1=0,a2=0, x1=0,x2=0,y1=0,y2=0;
+        void design(double fs, double fc) {
+            double w = 2.0*3.14159265358979*fc/fs, cw = cos(w), sw = sin(w), q = 0.707106781;
+            double alpha = sw/(2.0*q), a0 = 1.0+alpha;
+            b0=(1.0-cw)/2.0/a0; b1=(1.0-cw)/a0; b2=b0; a1=-2.0*cw/a0; a2=(1.0-alpha)/a0;
+            x1=x2=y1=y2=0;
+        }
+        double step(double x) {
+            double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
+            x2=x1; x1=x; y2=y1; y1=y; return y;
+        }
+    };
+    struct LP4 { Biquad s1, s2;
+        void design(double fs, double fc) {
+            /* Butterworth 4th order: two stages with Q 0.5412 / 1.3066 */
+            s1.design(fs, fc); s2.design(fs, fc);
+            double w = 2.0*3.14159265358979*fc/fs, cw = cos(w), sw = sin(w);
+            double a0;
+            double al1 = sw/(2.0*0.54119610), a = 1.0+al1;
+            s1.b0=(1.0-cw)/2.0/a; s1.b1=(1.0-cw)/a; s1.b2=s1.b0; s1.a1=-2.0*cw/a; s1.a2=(1.0-al1)/a;
+            double al2 = sw/(2.0*1.30656296); a = 1.0+al2;
+            s2.b0=(1.0-cw)/2.0/a; s2.b1=(1.0-cw)/a; s2.b2=s2.b0; s2.a1=-2.0*cw/a; s2.a2=(1.0-al2)/a;
+            (void)a0;
+        }
+        double step(double x) { return s2.step(s1.step(x)); }
+    };
+    LP4 bqL, bqR;
+
+    ym2610() : intf(), chip(intf, 0x7f) { intf.y = this; bqL.design(3579545.0/16.0, 18000.0); bqR = bqL; }
 };
 
 uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t address)
 {
     (void)type;                              /* ADPCM-A and -B share the audio ROM */
-    if (!y->rom || !y->rom_size) return 0;
-    return y->rom[address % y->rom_size];
+    if (!y->rom || address >= y->rom_size) return 0;   /* MAME: no wrap, OOB reads 0 */
+    return y->rom[address];
 }
 
 /* ---- lifecycle ---- */
@@ -166,14 +198,16 @@ static void ssg_stream(ym2610 *y, int32_t *buf, int n)
     for (int i = 0; i < n; i++) {
         int mix = 0;
         for (int ch = 0; ch < 3; ch++) {
-            int fn = ((y->r21[0x20 + ch*8] & 0x0F) << 6) | (y->r21[0x18 + ch*8] & 0x3F);
-            if (!fn) continue;
-            double f = 2048.0 * OUT_RATE / (4096*32) * fn / 8.0;
+            int fn  = ((y->r21[0x20 + ch*8] & 0x0F) << 6) | (y->r21[0x18 + ch*8] & 0x3F);
+            int oct = (y->r21[0x20 + ch*8] >> 4) & 7;
+            int vol = y->r21[0x0E + ch*8] & 0x1F;
+            if (!fn || !vol) continue;
+            /* YM2151 datasheet: f = clock * fn * 2^oct / 2^21 (clock 3.579545MHz) */
+            double f = 3579545.0 * fn * (1 << oct) / 2097152.0;
             y->ssg_phase[ch] += f / OUT_RATE;
             if (y->ssg_phase[ch] >= 1.0) { y->ssg_phase[ch] -= 1.0; y->ssg_out[ch] ^= 1; }
-            int vol = y->r21[0x0E + ch*8] & 0x1F;
-            int amp = (8192 - vol*256) / 6;
-            mix += y->ssg_out[ch] ? amp : -amp;   /* bipolar square: unipolar = DC = harsh buzz */
+            int amp = vol * 300;                       /* level 0..31, louder = bigger */
+            mix += y->ssg_out[ch] ? amp : -amp;        /* bipolar square: unipolar = DC = harsh buzz */
         }
         buf[i] += mix;
     }
@@ -187,6 +221,10 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
     int n = (int)(frames * (NAT_RATE / OUT_RATE)) + 2;
     y->obuf.resize(n);
     y->chip.generate(y->obuf.data(), n);
+    for (int i = 0; i < n; i++) {           /* anti-alias before decimation */
+        y->obuf[i].data[0] = (int32_t)y->bqL.step(y->obuf[i].data[0]);
+        y->obuf[i].data[1] = (int32_t)y->bqR.step(y->obuf[i].data[1]);
+    }
 
     std::vector<int32_t> mix(frames, 0);
     ssg_stream(y, mix.data(), frames);
