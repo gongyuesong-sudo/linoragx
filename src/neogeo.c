@@ -2285,6 +2285,16 @@ void linoragx_pc_hook(unsigned int pc)
         fprintf(stderr, "F %d %08x\n", f, pc);
 }
 
+/* Z80FLOW=lo-hi: instruction-level Z80 PC flow (env-gated) */
+static int g_z80flow_lo = -1, g_z80flow_hi = -1;
+void linoragx_z80_step(unsigned int pc)
+{
+    if (g_z80flow_lo < 0) return;
+    int f = g_ng ? g_ng->frame : -1;
+    if (f >= g_z80flow_lo && f <= g_z80flow_hi)
+        fprintf(stderr, "Z %d %04x\n", f, pc);
+}
+
 neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t errsz)
 {
     neogeo *ng = calloc(1, sizeof *ng);
@@ -2554,10 +2564,15 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     /* PCFLOW=lo-hi: instruction-level 68K PC flow dump (debug hook) */
     { const char *e = getenv("PCFLOW"); const char *d = e ? strchr(e, '-') : 0;
       if (e) { g_pcflow_lo = atoi(e); g_pcflow_hi = d ? atoi(d + 1) : 999999; g_pcflow_ng = ng; } }
+    { const char *e = getenv("Z80FLOW"); const char *d = e ? strchr(e, '-') : 0;
+      if (e) { g_z80flow_lo = atoi(e); g_z80flow_hi = d ? atoi(d + 1) : 999999; } }
     ym_reset(ng->ym);        /* ymfm requires an explicit reset; new() leaves chip state uninitialized */
     { const char *zt = getenv("Z80TRACE"); if (zt) ng->dbg_z80 = atoi(zt); }
     g_ng = ng;
     ng->z = z80w_create(ng, z_read, z_write, z_in, z_out);
+    { extern void z80w_set_step_hook(void*, void (*)(unsigned));
+      extern void linoragx_z80_step(unsigned);
+      z80w_set_step_hook(ng->z, linoragx_z80_step); }
     m68k_set_cpu_type(M68K_CPU_TYPE_68000);
     m68k_init();
     m68k_set_instr_hook_callback(linoragx_pc_hook);  /* must follow m68k_init (it clears callbacks) */

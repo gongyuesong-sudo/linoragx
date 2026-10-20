@@ -688,6 +688,8 @@ unsigned cpu_z80::mz80step()
 {
 	unsigned cyc = 0;
 
+	if (m_step_hook) m_step_hook(z80pc);
+
 	// EI acceptance shadow: EI already set IFF1/IFF2 (hardware-accurate); this
 	// counter only holds off interrupt ACCEPTANCE until after the instruction
 	// following EI. It must NOT set the flags itself -- an NMI can dispatch

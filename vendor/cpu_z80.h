@@ -249,6 +249,9 @@ private:
 
 public:
 	uint8_t* ram_array() { return m_rgbMemory; }   /* added: coherent RAM view for wrappers */
+	/* per-instruction step hook (env-gated tracing; null = free) */
+	void set_step_hook(void (*h)(unsigned pc)) { m_step_hook = h; }
+	void (*m_step_hook)(unsigned pc) = nullptr;
 private:
 	uint8_t* m_rgbStack;			// takes place of the SP register
 	uint8_t* m_rgbMemory;			// direct access to memory buffer (RAM)
