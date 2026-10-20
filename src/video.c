@@ -58,8 +58,10 @@ static void cram_lut_init(void)
     for (int k = 0; k < 4; k++) {
         double w[5], sum = 0;
         for (int n = 0; n < 5; n++) {
-            double g0 = (pd[k] == 0) ? 1e12 : 1.0 / pd[k];  /* pulldown conductance */
-            double g1 = 1e12;                               /* no pullup */
+            /* MAME resnet.cpp: an absent pulldown/pullup is an OPEN net, i.e.
+               conductance 1.0/1e12 = 1e-12, NOT 1e12 (that would be a short). */
+            double g0 = (pd[k] == 0) ? 1.0 / 1e12 : 1.0 / pd[k];  /* pulldown conductance */
+            double g1 = 1.0 / 1e12;                               /* no pullup: open */
             for (int j = 0; j < 5; j++) {
                 if (j == n) g1 += 1.0 / res[j];  /* this bit high: resistor to Vcc */
                 else        g0 += 1.0 / res[j];  /* this bit low: resistor to gnd */
@@ -81,6 +83,11 @@ static void cram_lut_init(void)
             cram_lut[i][k] = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v);
         }
     cram_lut_ready = 1;
+    if (getenv("CRAMLUT")) {
+        for (int i = 0; i < 32; i++)
+            fprintf(stderr, "LUT %2d: %3d %3d %3d %3d\n", i,
+                    cram_lut[i][0], cram_lut[i][1], cram_lut[i][2], cram_lut[i][3]);
+    }
 }
 
 static inline uint32_t cram24(uint16_t c, int shadow)
