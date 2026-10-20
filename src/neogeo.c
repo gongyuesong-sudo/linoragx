@@ -138,6 +138,9 @@ struct neogeo {
     uint8_t  fc;
     uint64_t frame;
     int      scanline;
+    uint32_t *fb;                 /* window framebuffer: when set, ng_run_frame draws
+                                     each scanline as it completes (MAME update_partial) */
+    int      draw_next;           /* next fb row to draw in the current frame */
     char     gamename[64];
     void    *z;
     ym2610  *ym;
@@ -2578,6 +2581,10 @@ void ng_run_frame(neogeo *ng)
     }
     /* vertical interrupt: level 1 (vector 0x64), fires every frame (LSPC auto) */
     m68k_set_virq(1, 1);
+    /* MAME per-line rendering: arm the framebuffer for this frame; lines are
+       drawn at their start inside the chunk loop (mid-frame VRAM/CRAM writes
+       become visible, like sprite_line_timer + update_partial in MAME). */
+    if (ng->fb) { ng_render_begin(ng, ng->fb); ng->draw_next = 0; }
     if (f_pcw() && ng->frame < 3) {
         static int z1 = 0;
         if (!z1) { z1 = 1;
@@ -2678,6 +2685,12 @@ void ng_run_frame(neogeo *ng)
         ng->mc_cycles += chunk;
         left -= chunk;
         ng->scanline = (int)((CYCLES_PER_FRAME - left) / CYCLES_PER_LINE) % LINES_PER_FRAME;
+        /* per-line draw: fb row r = scanline r+40 (frame start = MAME line 240,
+           visible lines start at s=40); a line is complete once the beam passed it */
+        if (ng->fb) {
+            int done = ng->scanline - 40;
+            while (ng->draw_next < done) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
+        }
         { extern uint16_t z80w_sp(void*);
           uint16_t zpc0 = z80w_pc(ng->z);
           z80w_exec(ng->z, chunk/3);   /* MAME: Z80 = master/6 = 4MHz, 68K = master/2 = 12MHz -> 1:3 */
@@ -2770,9 +2783,14 @@ void ng_run_frame(neogeo *ng)
        frame — the BIOS coin screen then never reaches its ISR). */
     if (getenv("VB_CLEAR")) m68k_set_virq(1, 0);    /* A/B: old frame-end clear */
     if (ng->irq_enable & 5) ng->raster_armed = 1;   /* AUTOLOAD_VBLANK or REPEAT */
+    if (ng->fb)   /* catch up any line the chunk loop did not reach */
+        while (ng->draw_next < NG_H) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
     ng->scanline = 0;
     ng->frame++;
 }
+
+/* arm per-line rendering into fb (window mode); NULL disables (headless) */
+void ng_set_fb(neogeo *ng, uint32_t *fb) { ng->fb = fb; }
 
 /* ---- accessors for video.c ---- */
 uint16_t *ng_vram(neogeo *ng) { return ng->vram; }

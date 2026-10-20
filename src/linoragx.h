@@ -13,6 +13,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
 void    ng_destroy(neogeo *ng);
 void    ng_run_frame(neogeo *ng);
 void    ng_render(neogeo *ng, uint32_t *fb /* NG_W*NG_H RGBA8888 */);
+void    ng_render_begin(neogeo *ng, uint32_t *fb);
+void    ng_draw_line(neogeo *ng, uint32_t *fb, int line);   /* fb row 0..NG_H-1 */
+void    ng_set_fb(neogeo *ng, uint32_t *fb);  /* per-line draw target (window mode) */
 void    ng_audio(neogeo *ng, int16_t *stereo, int frames);
 void    ng_set_button(neogeo *ng, int player, int bit, int down);
 void    ng_press_key(neogeo *ng, int keysym);      /* map xkb keysym -> buttons */

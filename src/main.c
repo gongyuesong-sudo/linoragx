@@ -194,6 +194,7 @@ int main(int argc, char **argv)
     wl_input *in = (backend && !strcmp(backend,"wayland")) ? wl_input_create(wdisp) : NULL;
 
     uint32_t *fb = malloc(NG_W*NG_H*4);
+    if (vk) ng_set_fb(ng, fb);   /* window mode: ng_run_frame draws per scanline (MAME) */
     if (getenv("LINORAGX_CTL")) {
         int cp = atoi(getenv("LINORAGX_CTL"));
         if (cp > 0 && ctl_open(cp) != 0) fprintf(stderr, "[ctl] open failed on port %d\n", cp);
@@ -241,7 +242,7 @@ int main(int argc, char **argv)
                 if (getenv("INPDBG")) fprintf(stderr, "[inp] f=%d bit=%d down=%d\n", evs[ei-1].f, evs[ei-1].b, evs[ei-1].down); }
         }
         ng_run_frame(ng);
-        ng_render(ng, fb);
+        if (!vk) ng_render(ng, fb);   /* window mode already drew per line in ng_run_frame */
         {   /* LINDUMPF=N: at frame N dump vram+cram+zoomy to /tmp/lindump.bin and fb to /tmp/lindump.bmp */
             static int lindf = -2;
             if (lindf == -2) { const char *e = getenv("LINDUMPF"); lindf = e ? atoi(e) : -1; }
