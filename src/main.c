@@ -252,7 +252,7 @@ int main(int argc, char **argv)
                     fclose(f);
                 }
                 dump_bmp(fb, "/tmp/lindump.bmp");
-                fprintf(stderr, "LINDUMP at frame %lld\n", (long long)n);
+                fprintf(stderr, "LINDUMP at frame %lld bank=%x\n", (long long)n, ng_cram_bank_render(ng));
             }
         }
         if (envf_dbg() && (n % 30 == 29)) {
