@@ -264,9 +264,9 @@ static uint8_t z_read(uint32_t a, void *c)
 {
     neogeo *ng = (neogeo*)c;
     a &= 0xFFFF;
-    if (getenv("BLKRD") && a >= 0xfec0 && a < 0xff00) {
+    if (getenv("BLKRD") && a >= 0xfc30 && a < 0xff00) {
         static long brd = 0;
-        if ((brd++ % 200) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x f=%llu\n", a, z80w_pc(ng->z), (unsigned long long)ng->frame);
+        if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x f=%llu\n", a, z80w_pc(ng->z), (unsigned long long)ng->frame);
     }
     if (f_ztrace() && a >= 0xFD25 && a <= 0xFD68 && ng->frame > 40 && ng->frame < 60)
         fprintf(stderr, "ZR f=%d a=%04x pc=%04x\n", ng->frame, a, z80w_pc(ng->z));
@@ -318,6 +318,10 @@ static void z_write(uint32_t a, uint8_t v, void *c)
 {
     neogeo *ng = (neogeo*)c;
     a &= 0xFFFF;
+    if (getenv("BLKRD") && a >= 0xfc30 && a < 0xff00) {
+        static long bwr = 0;
+        if ((bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x f=%llu\n", a, v, z80w_pc(ng->z), (unsigned long long)ng->frame);
+    }
     /* Z80 RAM is 0xF800-0xFFFF (2K). The stack starts at 0xFFFC (SP=0xFFFF at
        reset, first push writes 0xFFFB/0xFFFC): the high bytes are still RAM —
        dropping them corrupts NMI return addresses (crash to 0xFFFD). */

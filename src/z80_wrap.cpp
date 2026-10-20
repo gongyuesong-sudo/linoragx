@@ -3,6 +3,7 @@
 #include "cpu_z80.h"
 #include <cstring>
 #include <cstdlib>
+#include <cstdio>
 
 typedef uint8_t  (*rd_fn)(uint32_t, void*);
 typedef void     (*wr_fn)(uint32_t, uint8_t, void*);
@@ -21,7 +22,10 @@ struct z80w {
 };
 
 static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
-{ z80w *w = (z80w*)h->pUserArea;
+{ if (getenv("BLKRD") && off >= 0xFC30 && off < 0xFF00) {
+    static long brd = 0; z80w *w0 = (z80w*)h->pUserArea;
+    if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x\n", off, w0->cpu->get_state().PC); }
+  z80w *w = (z80w*)h->pUserArea;
   /* THE FIX: the core's Push/Pop walk m_rgbStack as a POINTER into
      m_rgbMemory and read back via the internal array (mz80GetMemory's
      sentinel fallthrough). Routing 0xF800-0xFFFF to the callback RAM
@@ -32,7 +36,10 @@ static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
   if (off >= 0xF800) return w->cpu->ram_array()[off];
   return w->rd(off + h->lowAddr, w->ctx); }
 static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
-{ z80w *w = (z80w*)h->pUserArea;
+{ if (getenv("BLKRD") && off >= 0xFC30 && off < 0xFF00) {
+    static long bwr = 0; z80w *w0 = (z80w*)h->pUserArea;
+    if ((bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x\n", off, v, w0->cpu->get_state().PC); }
+  z80w *w = (z80w*)h->pUserArea;
   if (off >= 0xF800) { w->cpu->ram_array()[off] = v; return; }
   w->wr(off + h->lowAddr, v, w->ctx); }
 static UINT16 tr_in(UINT16 p, z80PortRead *h)
