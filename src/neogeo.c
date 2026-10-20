@@ -264,6 +264,12 @@ static uint8_t z_read(uint32_t a, void *c)
 {
     neogeo *ng = (neogeo*)c;
     a &= 0xFFFF;
+    if (getenv("VIEWDBG") && a <= 0x0012) {
+        static long vd = 0;
+        if ((vd++ % 20) == 0) fprintf(stderr, "VIEW a=%04x cv=%d m1v=%d ca=%d zpc=%04x f=%llu\n",
+            a, ng->snd ? (ng->cart_audio || ng->m1_view) : 0, ng->m1_view, ng->cart_audio,
+            z80w_pc(ng->z), (unsigned long long)ng->frame);
+    }
     if (getenv("BLKRD") && a >= 0xfc30 && a < 0xff00) {
         static long brd = 0;
         if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x f=%llu\n", a, z80w_pc(ng->z), (unsigned long long)ng->frame);
