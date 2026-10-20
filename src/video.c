@@ -101,18 +101,23 @@ void ng_render(neogeo *ng, uint32_t *fb)
        tiles sharing the s1 pattern region, scroll regs at vram[0x84]/[0x85];
        MAME draws it first (tilemap->draw), pen0 transparent ---- */
     if (fixed && !envf_notile()) {
+        /* MAME neosprite_base_device::draw_fixed_layer: table at WORD 0x7000,
+           row stride 0x20, 40 cols x 32 rows, NO scroll (the old 0x4800/scroll
+           reading was sprite-table garbage: joyjoy noise 0.353). */
         static const uint8_t pbyte[8] = {0x10,0x10,0x18,0x18,0x00,0x00,0x08,0x08};
-        int scrollx = vram[0x84] & 0x1FF;
-        int scrolly = vram[0x85] & 0x1FF;
         for (int y = 0; y < NG_H; y++) {
-            int cy = (y + scrolly) & 0xFF;
-            int row = (cy >> 3)*32, ry = cy & 7;
+            int row = y >> 3;
+            const uint16_t *vd = &vram[0x7000 + row*0x20];
             uint32_t *drow = &fb[y*NG_W];
             for (int x = 0; x < NG_W; x++) {
-                int cx = (x + scrollx) & 0xFF;
-                uint16_t e = vram[0x4800 + row + (cx >> 3)];   /* byte 0x9000 = word 0x4800 (sprite tables live at word 0x8000+) */
-                uint8_t d = fixed[( (((e & 0xFFF) << 5) | ry) & fix_mask ) | pbyte[cx & 7]];
-                uint8_t p = (cx & 1) ? (d >> 4) : (d & 0x0F);
+                uint16_t e = vd[x >> 3];
+                uint32_t code = e & 0xFFF;
+                if (fix_banked) {   /* MAME FIX_BANKTYPE_GAROU / _KOF2000 */
+                    if (fbtype == 1) code += 0x1000 * (garouoffsets[(row - 2) & 31] ^ 3);
+                    else if (fbtype == 2) code += 0x1000 * (((vram[0x7500 + ((row - 1) & 31) + 32*(x/6)] >> (5 - (x%6))*2) & 3) ^ 3);
+                }
+                uint8_t d = fixed[( ((code << 5) | (y & 7)) & fix_mask ) | pbyte[x & 7]];
+                uint8_t p = (x & 1) ? (d >> 4) : (d & 0x0F);
                 if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank]);
             }
         }
