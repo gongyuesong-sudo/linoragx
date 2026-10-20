@@ -689,6 +689,10 @@ unsigned cpu_z80::mz80step()
 	unsigned cyc = 0;
 
 	if (m_step_hook) m_step_hook(z80pc);
+	{	static int c0 = -2;
+	 if (c0 == -2) c0 = getenv("CORE0CA0") ? 1 : 0;
+	 if (c0 && z80pc == 0x0ca0) { extern unsigned long long z80w_dbg_frame;
+	  fprintf(stderr, "CORE0CA0 f=%llu\n", z80w_dbg_frame); } }
 
 	// EI acceptance shadow: EI already set IFF1/IFF2 (hardware-accurate); this
 	// counter only holds off interrupt ACCEPTANCE until after the instruction
