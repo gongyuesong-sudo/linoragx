@@ -243,31 +243,25 @@ void ng_render(neogeo *ng, uint32_t *fb)
         }
     }
 
-    /* ---- fix layer, drawn LAST: its non-pen0 pixels overwrite sprites
-       (MAME screen_update: draw_sprites then draw_fixed_layer) ---- */
-    if (!envf_nofix())
-    for (int ty = 0; ty < 28; ty++) {
-        for (int tx = 0; tx < 40; tx++) {
-            uint16_t e = vram[0x7000 + ty + 0x20*tx];
-            int code = e & 0xFFF, pal = e >> 12;
-            if (fix_banked) {
-                if (fbtype == 1)
-                    code += 0x1000 * (garouoffsets[(ty - 2) & 31] ^ 3);
-                else
-                    code += 0x1000 * (((vram[0x7500 + ((ty - 1) & 31) + 32*(tx/6)] >> (5 - (tx % 6))*2) & 3) ^ 3);
-            }
-            const uint16_t *pens = &cram[(pal<<4) | bank];
-            for (int y = 0; y < 8; y++) {
-                int dy = ty*8 + y;
-                if (dy >= NG_H) continue;
-                uint32_t base = ((code<<5) | y) & fix_mask;
-                const uint8_t *g = fixed + base;
-                uint32_t *row = &fb[dy*NG_W + tx*8];
-                uint8_t d;
-                d = g[0x10]; if (d&0x0F) row[0]=cram24(pens[d&0x0F]); if (d&0xF0) row[1]=cram24(pens[d>>4]);
-                d = g[0x18]; if (d&0x0F) row[2]=cram24(pens[d&0x0F]); if (d&0xF0) row[3]=cram24(pens[d>>4]);
-                d = g[0x00]; if (d&0x0F) row[4]=cram24(pens[d&0x0F]); if (d&0xF0) row[5]=cram24(pens[d>>4]);
-                d = g[0x08]; if (d&0x0F) row[6]=cram24(pens[d&0x0F]); if (d&0xF0) row[7]=cram24(pens[d>>4]);
+    /* ---- fixed layer drawn ONCE (MAME draw_fixed_layer: table WORD 0x7000,
+       row stride 0x20, 40 cols x 32 rows, no scroll; non-pen0 pixels
+       overwrite sprites; drawn LAST per MAME screen_update) ---- */
+    if (!envf_nofix()) {
+        static const uint8_t pbyte[8] = {0x10,0x10,0x18,0x18,0x00,0x00,0x08,0x08};
+        for (int y = 0; y < NG_H; y++) {
+            int row = y >> 3;
+            const uint16_t *vd = &vram[0x7000 + row*0x20];
+            uint32_t *drow = &fb[y*NG_W];
+            for (int x = 0; x < NG_W; x++) {
+                uint16_t e = vd[x >> 3];
+                uint32_t code = e & 0xFFF;
+                if (fix_banked) {   /* MAME FIX_BANKTYPE_GAROU / _KOF2000 */
+                    if (fbtype == 1) code += 0x1000 * (garouoffsets[(row - 2) & 31] ^ 3);
+                    else if (fbtype == 2) code += 0x1000 * (((vram[0x7500 + ((row - 1) & 31) + 32*(x/6)] >> (5 - (x%6))*2) & 3) ^ 3);
+                }
+                uint8_t d = fixed[( ((code << 5) | (y & 7)) & fix_mask ) | pbyte[x & 7]];
+                uint8_t p = (x & 1) ? (d >> 4) : (d & 0x0F);
+                if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank]);
             }
         }
     }
