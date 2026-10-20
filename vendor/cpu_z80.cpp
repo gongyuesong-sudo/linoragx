@@ -3773,7 +3773,8 @@ void cpu_z80::HandleED() {
 		{	static int rp2 = -2;
 		 if (rp2 == -2) rp2 = getenv("RSTCORE") ? 1 : 0;
 		 if (rp2) { static long nret = 0;
-		  if ((nret++ % 400) == 0) fprintf(stderr, "RETN pop=%04x\n", mz80GetMemory((uint16_t)(m_rgbStack - m_rgbStackBase + 1)) | (mz80GetMemory((uint16_t)(m_rgbStack - m_rgbStackBase + 2)) << 8)); } }
+		  uint16_t sp = GetSP();
+		  if ((nret++ % 400) == 0) fprintf(stderr, "RETN pop=%04x\n", mz80GetMemory(sp) | (mz80GetMemory((uint16_t)(sp + 1)) << 8)); } }
 		cCycles += Ret0(1);
 		break;
 
