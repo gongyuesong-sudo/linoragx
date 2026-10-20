@@ -745,7 +745,9 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         int off = (a >> 1) & 0xF;
         int ch  = off & 7, v = (off >> 3) & 1;
         switch (ch) {
-        case 0: ng->screen_shadow = v; break;   /* MAME: q_out_cb<0> = set_screen_shadow */
+        case 0:
+            if (getenv("SHDWDBG")) fprintf(stderr, "SHDW v=%d f=%llu pc=%08x\n", v, (unsigned long long)ng->frame, m68k_get_reg(NULL,M68K_REG_PC));
+            ng->screen_shadow = v; break;   /* MAME: q_out_cb<0> = set_screen_shadow */
         case 1: if (f_latch_tr()) fprintf(stderr, "LATCH ch1 v=%d pc=%08x f=%d\n", v, m68k_get_reg(NULL,M68K_REG_PC), ng->frame); ng->vector_bank = v; break;
         case 2: ng->mc_lock1   = v; break;
         case 3: ng->mc_unlock2 = v; break;

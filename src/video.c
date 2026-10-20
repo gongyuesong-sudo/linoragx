@@ -125,12 +125,19 @@ static void parse_sprites(uint16_t *vram, int scanline)
     memset(dst, 0, (MAX_SPRITES_PER_LINE - cnt + 1) * 2);
 }
 
-/* frame start: MAME bitmap.fill(bg_pen) — background colour is CRAM[bank|0xFFF] */
+/* frame start: MAME bitmap.fill(bg_pen) — background colour is CRAM[bank|0xFFF].
+   MAME renders the whole frame once at vblank, so the screen-shadow latch is
+   sampled ONCE per frame here; the BIOS toggles ch0 dozens of times per frame
+   (fade effects) and reading it per scanline would darken part of the frame
+   ("translucent black flicker on the upper half"). */
+static int render_shadow;
+
 void ng_render_begin(neogeo *ng, uint32_t *fb)
 {
     uint16_t *cram = ng_cram(ng);
     uint32_t bank = ng_cram_bank_render(ng);
     uint32_t sh = ng_screen_shadow(ng);
+    render_shadow = (int)sh;
     uint32_t bg = cram24(cram[bank | 0xFFF], sh);
     for (int i = 0; i < NG_W*NG_H; i++) fb[i] = bg;
 
@@ -154,7 +161,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
     uint16_t *cram = ng_cram(ng);
     uint32_t bank = ng_cram_bank_render(ng);
     uint32_t fix_sz, spr_mask;
-    int sh = (int)ng_screen_shadow(ng);
+    int sh = render_shadow;   /* frame-start snapshot (MAME vblank semantics) */
     uint8_t *fixed = ng_fixed(ng, &fix_sz);
     uint8_t *spr8  = ng_sprite8(ng, &spr_mask);
     uint8_t *zoomy = ng_zoomy(ng);
@@ -300,7 +307,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
             }
             uint8_t d = fixed[( ((code << 5) | (line & 7)) & fix_mask ) | pbyte[x & 7]];
             uint8_t p = (x & 1) ? (d >> 4) : (d & 0x0F);
-            if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank], (int)ng_screen_shadow(ng));
+            if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank], render_shadow);
         }
     }
 }
