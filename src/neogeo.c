@@ -2922,6 +2922,8 @@ void ng_run_frame(neogeo *ng)
             for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfe10 + q));
             fprintf(stderr, "\nZRD feb0:");
             for (int q = 0; q < 0x20; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfeb0 + q));
+            fprintf(stderr, "\nZRD fec0:");
+            for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfec0 + q));
             fprintf(stderr, "\nZRD fd90:");
             for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfd90 + q));
             fprintf(stderr, "\nZRD fc30:");
