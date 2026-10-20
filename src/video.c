@@ -55,8 +55,7 @@ static void parse_sprites(uint16_t *vram, int scanline)
             y = 0x200 - (yc >> 7);
             rows = yc & 0x3F;
         }
-        if (rows == 0) continue;
-        if (!(rows >= 0x20 || ((scanline - y) & 0x1FF) < rows * 0x10)) continue;
+        if (!(rows == 0 || rows >= 0x20 || ((scanline - y) & 0x1FF) < rows * 0x10)) continue;
         *dst++ = n;
         if (++cnt == MAX_SPRITES_PER_LINE) break;
     }
