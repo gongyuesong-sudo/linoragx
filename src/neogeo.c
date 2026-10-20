@@ -315,7 +315,7 @@ static void z_write(uint32_t a, uint8_t v, void *c)
        reset, first push writes 0xFFFB/0xFFFC): the high bytes are still RAM —
        dropping them corrupts NMI return addresses (crash to 0xFFFD). */
     if (a >= 0xF800) {
-        if (f_ztrace() && a >= 0xFD00 && a <= 0xFDFF)
+        if (f_ztrace() && (a >= 0xF800))
             fprintf(stderr, "ZW f=%d a=%04x v=%02x pc=%04x\n", ng->frame, a, v, z80w_pc(ng->z));
         ng->sndram[a & 0x7FF] = v;
     }
@@ -712,7 +712,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             /* MAME generic_latch_8: data always overwritten, but data_pending
                (and hence the NMI line) only rises when idle. */
             if (!ng->z80_nmi_pend) ng->z80_nmi_pend = 1;
-            if (ng->dbg_z80==3) fprintf(stderr, "SL1W %02x a=%06x d=%04x m=%04x pc=%08x\n", v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
+            if (ng->dbg_z80==3) fprintf(stderr, "SL1W %02x a=%06x d=%04x m=%04x pc=%08x zpc=%04x pend=%d en=%d asrt=%d\n", v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC), z80w_pc(ng->z), ng->z80_nmi_pend, ng->z80_nmi_en, ng->z80_nmi_asserted);
             ng->sl1_cnt++;
         }
         return;
@@ -2274,6 +2274,17 @@ static void pvc_pack_color(neogeo *ng)
         ((sr & 0x0001) << 14) | ((sr & 0x0100) << 7));
 }
 
+/* PCFLOW=lo-hi instruction-level PC flow probe (env-gated; near-free when off) */
+static struct neogeo *g_pcflow_ng;
+static int g_pcflow_lo = -1, g_pcflow_hi = -1;
+void linoragx_pc_hook(unsigned int pc)
+{
+    if (g_pcflow_lo < 0) return;
+    int f = g_pcflow_ng ? g_pcflow_ng->frame : -1;
+    if (f >= g_pcflow_lo && f <= g_pcflow_hi)
+        fprintf(stderr, "F %d %08x\n", f, pc);
+}
+
 neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t errsz)
 {
     neogeo *ng = calloc(1, sizeof *ng);
@@ -2540,12 +2551,16 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     decode_sprites(ng);
 
     ng->ym = ym_create();
+    /* PCFLOW=lo-hi: instruction-level 68K PC flow dump (debug hook) */
+    { const char *e = getenv("PCFLOW"); const char *d = e ? strchr(e, '-') : 0;
+      if (e) { g_pcflow_lo = atoi(e); g_pcflow_hi = d ? atoi(d + 1) : 999999; g_pcflow_ng = ng; } }
     ym_reset(ng->ym);        /* ymfm requires an explicit reset; new() leaves chip state uninitialized */
     { const char *zt = getenv("Z80TRACE"); if (zt) ng->dbg_z80 = atoi(zt); }
     g_ng = ng;
     ng->z = z80w_create(ng, z_read, z_write, z_in, z_out);
     m68k_set_cpu_type(M68K_CPU_TYPE_68000);
     m68k_init();
+    m68k_set_instr_hook_callback(linoragx_pc_hook);  /* must follow m68k_init (it clears callbacks) */
     ng->screen_enabled = 1;
     ng->mc_lock1 = 1; ng->mc_unlock2 = 1; ng->mc_regsel = 1;
 
@@ -2775,6 +2790,28 @@ void ng_run_frame(neogeo *ng)
               if (++ng->dbg_z80 > 40) ng->dbg_z80 = 0;
           } }
         ym_advance(ng->ym, chunk*2/3);  /* YM2610 = master/3 = 8MHz = 2x Z80 rate */
+        { static int zram_mask = 0;
+          extern uint8_t z80w_peek(void*, uint32_t);
+          extern uint16_t z80w_sp(void*);
+          /* ZLO: catch PC entering the zero-page crash zone with stack snapshot */
+          if (f_ztrace()) {
+              static int zlo_armed = 1;
+              uint16_t zpc_now = z80w_pc(ng->z);
+              if (zlo_armed && ng->frame > 50 && zpc_now < 0x0100 && zpc_now != 0x0038 && zpc_now != 0x0066) {
+                  zlo_armed = 0;
+                  uint16_t spn = z80w_sp(ng->z);
+                  fprintf(stderr, "ZLO f=%d pc=%04x sp=%04x stk=%02x %02x %02x %02x %02x %02x %02x %02x\n",
+                      ng->frame, zpc_now, spn,
+                      z80w_peek(ng->z,spn), z80w_peek(ng->z,spn+1), z80w_peek(ng->z,spn+2), z80w_peek(ng->z,spn+3),
+                      z80w_peek(ng->z,spn+4), z80w_peek(ng->z,spn+5), z80w_peek(ng->z,spn+6), z80w_peek(ng->z,spn+7));
+              }
+          }
+          if (f_ztrace() && ng->frame >= 59 && ng->frame <= 62) {
+              int bit = 1 << (ng->frame - 59);
+              if (!(zram_mask & bit)) { zram_mask |= bit;
+                  fprintf(stderr, "ZRAM f=%d ffd=%02x ffe=%02x fff=%02x pc=%04x sp=%04x\n",
+                      ng->frame, z80w_peek(ng->z,0xfffd), z80w_peek(ng->z,0xfffe),
+                      z80w_peek(ng->z,0xffff), z80w_pc(ng->z), z80w_sp(ng->z)); } } }
         { int p = ym_irq_pending(ng->ym);          /* YM2610 timer IRQ -> Z80 INT (IM1 -> 0x38) */
           if (p && !ng->ym_irq_prev) z80w_irq(ng->z, 0xff);
           ng->ym_irq_prev = p; }

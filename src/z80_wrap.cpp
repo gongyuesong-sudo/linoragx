@@ -73,6 +73,7 @@ void z80w_reset(void *v) {
     ((z80w*)v)->cpu->set_state(st);
 }
 unsigned long z80w_exec(void *v, unsigned long t) { return ((z80w*)v)->cpu->mz80exec(t); }
+uint8_t z80w_peek(void *v, uint32_t off) { return ((z80w*)v)->cpu->ram_array()[off & 0xFFFF]; }
 void z80w_irq(void *v, uint8_t vector) { ((z80w*)v)->cpu->mz80int(vector); }
 void z80w_nmi(void *v) { ((z80w*)v)->cpu->mz80nmi(); }
 uint16_t z80w_pc(void *v) { return ((z80w*)v)->cpu->GetPC(); }
