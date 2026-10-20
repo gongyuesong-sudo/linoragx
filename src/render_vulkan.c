@@ -537,7 +537,12 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
     /* texture */
     {
         VkImageCreateInfo ti = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-        ti.imageType = VK_IMAGE_TYPE_2D; ti.format = VK_FORMAT_R8G8B8A8_UNORM;
+        /* MAME parity: fb is RGB32 0xAARRGGBB (same as MAME's bitmap_t), which
+           in little-endian memory is B,G,R,A — upload as B8G8R8A8 exactly like
+           MAME's OpenGL path uses GL_BGRA.  Declaring R8G8B8A8 here swaps R/B
+           on screen (skin turns blue, blue text turns red) while BMP dumps
+           (written from the fb directly) stay correct. */
+        ti.imageType = VK_IMAGE_TYPE_2D; ti.format = VK_FORMAT_B8G8R8A8_UNORM;
         ti.extent = (VkExtent3D){NG_W, NG_H, 1};
         ti.mipLevels = ti.arrayLayers = 1;
         ti.samples = VK_SAMPLE_COUNT_1_BIT; ti.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -551,7 +556,7 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
         vkAllocateMemory(v->dev, &ai, NULL, &v->texmem);
         vkBindImageMemory(v->dev, v->tex, v->texmem, 0);
         VkImageViewCreateInfo vi = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-        vi.image = v->tex; vi.viewType = VK_IMAGE_VIEW_TYPE_2D; vi.format = VK_FORMAT_R8G8B8A8_UNORM;
+        vi.image = v->tex; vi.viewType = VK_IMAGE_VIEW_TYPE_2D; vi.format = VK_FORMAT_B8G8R8A8_UNORM;
         vi.subresourceRange = (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT,0,1,0,1};
         vkCreateImageView(v->dev, &vi, NULL, &v->texview);
         VkSamplerCreateInfo si = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
