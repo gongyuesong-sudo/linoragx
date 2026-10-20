@@ -2296,6 +2296,11 @@ void cpu_z80::Rst(uint16_t wAddr)
 			extern unsigned long long z80w_dbg_frame;
 			fprintf(stderr, "RSTCORE v=10 from=%04x fe3d=%02x f=%llu\n",
 			        z80pc, mz80GetMemory(0xfe3d), z80w_dbg_frame);
+		}
+		if (rp && wAddr == 0x0038) {
+			extern unsigned long long z80w_dbg_frame;
+			static long n38 = 0;
+			if ((n38++ % 400) == 0) fprintf(stderr, "IRQDISP push=%04x f=%llu\n", z80pc, z80w_dbg_frame);
 		} }
 	Push(GetPC());
 	SetPC(wAddr);
@@ -3765,6 +3770,10 @@ void cpu_z80::HandleED() {
 	case 0x45: // retn
 		cCycles += 8;
 		m_iff1 = m_iff2;
+		{	static int rp2 = -2;
+		 if (rp2 == -2) rp2 = getenv("RSTCORE") ? 1 : 0;
+		 if (rp2) { static long nret = 0;
+		  if ((nret++ % 400) == 0) fprintf(stderr, "RETN pop=%04x\n", mz80GetMemory((uint16_t)(m_rgbStack - m_rgbStackBase + 1)) | (mz80GetMemory((uint16_t)(m_rgbStack - m_rgbStackBase + 2)) << 8)); } }
 		cCycles += Ret0(1);
 		break;
 
