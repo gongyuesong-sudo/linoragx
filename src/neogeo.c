@@ -2692,7 +2692,9 @@ void ng_run_frame(neogeo *ng)
         /* per-line draw: fb row r = scanline r+40 (frame start = MAME line 240,
            visible lines start at s=40); a line is complete once the beam passed it */
         if (ng->fb) {
-            int done = ng->scanline - 40;
+            static int vsh = -1;
+            if (vsh < 0) vsh = getenv("VSHIFT") ? atoi(getenv("VSHIFT")) : 40;
+            int done = ng->scanline - vsh;
             while (ng->draw_next < done) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
         }
         { extern uint16_t z80w_sp(void*);

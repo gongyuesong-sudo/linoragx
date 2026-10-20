@@ -168,6 +168,14 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
     uint32_t fix_mask = fix_sz - 1;
     int ac = ng_auto_counter(ng);
 
+    /* vertical content shift: user-reported 16-line downward offset (bottom
+       of the picture cut off, black bar on top). Row `line` of the fb shows
+       content row line+VOFF. Override with VOFF env (0 restores old map). */
+    static int voff = -1;
+    if (voff < 0) voff = getenv("VOFF") ? atoi(getenv("VOFF")) : 16;
+    int dline = line;
+    line += voff;
+
     /* ---- sprites for this line ---- */
     if (spr8 && !envf_nosp()) {
         static int nolist = -2;
@@ -246,7 +254,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                     if (zt & 0x8000) {
                         if (dx < NG_W) {
                             uint8_t p = g[0];
-                            if (p) fb[line*NG_W + dx] = cram24(pens[p], sh);
+                            if (p) fb[dline*NG_W + dx] = cram24(pens[p], sh);
                         }
                         dx++;
                     }
@@ -262,7 +270,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                         if (xw >= 0x200) {
                             if (dx < NG_W) {
                                 uint8_t p = g[0];
-                                if (p) fb[line*NG_W + dx] = cram24(pens[p], sh);
+                                if (p) fb[dline*NG_W + dx] = cram24(pens[p], sh);
                             }
                             dx++;
                         }
@@ -297,7 +305,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
         }
         int row = line >> 3;
         const uint16_t *vd = &vram[0x7000 + row];
-        uint32_t *drow = &fb[line*NG_W];
+        uint32_t *drow = &fb[dline*NG_W];
         for (int x = 0; x < NG_W; x++) {
             uint16_t e = vd[(x >> 3)*0x20];
             uint32_t code = e & 0xFFF;
