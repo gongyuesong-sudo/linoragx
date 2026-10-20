@@ -2283,6 +2283,13 @@ int cpu_z80::Jp1(int f)
 
 void cpu_z80::Rst(uint16_t wAddr)
 {
+	{	static int rp = -2;
+		if (rp == -2) rp = getenv("RSTCORE") ? 1 : 0;
+		if (rp && wAddr == 0x0010) {
+			extern unsigned long long z80w_dbg_frame;
+			fprintf(stderr, "RSTCORE v=10 from=%04x fe3d=%02x f=%llu\n",
+			        z80pc, mz80GetMemory(0xfe3d), z80w_dbg_frame);
+		} }
 	Push(GetPC());
 	SetPC(wAddr);
 }
