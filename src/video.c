@@ -52,7 +52,9 @@ static void cram_lut_init(void)
 {
     static const double res[5] = { 3900, 2200, 1000, 470, 220 };
     double weights[4][5], scaler = 0;
-    const int pd[4] = { 0, 8200, 150, 147 };  /* MAME: 1/(1/8200+1/150) truncates to 147 */
+    /* MAME neogeo_v.cpp: dark+shadow pulldown is the parallel of 8200 and 150
+       ohm, kept as a double (147.26), not truncated. */
+    const double pd[4] = { 0, 8200, 150, 1.0 / ((1.0 / 8200) + (1.0 / 150)) };
     for (int k = 0; k < 4; k++) {
         double w[5], sum = 0;
         for (int n = 0; n < 5; n++) {
@@ -205,7 +207,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
             else if (attr & 0x04) code = (code & ~3u) | (ac & 3);
             if (attr & 0x02) sprite_y ^= 0x0F;      /* vflip */
 
-            const uint16_t *pens = &cram[(attr >> 8) << 4];   /* MAME: no fix-layer bank term for sprites */
+            const uint16_t *pens = &cram[((attr >> 8) << 4) | bank];   /* MAME: m_pens base = palette + bank */
             uint32_t gfx = ((code << 8) | (sprite_y << 4)) & spr_mask;
             int x_inc = 1;
             if (attr & 0x01) { gfx += 0x0F; x_inc = -1; }   /* hflip */
