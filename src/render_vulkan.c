@@ -354,7 +354,10 @@ static int mk_swapchain(struct vkrend *v, uint32_t want_w, uint32_t want_h)
     sci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     sci.preTransform = caps.currentTransform;
     sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    /* present mode override for A/B testing: LINORAGX_PRESENT=mailbox|immediate (default fifo) */
+    /* present mode: default mailbox. FIFO stalls ~1s per acquire on this
+       compositor-less virtual display (irregular vsync), which the user sees
+       as frozen/flickering frames; mailbox measured 0ms acquire, 59.5fps.
+       Override for A/B: LINORAGX_PRESENT=fifo|mailbox|immediate. */
     sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;
     {
         const char *pm = getenv("LINORAGX_PRESENT");
@@ -367,8 +370,9 @@ static int mk_swapchain(struct vkrend *v, uint32_t want_w, uint32_t want_h)
             if (avail[q] == VK_PRESENT_MODE_MAILBOX_KHR) has_mailbox = 1;
             if (avail[q] == VK_PRESENT_MODE_IMMEDIATE_KHR) has_imm = 1;
         }
-        if (pm && !strcmp(pm, "mailbox") && has_mailbox) sci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+        if (pm && !strcmp(pm, "fifo")) sci.presentMode = VK_PRESENT_MODE_FIFO_KHR;
         else if (pm && !strcmp(pm, "immediate") && has_imm) sci.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        else if (has_mailbox) sci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
         fprintf(stderr, "[vk] present modes: %u avail, mailbox=%d imm=%d, using %s\n",
                 npm, has_mailbox, has_imm,
                 sci.presentMode == VK_PRESENT_MODE_MAILBOX_KHR ? "mailbox" :
