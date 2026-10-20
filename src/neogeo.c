@@ -753,7 +753,13 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                start command silently swallowed). mz80int_dispatch keeps the
                NMI line pending until the core actually takes it, so an
                immediate assert here is race-free even mid-heartbeat. */
-            if (ng->z80_nmi_en && !ng->z80_nmi_asserted) {
+            if (ng->z80_nmi_en) {
+                /* One soundlatch write == one NMI pulse (real HC259/latch
+                   hardware: every write re-edges the line regardless of
+                   whether the Z80 handler ever read the latch back).
+                   The old !z80_nmi_asserted level guard dead-locked the
+                   line high after the first unread command (samsho2
+                   cmd 07/2d at f=765/779 never fired). */
                 z80w_nmi(ng->z);
                 ng->nmi_cnt++;
                 ng->z80_nmi_asserted = 1;
