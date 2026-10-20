@@ -13,6 +13,9 @@ static int (*p_set_hw_params_all)(void*,unsigned,int,unsigned,int,int,int);
 static int (*p_writei)(void*,const void*,unsigned);
 static int (*p_prepare)(void*);
 static int (*p_drop)(void*);
+
+static int16_t *ring;            /* stereo frames, capacity rate_g*2 */
+static int ring_cap, ring_head, ring_count;
 static int rate_g = 44100;
 static short *conv;
 
@@ -34,6 +37,8 @@ int audio_init(int rate)
     if (err < 0) { p_close(pcm); pcm=0; hnd=0; return -1; }
     rate_g = rate;
     conv = malloc(rate*2*4);
+    ring_cap = rate*2; ring_head = ring_count = 0;
+    ring = malloc(ring_cap * 2 * sizeof(int16_t));
     fprintf(stderr, "[audio] ALSA default @%dHz\n", rate);
     return 0;
 }
@@ -44,9 +49,24 @@ void audio_close(void)
     if (hnd) dlclose(hnd);
     hnd = 0;
     free(conv); conv = 0;
+    free(ring); ring = 0; ring_cap = ring_head = ring_count = 0;
 }
 
-/* submit 44100 stereo s16; resample to rate_g by nearest */
+/* submit 44100 stereo s16; resample to rate_g by nearest.
+ * A NONBLOCK device returns -EAGAIN when its buffer is momentarily full:
+ * the leftover must be queued and flushed next call — dropping whole chunks
+ * (the old behaviour) punches 16ms holes in the waveform = audible clicking. */
+static void ring_push(const int16_t *src, int n)
+{
+    if (n > ring_cap) { src += (n - ring_cap) * 2; n = ring_cap; }  /* chronic lag: keep newest */
+    for (int i = 0; i < n; i++) {
+        int t = (ring_head + ring_count) % ring_cap;
+        ring[t*2] = src[i*2]; ring[t*2+1] = src[i*2+1];
+        ring_count++;
+        if (ring_count == ring_cap) ring_head = (ring_head + 1) % ring_cap;  /* overwrite oldest */
+    }
+}
+
 void audio_submit(const int16_t *stereo, int frames)
 {
     if (!pcm) return;
@@ -58,14 +78,27 @@ void audio_submit(const int16_t *stereo, int frames)
         conv[i*2]   = stereo[s*2];
         conv[i*2+1] = stereo[s*2+1];
     }
-    int w = p_writei(pcm, conv, outn);
+    ring_push(conv, outn);
+
+    int guard = 8;
+    while (ring_count > 0 && guard-- > 0) {
+        int tail = ring_cap - ring_head;
+        int first = ring_count < tail ? ring_count : tail;
+        int w = p_writei(pcm, ring + ring_head*2, first);
+        if (w > 0) {
+            ring_head = (ring_head + w) % ring_cap;
+            ring_count -= w;
+            if (w < first) break;                 /* buffer filled up; retry next frame */
+        } else if (w == -11 /*-EAGAIN*/) {
+            break;                                /* full: keep queue, never stall video */
+        } else if (w == -32 /*-EPIPE: xrun*/) {
+            p_prepare(pcm);                       /* recover and retry */
+        } else {
+            break;
+        }
+    }
     static int audbg = -2; static long acnt = 0;
     if (audbg == -2) audbg = getenv("AUDDBG") ? 1 : 0;
-    if (audbg && (acnt++ % 300) == 0) {
-        int peak = 0, uniq = 0; int16_t prev = 0;
-        for (int i = 0; i < frames*2; i++) { int v = stereo[i] < 0 ? -stereo[i] : stereo[i]; if (v > peak) peak = v; if (stereo[i] != prev) { uniq++; prev = stereo[i]; } }
-        fprintf(stderr, "[aud] n=%ld in_frames=%d out=%d peak=%d uniq=%d first=%d,%d writei=%d\n", acnt, frames, outn, peak, uniq, stereo[0], stereo[1], w);
-    }
-    if (w == -11 /*-EAGAIN: buffer full — drop this chunk, keep video pacing*/) return;
-    if (w < 0) p_prepare(pcm);
+    if (audbg && (acnt++ % 300) == 0)
+        fprintf(stderr, "[aud] in_frames=%d out=%d queued=%d\n", frames, outn, ring_count);
 }

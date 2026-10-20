@@ -4,6 +4,7 @@
  * External C interface unchanged; timer/IRQ/status handshake semantics are
  * preserved because the sm1 sound driver polls them. */
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -49,6 +50,8 @@ struct ym2610 {
     uint32_t rom_size = 0;
 
     std::vector<ymfm::ym2610::output_data> obuf;
+    std::vector<ymfm::ym2610::output_data> pend;   /* native samples not yet consumed */
+    double frac = 0.0;                             /* fractional read position in pend */
 
     /* anti-alias filter: 4th-order Butterworth (2 cascaded biquads) LP @18k
      * in the native 223.7k domain, applied before decimation */
@@ -99,6 +102,8 @@ void ym_destroy(ym2610 *y) { delete y; }
 void ym_reset(ym2610 *y)
 {
     y->chip.reset();
+    y->pend.clear();
+    y->frac = 0.0;
     memset(y->r21, 0, sizeof y->r21);
     memset(y->ssg_phase, 0, sizeof y->ssg_phase);
     memset(y->ssg_out, 0, sizeof y->ssg_out);
@@ -115,6 +120,9 @@ void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size)
 
 void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 {
+    static int ymdbg = -1;
+    if (ymdbg < 0) ymdbg = getenv("YMBDBG") ? 1 : 0;
+    if (ymdbg && chipno == 1) fprintf(stderr, "YMB %02x=%02x\n", reg, val);
     if (chipno == 2) {                       /* YM2151 SSG: real chip ignores reg > 0x7F */
         if (reg <= 0x7F) y->r21[reg] = val;
         return;
@@ -218,27 +226,32 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
     memset(stereo, 0, frames * 2 * sizeof(int16_t));
     if (frames <= 0) return;
 
-    int n = (int)(frames * (NAT_RATE / OUT_RATE)) + 2;
-    y->obuf.resize(n);
-    y->chip.generate(y->obuf.data(), n);
-    for (int i = 0; i < n; i++) {           /* anti-alias before decimation */
+    /* Continuous resampling: the fractional read position carries across
+     * frames (a per-frame reset makes a waveform discontinuity every frame
+     * = audible 59Hz clicking). pend holds unconsumed native samples. */
+    const double STEP = NAT_RATE / OUT_RATE;
+    int need = (int)(y->frac + frames * STEP) + 2 - (int)y->pend.size();
+    if (need < 0) need = 0;
+    y->obuf.resize(need);
+    y->chip.generate(y->obuf.data(), need);
+    for (int i = 0; i < need; i++) {        /* anti-alias before decimation */
         y->obuf[i].data[0] = (int32_t)y->bqL.step(y->obuf[i].data[0]);
         y->obuf[i].data[1] = (int32_t)y->bqR.step(y->obuf[i].data[1]);
+        y->pend.push_back(y->obuf[i]);
     }
 
     std::vector<int32_t> mix(frames, 0);
     ssg_stream(y, mix.data(), frames);
 
-    double step = (double)n / frames;
-    double pos = 0.0;
-    for (int i = 0; i < frames; i++, pos += step) {
+    double pos = y->frac;
+    for (int i = 0; i < frames; i++, pos += STEP) {
         int j = (int)pos;
-        if (j >= n - 1) j = n - 2;
+        if (j + 1 >= (int)y->pend.size()) j = (int)y->pend.size() - 2;
         double f = pos - j;
-        int32_t l0 = y->obuf[j].data[0] + mix[i];
-        int32_t r0 = y->obuf[j].data[1] + mix[i];
-        int32_t l1 = y->obuf[j+1].data[0] + mix[i];
-        int32_t r1 = y->obuf[j+1].data[1] + mix[i];
+        int32_t l0 = y->pend[j].data[0] + mix[i];
+        int32_t r0 = y->pend[j].data[1] + mix[i];
+        int32_t l1 = y->pend[j+1].data[0] + mix[i];
+        int32_t r1 = y->pend[j+1].data[1] + mix[i];
         int32_t L = (int32_t)(l0 * (1.0 - f) + l1 * f);
         int32_t R = (int32_t)(r0 * (1.0 - f) + r1 * f);
         if (L > 32767) L = 32767; if (L < -32768) L = -32768;
@@ -246,4 +259,7 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
         stereo[i*2]   = (int16_t)L;
         stereo[i*2+1] = (int16_t)R;
     }
+    int cons = (int)pos;
+    y->pend.erase(y->pend.begin(), y->pend.begin() + cons);
+    y->frac = pos - cons;
 }

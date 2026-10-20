@@ -345,6 +345,8 @@ static uint16_t z_in(uint32_t p, void *c)
 static void z_out(uint32_t p, uint8_t v, void *c)
 {
     neogeo *ng = (neogeo*)c;
+    { static int zio = -1; if (zio < 0) zio = getenv("Z80IO") ? 1 : 0;
+      if (zio && (p & 0xFF) != 0x0C) fprintf(stderr, "ZIO %02x=%02x\n", p & 0xFF, v); }
     switch (p & 0xFF) {
     case 0x04: ng->ym_reg[0] = v; break;                    /* YM2610 A: register latch (YM2151 shares bus) */
     case 0x05: ym_write(ng->ym, 0, ng->ym_reg[0], v);       /* YM2610 A: data write */
