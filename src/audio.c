@@ -59,6 +59,13 @@ void audio_submit(const int16_t *stereo, int frames)
         conv[i*2+1] = stereo[s*2+1];
     }
     int w = p_writei(pcm, conv, outn);
+    static int audbg = -2; static long acnt = 0;
+    if (audbg == -2) audbg = getenv("AUDDBG") ? 1 : 0;
+    if (audbg && (acnt++ % 300) == 0) {
+        int peak = 0, uniq = 0; int16_t prev = 0;
+        for (int i = 0; i < frames*2; i++) { int v = stereo[i] < 0 ? -stereo[i] : stereo[i]; if (v > peak) peak = v; if (stereo[i] != prev) { uniq++; prev = stereo[i]; } }
+        fprintf(stderr, "[aud] n=%ld in_frames=%d out=%d peak=%d uniq=%d first=%d,%d writei=%d\n", acnt, frames, outn, peak, uniq, stereo[0], stereo[1], w);
+    }
     if (w == -11 /*-EAGAIN: buffer full — drop this chunk, keep video pacing*/) return;
     if (w < 0) p_prepare(pcm);
 }

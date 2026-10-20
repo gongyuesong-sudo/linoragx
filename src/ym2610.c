@@ -158,7 +158,8 @@ static void fm_stream(ym2610 *y, int c, int16_t *buf, int n)
             y->ssg_phase[ch] += f / FM_RATE;
             if (y->ssg_phase[ch] >= 1.0) { y->ssg_phase[ch] -= 1.0; y->ssg_out[ch] ^= 1; }
             int vol = y->r21[0x0E + ch*8] & 0x1F;
-            if (y->ssg_out[ch]) mix += (8192 - vol*256) / 6;
+            int amp = (8192 - vol*256) / 6;
+            mix += y->ssg_out[ch] ? amp : -amp;   /* bipolar square: unipolar = DC = harsh buzz */
         }
         /* noise channel of 2610 (ch5 special) — light white noise when enabled */
         if (R[0xB6] & 0x04) mix += (rand() & 255) - 128;
