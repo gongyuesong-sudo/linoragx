@@ -2364,6 +2364,12 @@ void linoragx_z80_step(unsigned int pc)
                     g_ng->snd ? (g_ng->cart_audio || g_ng->m1_view) : 0,
                     g_ng->m1_view, g_ng->snd_size);
         }
+        if (pc == 0x0010 && g_ng && getenv("RST10DBG")) {
+            extern uint8_t z80w_peek(void*, uint32_t);
+            unsigned cmd = z80w_peek(g_ng->z, 0xfe3d);
+            unsigned tgt = z_read(0x0cad + 3u*cmd + 1, g_ng) | (z_read(0x0cad + 3u*cmd + 2, g_ng) << 8);
+            fprintf(stderr, "RST10 cmd=%02x -> %04x f=%llu\n", cmd, tgt, (unsigned long long)g_ng->frame);
+        }
         fprintf(stderr, "Z %d %04x\n", f, pc);
     }
 }
