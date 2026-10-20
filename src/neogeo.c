@@ -139,6 +139,7 @@ struct neogeo {
     uint8_t  fc;
     uint64_t frame;
     int      scanline;
+    int      perline;     /* 1 = draw lines inside chunk loop; 0 = whole frame at frame end (default) */
     uint32_t *fb;                 /* window framebuffer: when set, ng_run_frame draws
                                      each scanline as it completes (MAME update_partial) */
     int      draw_next;           /* next fb row to draw in the current frame */
@@ -2587,8 +2588,14 @@ void ng_run_frame(neogeo *ng)
     m68k_set_virq(1, 1);
     /* MAME per-line rendering: arm the framebuffer for this frame; lines are
        drawn at their start inside the chunk loop (mid-frame VRAM/CRAM writes
-       become visible, like sprite_line_timer + update_partial in MAME). */
-    if (ng->fb) { ng_render_begin(ng, ng->fb); ng->draw_next = 0; }
+       become visible, like sprite_line_timer + update_partial in MAME).
+       Default OFF: MAME's Neo Geo renders the whole frame once at vblank;
+       per-line interleaving exposed BIOS mid-frame writes as flickering
+       black blocks in window mode (user report 2026-10-20). PERLINE=1 restores. */
+    static int perline = -1;
+    if (perline < 0) perline = getenv("PERLINE") ? 1 : 0;
+    ng->perline = perline;
+    if (ng->fb && perline) { ng_render_begin(ng, ng->fb); ng->draw_next = 0; }
     if (f_pcw() && ng->frame < 3) {
         static int z1 = 0;
         if (!z1) { z1 = 1;
@@ -2691,10 +2698,8 @@ void ng_run_frame(neogeo *ng)
         ng->scanline = (int)((CYCLES_PER_FRAME - left) / CYCLES_PER_LINE) % LINES_PER_FRAME;
         /* per-line draw: fb row r = scanline r+40 (frame start = MAME line 240,
            visible lines start at s=40); a line is complete once the beam passed it */
-        if (ng->fb) {
-            static int vsh = -1;
-            if (vsh < 0) vsh = getenv("VSHIFT") ? atoi(getenv("VSHIFT")) : 40;
-            int done = ng->scanline - vsh;
+        if (ng->fb && ng->perline) {
+            int done = ng->scanline - 40;
             while (ng->draw_next < done) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
         }
         { extern uint16_t z80w_sp(void*);
@@ -2789,8 +2794,10 @@ void ng_run_frame(neogeo *ng)
        frame — the BIOS coin screen then never reaches its ISR). */
     if (getenv("VB_CLEAR")) m68k_set_virq(1, 0);    /* A/B: old frame-end clear */
     if (ng->irq_enable & 5) ng->raster_armed = 1;   /* AUTOLOAD_VBLANK or REPEAT */
-    if (ng->fb)   /* catch up any line the chunk loop did not reach */
+    if (ng->fb) {   /* frame-end whole-frame draw (MAME vblank semantics) unless per-line */
+        if (!ng->perline) { ng_render_begin(ng, ng->fb); ng->draw_next = 0; }
         while (ng->draw_next < NG_H) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
+    }
     ng->scanline = 0;
     ng->frame++;
 }
