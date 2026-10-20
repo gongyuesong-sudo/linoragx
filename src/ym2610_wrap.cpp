@@ -142,6 +142,12 @@ void ym_advance(ym2610 *y, int zcycles)
 {
     /* timer A: 1 step / 192 clocks; timer B: 1 step / 80 clocks */
     y->clk += (unsigned long)zcycles;        /* busy D7 auto-clear clock */
+    { static int tp = -2;
+      if (tp == -2) tp = getenv("TIMPROBE") ? 1 : 0;
+      if (tp) { static unsigned long n = 0;
+                if ((n++ % 12000) == 0)
+                    fprintf(stderr, "TIM ten=%d tload=%d tcnt=%d tflag=%d irqen=%02x clk=%lu\n",
+                            y->ten[0], y->tload[0], y->tcnt[0], y->tflag[0], y->irqen[0], y->clk); } }
     y->tfrac += zcycles;
     while (y->tfrac >= 192) {
         y->tfrac -= 192;

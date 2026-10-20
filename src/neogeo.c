@@ -801,12 +801,21 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                        c11eda..c11ee4 expecting SM1 to answer; resetting
                        there hands the test to cart m1 whose echo-only first
                        NMI deadlocks the BIOS: pnyaa/kof2003/kf2k3pl).
-                       Reset only when the GAME (68K outside BIOS alias
-                       windows) enables cart audio: mslug3 f234@0x10fa6. */
+                       BIOS-phase enable now ALSO keeps the SM1 view: cart m1
+                       must not see any BIOS-phase command or its track
+                       state machine loads garbage (samsho2: cmd residue
+                       fe3c=0x0d deadlocks the m1 main loop at 0x24b0 and the
+                       game's own cmd 2d is never dispatched). Handoff to a
+                       freshly reset cart m1 happens when the 68K PC leaves
+                       the BIOS windows — i.e. the game has actually started.
+                       Game-side enables (68K already outside BIOS, mslug3
+                       f234@0x10fa6) reset+boot immediately as before. */
                     unsigned long pc = (unsigned long)m68k_get_reg(NULL, M68K_REG_PC);
                     int in_bios = (pc >= 0xC00000UL && pc < 0xD00000UL) || pc >= 0xFF8000UL;
-                    if (!in_bios) { z80w_reset(ng->z); ng->z80_nmi_asserted = 0; ng->m1_booted = 1; ng->m1_view = 1; }
-                    else { ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
+                    if (!in_bios) { ng->cart_audio = 1;
+                        z80w_reset(ng->z); ng->z80_nmi_asserted = 0; ng->m1_booted = 1; ng->m1_view = 1;
+                    } else { ng->cart_audio = 0;   /* keep SM1 visible through BIOS phase */
+                        ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
                 }
             }
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 now=%d f=%d\n", ng->cart_audio, ng->frame);
@@ -2307,10 +2316,16 @@ void linoragx_z80_step(unsigned int pc)
     int f = g_ng ? g_ng->frame : -1;
     if (f >= g_z80flow_lo && f <= g_z80flow_hi) {
         static long zc = 0;
+        extern void z80w_force_ei(void*);
         if (pc == 0x24cb && (zc++ % 400) == 0 && g_ng) {
             extern uint8_t z80w_peek(void*, uint32_t);
-            fprintf(stderr, "Z24CB fe3c=%02x fe36=%02x\n", z80w_peek(g_ng->z, 0xfe3c), z80w_peek(g_ng->z, 0xfe36));
+            extern int z80w_iff1(void*), z80w_im(void*);
+            extern void z80w_force_ei(void*);
+            fprintf(stderr, "Z24CB fe3c=%02x iff1=%d im=%d\n", z80w_peek(g_ng->z, 0xfe3c),
+                    z80w_iff1(g_ng->z), z80w_im(g_ng->z));
         }
+        /* HACKTEST: force-enable interrupts while wedged in the 24b0 wait loop */
+        if (pc == 0x24b0 && g_ng && getenv("FORCEEI")) z80w_force_ei(g_ng->z);
         fprintf(stderr, "Z %d %04x\n", f, pc);
     }
 }
@@ -2825,6 +2840,14 @@ void ng_run_frame(neogeo *ng)
               if (++ng->dbg_z80 > 40) ng->dbg_z80 = 0;
           } }
         ym_advance(ng->ym, chunk*2/3);  /* YM2610 = master/3 = 8MHz = 2x Z80 rate */
+        /* YM2610 timer IRQ -> Z80 INT must be evaluated at chunk granularity:
+           m1's heartbeat polls in(04) several times per frame and the status
+           read ACKs (clears) the timer flags — a frame-end-only check lets
+           the heartbeat swallow every IRQ before it is ever delivered
+           (samsho2 m1 track sequencer is timer-driven and deadlocks without it). */
+        { int p = ym_irq_pending(ng->ym);
+          if (p) z80w_irq(ng->z, 0xff);   /* level semantics: re-assert every chunk */
+          ng->ym_irq_prev = p; }
         { static int zram_mask = 0;
           extern uint8_t z80w_peek(void*, uint32_t);
           extern uint16_t z80w_sp(void*);
@@ -2850,9 +2873,7 @@ void ng_run_frame(neogeo *ng)
                       z80w_peek(ng->z,0xfe18), z80w_peek(ng->z,0xfc33),
                       z80w_pc(ng->z), z80w_sp(ng->z),
                       ng->cart_audio, z_read(0x2106, ng), ng->sm1 ? ng->sm1[0x2106] : 0xEE, (void*)ng->snd); } } }
-        { int p = ym_irq_pending(ng->ym);          /* YM2610 timer IRQ -> Z80 INT (IM1 -> 0x38) */
-          if (p && !ng->ym_irq_prev) z80w_irq(ng->z, 0xff);
-          ng->ym_irq_prev = p; }
+        /* (YM timer IRQ now delivered at chunk granularity above) */
         { int a = ng->z80_nmi_pend && ng->z80_nmi_en;
           if (a && !ng->z80_nmi_asserted) { z80w_nmi(ng->z); ng->nmi_cnt++; if (f_znmit()) ng->znmi_t = 40; }
           ng->z80_nmi_asserted = a; }
@@ -2888,6 +2909,8 @@ void ng_run_frame(neogeo *ng)
             for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfe10 + q));
             fprintf(stderr, "\nZRD feb0:");
             for (int q = 0; q < 0x20; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfeb0 + q));
+            fprintf(stderr, "\nZRD fd90:");
+            for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfd90 + q));
             fprintf(stderr, "\nZRD fc30:");
             for (int q = 0; q < 0x10; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfc30 + q));
             fprintf(stderr, "\n");
@@ -2899,13 +2922,27 @@ void ng_run_frame(neogeo *ng)
        frame). Without this the Z80 stays on sm1, which does not understand
        the game's own sound protocol (samsho2 family cmd 2d handshake), and
        game BGM never starts. */
-    if (ng->ch5_bios_pend && ng->cart_audio && !ng->m1_booted
-        && ng->frame - ng->ch5_on_frame >= 3) {
-        ng->ch5_bios_pend = 0;
-        z80w_reset(ng->z);
-        ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
-        ng->m1_booted = 1; ng->m1_view = 1;
-        if (f_latch_tr()) fprintf(stderr, "CH5HANDOFF f=%llu\n", (unsigned long long)ng->frame);
+    /* BIOS-phase handoff: the BIOS left ch5=1 (cart audio requested) but the
+       Z80 must stay on SM1 until the BIOS is fully done. The real switch
+       point is the 68K PC leaving the BIOS alias windows — the game has
+       started and its own sound protocol begins; reset into a clean cart m1
+       so its RAM/track state never saw a BIOS-phase command (samsho2 cmd
+       residue deadlocked m1's main loop otherwise). */
+    if (ng->ch5_bios_pend && ng->snd && !ng->m1_booted) {
+        unsigned long pc = (unsigned long)m68k_get_reg(NULL, M68K_REG_PC);
+        int in_bios = (pc >= 0xC00000UL && pc < 0xD00000UL) || pc >= 0xFF8000UL
+                   || (pc >= 0x100000UL && pc < 0x200000UL);   /* BIOS workram */
+        if (!in_bios) {
+            if (ng->frame - ng->ch5_on_frame >= 2) {   /* debounce bank-switch transients */
+                ng->ch5_bios_pend = 0;
+                ng->cart_audio = 1;
+                z80w_reset(ng->z);
+                ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
+                ng->m1_booted = 1; ng->m1_view = 1;
+                if (f_latch_tr()) fprintf(stderr, "PCHANDOFF f=%llu pc=%08lx\n",
+                                          (unsigned long long)ng->frame, pc);
+            }
+        } else ng->ch5_on_frame = ng->frame;   /* still in BIOS: keep waiting */
     }
     ng->frame++;
 }

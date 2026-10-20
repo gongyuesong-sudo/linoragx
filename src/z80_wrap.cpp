@@ -74,6 +74,10 @@ void z80w_reset(void *v) {
 }
 unsigned long z80w_exec(void *v, unsigned long t) { return ((z80w*)v)->cpu->mz80exec(t); }
 uint8_t z80w_peek(void *v, uint32_t off) { return ((z80w*)v)->cpu->ram_array()[off & 0xFFFF]; }
+int z80w_iff1(void *v) { return ((z80w*)v)->cpu->get_state().IFF1; }
+int z80w_im(void *v) { return ((z80w*)v)->cpu->get_state().NIM; }
+void z80w_force_ei(void *v) { cpu_z80::State st = ((z80w*)v)->cpu->get_state();
+                              if (!st.IFF1) { st.IFF1 = 1; st.IFF2 = 1; ((z80w*)v)->cpu->set_state(st); } }
 void z80w_set_step_hook(void *v, void (*h)(unsigned pc)) { ((z80w*)v)->cpu->set_step_hook(h); }
 void z80w_irq(void *v, uint8_t vector) { ((z80w*)v)->cpu->mz80int(vector); }
 void z80w_nmi(void *v) { ((z80w*)v)->cpu->mz80nmi(); }
