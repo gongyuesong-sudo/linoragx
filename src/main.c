@@ -237,6 +237,24 @@ int main(int argc, char **argv)
         }
         ng_run_frame(ng);
         ng_render(ng, fb);
+        {   /* LINDUMPF=N: at frame N dump vram+cram+zoomy to /tmp/lindump.bin and fb to /tmp/lindump.bmp */
+            static int lindf = -2;
+            if (lindf == -2) { const char *e = getenv("LINDUMPF"); lindf = e ? atoi(e) : -1; }
+            if (lindf >= 0 && (int)n == lindf) {
+                extern int dump_bmp(const uint32_t *fb, const char *path);
+                uint16_t *vr = ng_vram(ng), *cr = ng_cram(ng);
+                uint8_t *zy = ng_zoomy(ng);
+                FILE *f = fopen("/tmp/lindump.bin", "wb");
+                if (f) {
+                    for (int i = 0; i < 0x8800; i++) { uint8_t b[2]={(uint8_t)(vr[i]>>8),(uint8_t)vr[i]}; fwrite(b,1,2,f); }
+                    for (int i = 0; i < 0x1000; i++) { uint8_t b[2]={(uint8_t)(cr[i]>>8),(uint8_t)cr[i]}; fwrite(b,1,2,f); }
+                    fwrite(zy, 1, 0x10000, f);
+                    fclose(f);
+                }
+                dump_bmp(fb, "/tmp/lindump.bmp");
+                fprintf(stderr, "LINDUMP at frame %lld\n", (long long)n);
+            }
+        }
         if (envf_dbg() && (n % 30 == 29)) {
             #include "m68k.h"
             uint16_t *cr = ng_cram(ng), *vr = ng_vram(ng);

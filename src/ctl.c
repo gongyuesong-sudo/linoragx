@@ -160,6 +160,90 @@ static void handle_cmd(neogeo *ng, const uint32_t *fb, char *cmd)
         }
         if (f) fclose(f);
         snprintf(resp, sizeof resp, "{\"ok\":%s,\"tiles\":%d,\"path\":\"%s\"}", ok?"true":"false", cnt, path);
+    } else if (!strcmp(op, "gfxpeek")) {
+        unsigned off = 0; int n = 16;
+        sscanf(cmd, "%*s %x %d", &off, &n);
+        if (n > 64) n = 64;
+        uint32_t mask = 0; uint8_t *s8 = ng_sprite8(ng, &mask);
+        char hex[64*3+1] = "";
+        for (int i = 0; i < n; i++) sprintf(hex+3*i, "%02x ", s8 ? s8[(off+i)&mask] : 0xEE);
+        snprintf(resp, sizeof resp, "{\"addr\":\"0x%x\",\"hex\":\"%s\",\"mask\":\"0x%x\"}", off, hex, mask);
+    } else if (!strcmp(op, "zoompeek")) {
+        unsigned off = 0; int n = 16;
+        sscanf(cmd, "%*s %x %d", &off, &n);
+        if (n > 64) n = 64;
+        uint8_t *zy = ng_zoomy(ng);
+        char hex[64*3+1] = "";
+        for (int i = 0; i < n; i++) sprintf(hex+3*i, "%02x ", zy ? zy[(off+i)&0xFFFF] : 0xEE);
+        snprintf(resp, sizeof resp, "{\"addr\":\"0x%x\",\"hex\":\"%s\"}", off, hex);
+    } else if (!strcmp(op, "sprdraw")) {
+        /* replicate ng_render's per-scanline sprite walk at a given line */
+        unsigned line = 0;
+        sscanf(cmd, "%*s %x", &line);
+        uint16_t *vram = ng_vram(ng);
+        uint16_t *cram = ng_cram(ng);
+        uint32_t bank = ng_cram_bank_render(ng);
+        uint32_t spr_mask; uint8_t *spr8 = ng_sprite8(ng, &spr_mask);
+        uint8_t *zoomy = ng_zoomy(ng);
+        int ac = ng_auto_counter(ng);
+        uint16_t *list = &vram[(line & 1) ? 0x8680 : 0x8600];
+        int maxsi = 95;
+        while (maxsi >= 0 && list[maxsi] == 0) maxsi--;
+        if (maxsi != 95) maxsi++;
+        int x = 0, zoom_x = 0, y = 0, rows = 0, zoom_y = 0;
+        char out[2048] = "";
+        int shown = 0;
+        for (int si = 0; si <= maxsi && shown < 6; si++) {
+            int n = list[si] & 0x1FF;
+            uint16_t yc = vram[0x8200 | n], zc = vram[0x8000 | n];
+            if (yc & 0x40) { x = (x + zoom_x + 1) & 0x1FF; zoom_x = (zc >> 8) & 0x0F; }
+            else { y = 0x200 - (yc >> 7); x = vram[0x8400 | n] >> 7; zoom_y = zc & 0xFF; zoom_x = (zc >> 8) & 0x0F; rows = yc & 0x3F; }
+            if (x >= 0x140 && x <= 0x1F0) continue;
+            if (!(rows == 0 || rows >= 0x20 || ((int)(line - y) & 0x1FF) < rows * 16)) continue;
+            int sprite_line = ((int)line - y) & 0x1FF;
+            int zoom_line = sprite_line & 0xFF; int invert = (sprite_line >> 8) & 1;
+            if (invert) zoom_line ^= 0xFF;
+            if (rows > 0x20) {
+                zoom_line = zoom_line % ((zoom_y + 1) << 1);
+                if (zoom_line > zoom_y) { zoom_line = ((zoom_y + 1) << 1) - 1 - zoom_line; invert = !invert; }
+            }
+            uint8_t syt = zoomy[(zoom_y << 8) | zoom_line];
+            int sprite_y = syt & 0x0F; int tile = syt >> 4;
+            if (invert) { sprite_y ^= 0x0F; tile ^= 0x1F; }
+            int ao = (n << 6) | (tile << 1);
+            uint16_t attr = vram[ao + 1];
+            uint32_t code = (((uint32_t)attr << 12) & 0xF0000) | vram[ao];
+            if (attr & 0x08) code = (code & ~7u) | (ac & 7);
+            else if (attr & 0x04) code = (code & ~3u) | (ac & 3);
+            if (attr & 0x02) sprite_y ^= 0x0F;
+            uint32_t gfx = ((code << 8) | (sprite_y << 4)) & spr_mask;
+            const uint16_t *pens = &cram[((attr >> 8) << 4) | bank];
+            int off = snprintf(out + strlen(out), sizeof(out) - strlen(out),
+                "si=%d n=%d y=%x x=%x rows=%x zy=%x zx=%x sl=%d zl=%d inv=%d syt=%02x tile=%x sy=%d code=%x attr=%x gfx=%x p0=%x p1=%x p2=%x\n",
+                si, n, y, x, rows, zoom_y, zoom_x, sprite_line, zoom_line, invert, syt, tile, sprite_y,
+                (unsigned)code, attr, (unsigned)gfx, pens[0], pens[1], pens[2]);
+            if (off < 0) break;
+            shown++;
+        }
+        snprintf(resp, sizeof resp, "{\"line\":%u,\"maxsi\":%d,\"walk\":\"%s\"}", line, maxsi, out);
+    } else if (!strcmp(op, "gfxdec")) {
+        /* dump raw CROM bytes at gfx offset + our predecoded bytes, plus a
+           manual 4bpp decode of the first 8 pixels for cross-check */
+        unsigned off = 0;
+        sscanf(cmd, "%*s %x", &off);
+        uint32_t mask = 0; uint8_t *s8 = ng_sprite8(ng, &mask);
+        uint32_t rsz = 0; uint8_t *raw = ng_spr(ng, &rsz);
+        uint32_t ro = (off & mask) >> 1;
+        char hex[64*3+1] = "", dec[64] = "";
+        for (int i = 0; i < 16; i++) sprintf(hex+3*i, "%02x ", (raw && ro+i < rsz) ? raw[ro+i] : 0xEE);
+        for (int i = 0; i < 8; i++) {
+            uint8_t b = (raw && ro+i < rsz) ? raw[ro+i] : 0;
+            sprintf(dec+2*i, "%x%x", b>>4, b&0xF);
+        }
+        char h2[64*3+1] = "";
+        for (int i = 0; i < 16; i++) sprintf(h2+3*i, "%02x ", s8 ? s8[(off+i)&mask] : 0xEE);
+        snprintf(resp, sizeof resp, "{\"gfx\":\"0x%x\",\"raw\":\"%s\",\"dec\":\"%s\",\"pre\":[%s]}",
+            off, hex, dec, h2);
     } else if (!strcmp(op, "sprstats")) {
         uint32_t sz = 0; uint8_t *sp = ng_spr(ng, &sz);
         long nz = 0; uint32_t first = 0xFFFFFFFF;
@@ -185,6 +269,21 @@ static void handle_cmd(neogeo *ng, const uint32_t *fb, char *cmd)
         snprintf(resp, sizeof resp, "{\"sr\":\"0x%04x\",\"vbr\":\"0x%08x\",\"usp\":\"0x%08x\"}",
             m68k_get_reg(NULL, M68K_REG_SR), m68k_get_reg(NULL, M68K_REG_VBR),
             m68k_get_reg(NULL, M68K_REG_USP));
+    } else if (!strcmp(op, "vdump")) {
+        /* whole vram+cram+zoomy to a binary file (big-endian), reply path */
+        uint16_t *vr = ng_vram(ng);
+        uint16_t *cr = ng_cram(ng);
+        uint8_t *zy = ng_zoomy(ng);
+        const char *path = "/tmp/linoragx_vdump.bin";
+        FILE *f = fopen(path, "wb");
+        if (!f) { snprintf(resp, sizeof resp, "{\"err\":\"fopen\"}"); }
+        else {
+            for (int i = 0; i < 0x8800; i++) { uint8_t b[2] = {(uint8_t)(vr[i]>>8), (uint8_t)vr[i]}; fwrite(b,1,2,f); }
+            for (int i = 0; i < 0x1000; i++) { uint8_t b[2] = {(uint8_t)(cr[i]>>8), (uint8_t)cr[i]}; fwrite(b,1,2,f); }
+            fwrite(zy, 1, 0x10000, f);
+            fclose(f);
+            snprintf(resp, sizeof resp, "{\"path\":\"%s\",\"size\":%d}", path, 0x8800*2 + 0x1000*2 + 0x10000);
+        }
     } else if (!strcmp(op, "vpeek")) {
         unsigned a = 0; int n = 8;
         sscanf(cmd, "%*s %x %d", &a, &n);
