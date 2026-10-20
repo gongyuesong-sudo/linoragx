@@ -38,14 +38,58 @@ static const uint16_t zoom_x_tables[16] =
 { 0x0080,0x0880,0x0888,0x2888,0x288a,0x2a8a,0x2aaa,0xaaaa,
   0xaaea,0xbaea,0xbaeb,0xbbeb,0xbbef,0xfbef,0xfbff,0xffff };
 
-static inline uint32_t cram24(uint16_t c)
+/* MAME neogeo_v.cpp palette model.  CRAM word layout (NOT contiguous 5-bit
+   fields): bit15=dark, and each channel's LSB is scattered in the high bits:
+       R = {b11,b10,b9,b8,b14}  G = {b7,b6,b5,b4,b13}  B = {b3,b2,b1,b0,b12}
+   Each 5-bit channel drives an R-2R resistor DAC (3900/2200/1000/470/220 ohm);
+   the dark bit adds an 8200 ohm pulldown, the screen-shadow latch a 150 ohm
+   one.  Weights are computed exactly like MAME's compute_resistor_weights
+   (src/lib/video/resnet.cpp) and combined per set bit (combine_weights). */
+static uint8_t cram_lut[32][4];   /* [value][dark + 2*shadow] */
+static int cram_lut_ready = 0;
+
+static void cram_lut_init(void)
 {
-    /* Neo Geo CRAM word: XRRRRRGG GGGBBBBB (MAME: R=bits10-14, G=5-9, B=0-4) */
+    static const double res[5] = { 3900, 2200, 1000, 470, 220 };
+    double weights[4][5], scaler = 0;
+    const int pd[4] = { 0, 8200, 150, 147 };  /* MAME: 1/(1/8200+1/150) truncates to 147 */
+    for (int k = 0; k < 4; k++) {
+        double w[5], sum = 0;
+        for (int n = 0; n < 5; n++) {
+            double g0 = (pd[k] == 0) ? 1e12 : 1.0 / pd[k];  /* pulldown conductance */
+            double g1 = 1e12;                               /* no pullup */
+            for (int j = 0; j < 5; j++) {
+                if (j == n) g1 += 1.0 / res[j];  /* this bit high: resistor to Vcc */
+                else        g0 += 1.0 / res[j];  /* this bit low: resistor to gnd */
+            }
+            double R0 = 1.0 / g0, R1 = 1.0 / g1;
+            w[n] = 255.0 * R0 / (R1 + R0);
+        }
+        if (k == 0) {                          /* normal net defines the shared scaler */
+            for (int n = 0; n < 5; n++) sum += w[n];
+            scaler = 255.0 / sum;
+        }
+        for (int n = 0; n < 5; n++) weights[k][n] = w[n] * scaler;
+    }
+    for (int i = 0; i < 32; i++)
+        for (int k = 0; k < 4; k++) {
+            double s = 0;
+            for (int b = 0; b < 5; b++) if ((i >> b) & 1) s += weights[k][b];
+            int v = (int)(s + 0.5);
+            cram_lut[i][k] = (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v);
+        }
+    cram_lut_ready = 1;
+}
+
+static inline uint32_t cram24(uint16_t c, int shadow)
+{
+    if (!cram_lut_ready) cram_lut_init();
     uint32_t dark = (c >> 15) & 1;
-    uint32_t r = (c >> 10) & 0x1F, g = (c >> 5) & 0x1F, b = c & 0x1F;
-    r = (r << 3) | (r >> 2); g = (g << 3) | (g >> 2); b = (b << 3) | (b >> 2);
-    if (dark) { r >>= 1; g >>= 1; b >>= 1; }
-    return 0xFF000000 | (r << 16) | (g << 8) | b;
+    uint32_t r = ((c >> 14) & 0x1) | ((c >> 7) & 0x1e);
+    uint32_t g = ((c >> 13) & 0x1) | ((c >> 3) & 0x1e);
+    uint32_t b = ((c >> 12) & 0x1) | ((c << 1) & 0x1e);
+    int k = (int)(dark + (shadow ? 2 : 0));
+    return 0xFF000000 | (cram_lut[r][k] << 16) | (cram_lut[g][k] << 8) | cram_lut[b][k];
 }
 
 /* MAME parse_sprites: the priority lists are built by the emulator each line
@@ -77,7 +121,8 @@ void ng_render_begin(neogeo *ng, uint32_t *fb)
 {
     uint16_t *cram = ng_cram(ng);
     uint32_t bank = ng_cram_bank_render(ng);
-    uint32_t bg = cram24(cram[bank | 0xFFF]);
+    uint32_t sh = ng_screen_shadow(ng);
+    uint32_t bg = cram24(cram[bank | 0xFFF], sh);
     for (int i = 0; i < NG_W*NG_H; i++) fb[i] = bg;
 
     if (envf_vdbg()) {
@@ -87,7 +132,7 @@ void ng_render_begin(neogeo *ng, uint32_t *fb)
         uint16_t e0 = vram[0x7000]; int c0=e0&0xFFF, p0=e0>>12;
         const uint16_t *ps = &cram[(p0<<4)|bank];
         fprintf(stderr, "VDBG e0=%04x code=%x pal=%x bank=%x pens[3]=%04x c24=%08x base=%x g10=%02x\n",
-            e0, c0, p0, bank, ps[3], (unsigned)cram24(ps[3]), (c0<<5)&fix_mask, fixed?fixed[((c0<<5)&fix_mask)+0x10]:0);
+            e0, c0, p0, bank, ps[3], (unsigned)cram24(ps[3], 0), (c0<<5)&fix_mask, fixed?fixed[((c0<<5)&fix_mask)+0x10]:0);
         fprintf(stderr, "VDBG fb0=%08x active?\n", (unsigned)fb[0]);
     }
 }
@@ -100,6 +145,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
     uint16_t *cram = ng_cram(ng);
     uint32_t bank = ng_cram_bank_render(ng);
     uint32_t fix_sz, spr_mask;
+    int sh = (int)ng_screen_shadow(ng);
     uint8_t *fixed = ng_fixed(ng, &fix_sz);
     uint8_t *spr8  = ng_sprite8(ng, &spr_mask);
     uint8_t *zoomy = ng_zoomy(ng);
@@ -184,7 +230,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                     if (zt & 0x8000) {
                         if (dx < NG_W) {
                             uint8_t p = g[0];
-                            if (p) fb[line*NG_W + dx] = cram24(pens[p]);
+                            if (p) fb[line*NG_W + dx] = cram24(pens[p], sh);
                         }
                         dx++;
                     }
@@ -200,7 +246,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                         if (xw >= 0x200) {
                             if (dx < NG_W) {
                                 uint8_t p = g[0];
-                                if (p) fb[line*NG_W + dx] = cram24(pens[p]);
+                                if (p) fb[line*NG_W + dx] = cram24(pens[p], sh);
                             }
                             dx++;
                         }
@@ -245,7 +291,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
             }
             uint8_t d = fixed[( ((code << 5) | (line & 7)) & fix_mask ) | pbyte[x & 7]];
             uint8_t p = (x & 1) ? (d >> 4) : (d & 0x0F);
-            if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank]);
+            if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank], (int)ng_screen_shadow(ng));
         }
     }
 }

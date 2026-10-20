@@ -89,6 +89,7 @@ struct neogeo {
     uint8_t k3bl_px;               /* 1=pl_px_decrypt applied, 2=upl variant */
     uint16_t pvc_ram[0x1000];          /* PVC protection RAM @ $2FE000-$2FFFFF */
     uint32_t cram_bank;
+    uint32_t screen_shadow;   /* systemlatch ch0: MAME set_screen_shadow (150R pulldown) */
     uint32_t cram_bank_render;  /* bank at first CRAM write of the frame (MAME line-render parity) */
     uint64_t bank_snapf;
     int dbg_vw; int dbg_z80; int sl1_trace;
@@ -744,6 +745,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         int off = (a >> 1) & 0xF;
         int ch  = off & 7, v = (off >> 3) & 1;
         switch (ch) {
+        case 0: ng->screen_shadow = v; break;   /* MAME: q_out_cb<0> = set_screen_shadow */
         case 1: if (f_latch_tr()) fprintf(stderr, "LATCH ch1 v=%d pc=%08x f=%d\n", v, m68k_get_reg(NULL,M68K_REG_PC), ng->frame); ng->vector_bank = v; break;
         case 2: ng->mc_lock1   = v; break;
         case 3: ng->mc_unlock2 = v; break;
@@ -2814,6 +2816,7 @@ void      ng_set_button(neogeo *ng, int p, int bit, int down)
     if (down) ng->buttons[p] |= 1u << bit; else ng->buttons[p] &= ~(1u << bit);
 }
 uint32_t ng_cram_bank(neogeo *ng) { return ng->cram_bank; }
+uint32_t ng_screen_shadow(neogeo *ng) { return ng->screen_shadow; }
 uint32_t ng_cram_bank_render(neogeo *ng) { return ng->cram_bank_render; }
 void ng_dbg_vw(neogeo *ng, int on) { ng->dbg_vw = on; }
 void ng_dbg_z80(neogeo *ng, int on) { ng->dbg_z80 = on; }
@@ -2875,7 +2878,7 @@ int ng_save_state(neogeo *ng, const char *path)
     if (!f) return -1;
     struct hdr h; memset(&h, 0, sizeof h);
     memcpy(h.magic, "NRXSTATE09", 11);
-    h.crambank = ng->cram_bank;
+    h.crambank = ng->cram_bank | ((ng->screen_shadow & 1) << 1);  /* bit1 = shadow (NRXSTATE09-compatible) */
     h.frame = ng->frame; h.fc = ng->fc;
     h.sr = m68k_get_reg(NULL, M68K_REG_SR);
     h.ssp = m68k_get_reg(NULL, M68K_REG_A7);
@@ -2919,6 +2922,7 @@ int ng_load_state(neogeo *ng, const char *path)
     ng->vram_offset = h.voff; ng->vram_modulo = h.vmod; ng->vram_readbuf = h.vrb;
     ng->display_counter = h.dcnt; ng->irq_enable = h.ictl;
     ng->cram_bank = h.crambank & 0x1000;
+    ng->screen_shadow = (h.crambank >> 1) & 1;
     if (fread(ng->vram, sizeof ng->vram, 1, f) != 1 ||
         fread(ng->cram, sizeof ng->cram, 1, f) != 1 ||
         fread(ng->workram, sizeof ng->workram, 1, f) != 1 ||

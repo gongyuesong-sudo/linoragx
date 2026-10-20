@@ -34,6 +34,7 @@ uint16_t *ng_vram(neogeo *ng);
 uint16_t *ng_workram(neogeo *ng);
 uint16_t *ng_cram(neogeo *ng);
 uint32_t ng_cram_bank(neogeo *ng);
+uint32_t ng_screen_shadow(neogeo *ng);
 uint32_t ng_cram_bank_render(neogeo *ng);
 int ng_dbg_vbank(neogeo *ng);
 /* netplay (src/netplay.c) */
