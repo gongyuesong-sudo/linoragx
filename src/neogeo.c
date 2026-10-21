@@ -344,7 +344,10 @@ static uint8_t z_read(uint32_t a, void *c)
     const uint8_t *r = cart_visible ? ng->snd : (ng->sm1 ? ng->sm1 : ng->snd);
     uint32_t sz = cart_visible ? ng->snd_size : (ng->sm1 ? 0x20000 : ng->snd_size);
     if (!r) { r = ng->snd; sz = ng->snd_size; }
-    if (a >= 0xC000 && a < 0xF800) return ng->smem[a - 0xC000];  /* SMEM shared RAM (Z80 view) */
+    /* MAME parity: Z80 0xC000-0xDFFF / 0xF000-0xF7FF are bank-switched ROM
+       (audio_c000/audio_f000 banks), NOT shared RAM. Shared RAM lives on the
+       68K side (0x100000-0x10FFFF). Hard-mapping smem here clobbered the m1
+       driver's ROM view (dragonsh boot). Fall through to banked ROM below. */
     if (a < 0x8000) {
         return (r && a < sz) ? r[a] : 0xFF;
     }
@@ -393,8 +396,10 @@ static void z_write(uint32_t a, uint8_t v, void *c)
         if (zwr_tr&2) { static long swz = 0;
             if (swz++ < 200) fprintf(stderr, "SMEMWRZ f=%llu a=%04x v=%02x zpc=%04x\n",
                 (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
-        ng->smem[a - 0xC000] = v; return;
-    }  /* SMEM shared RAM (Z80 view) */
+        /* MAME parity: this Z80 window is bank ROM, writes are ignored
+           (was: smem shared write — clobbered m1 ROM view, dragonsh boot). */
+        return;
+    }
     if (a >= 0xF800) {
         if ((zwr_tr&4) && a >= 0xFFE0) { static long stw = 0;
             if (stw++ < 300) fprintf(stderr, "STKW f=%llu a=%04x v=%02x pc=%04x\n",
