@@ -22,7 +22,7 @@ struct z80w {
 };
 
 static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
-{ if (getenv("BLKRD") && off >= 0xFC30 && off < 0xFF00) {
+{ if (getenv("BLKRD") && off >= 0xFEB0 && off < 0xFF00) {
     static long brd = 0; z80w *w0 = (z80w*)h->pUserArea;
     if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x\n", off, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
@@ -36,7 +36,7 @@ static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
   if (off >= 0xF800) return w->cpu->ram_array()[off];
   return w->rd(off + h->lowAddr, w->ctx); }
 static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
-{ if (getenv("BLKRD") && off >= 0xFC30 && off < 0xFF00) {
+{ if (getenv("BLKRD") && off >= 0xFEB0 && off < 0xFF00) {
     static long bwr = 0; z80w *w0 = (z80w*)h->pUserArea;
     if ((bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x\n", off, v, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
