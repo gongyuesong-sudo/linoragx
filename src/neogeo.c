@@ -131,11 +131,13 @@ struct neogeo {
     /* UPD1990A memory card (minimal) */
     int      mc_dummy;
     uint64_t mc_cycles;
-    /* UPD4990A serial state */
-    int      mc_cki, mc_cs, mc_di;
-    int      mc_bitcnt, mc_cmd, mc_readphase;
-    uint8_t  mc_resp;          /* response byte, shifted MSB first */
-    int      mc_dobit;         /* current DO bit */
+    /* UPD4990A serial state (MAME upd1990a.cpp parity, serial mode: CS/OE/C0-C2 tied 1) */
+    int      mc_clk, mc_di, mc_stb;
+    uint8_t  mc_shift[7];      /* [0..5] data chain (48b), [6] 4-bit command reg */
+    uint8_t  mc_time[6];       /* BCD sec,min,hour,day,(mon<<4|dow),year */
+    int      mc_c;             /* latched mode/command */
+    int      mc_testmode;
+    int      mc_dout;          /* current DO bit (OE=1 -> direct) */
     int      mc_tp;
     uint8_t  adpcm_a[4];
     uint8_t  adpcm_b[4];
@@ -472,17 +474,58 @@ static void z_out(uint32_t p, uint8_t v, void *c)
     }
 }
 
-/* UPD4990A: 4-bit commands; status/calendar reads return plausible bytes */
-static uint8_t mc4990_response(neogeo *ng, int cmd)
+/* UPD4990A serial-mode state machine, ported from MAME upd1990a.cpp.
+ * Neo Geo wiring (MAME neogeo.cpp): 0x380050 bit0=DI bit1=CLK bit2=STB;
+ * CS/OE/C0/C1/C2 tied high -> is_serial_mode() true (c_unlatched==7). */
+static void mc_stb_rise(neogeo *ng)
 {
-    (void)ng;
-    switch (cmd & 0x0F) {
-    case 0x07: return 0x3D;   /* status: OK (BIOS accepts 0x39..0x3F) */
-    case 0x08: return 0x3D;   /* status: OK */
-    case 0x03: return 0x25;   /* calendar year-ish BCD */
-
-    default:   return 0x00;
+    int m_c = ng->mc_shift[6] & 0xF;   /* serial mode: command from shift[6] */
+    ng->mc_c = m_c;
+    if (m_c == 0 || (m_c >= 4 && m_c < 15))
+        ng->mc_testmode = 0;
+    switch (m_c) {
+    case 1:  /* MODE_SHIFT */
+        ng->mc_dout = ng->mc_shift[0] & 1;
+        break;
+    case 2:  /* MODE_TIME_SET: load shift reg into RTC */
+        for (int i = 0; i < 6; i++) ng->mc_time[i] = ng->mc_shift[i];
+        break;
+    case 3:  /* MODE_TIME_READ: load RTC into shift reg */
+        for (int i = 0; i < 6; i++) ng->mc_shift[i] = ng->mc_time[i];
+        break;
+    case 15: /* MODE_TEST */
+        ng->mc_testmode = 1;
+        break;
+    default: break;   /* REGISTER_HOLD / TP_* / INT_*: timers approximated */
     }
+}
+
+static void mc_clk_rise(neogeo *ng)
+{
+    /* serial mode: always clock the 4-bit command register */
+    int in = ng->mc_shift[6] & 1;
+    ng->mc_shift[6] >>= 1;
+    ng->mc_shift[6] |= (ng->mc_di << 3);
+    if (ng->mc_c == 1) {   /* MODE_SHIFT: 48-bit chain shift, LSB out first */
+        for (int i = 0; i < 6; i++) {
+            ng->mc_shift[i] >>= 1;
+            if (i == 5) ng->mc_shift[i] |= (in << 7);
+            else        ng->mc_shift[i] |= (ng->mc_shift[i+1] << 7) & 0x80;
+        }
+        ng->mc_dout = ng->mc_shift[0] & 1;
+    }
+}
+
+static void mc_rtc_init(neogeo *ng)
+{
+    time_t t = time(NULL);
+    struct tm *lt = localtime(&t);
+    ng->mc_time[0] = (uint8_t)(((lt->tm_sec/10)<<4) | (lt->tm_sec%10));
+    ng->mc_time[1] = (uint8_t)(((lt->tm_min/10)<<4) | (lt->tm_min%10));
+    ng->mc_time[2] = (uint8_t)(((lt->tm_hour/10)<<4) | (lt->tm_hour%10));
+    ng->mc_time[3] = (uint8_t)(((lt->tm_mday/10)<<4) | (lt->tm_mday%10));
+    ng->mc_time[4] = (uint8_t)(((lt->tm_mon+1)<<4) | (lt->tm_wday == 0 ? 6 : lt->tm_wday - 1));
+    ng->mc_time[5] = (uint8_t)((((1900+lt->tm_year)%100/10)<<4) | ((1900+lt->tm_year)%10));
 }
 
 /* ---- 68k side ---- */
@@ -646,7 +689,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         /* UPD4990A: TP toggles with serial clock; idle = slow RTC square
            wave.  Frame-based: the BIOS validates the TP period against Timer
            C counts (calendar check) and only passes with ~30-frame halves. */
-        if (ng->mc_bitcnt || ng->mc_readphase) { if (ng->mc_tp) lo |= 0x40; }
+        if ((ng->mc_shift[6] & 0xF) && ng->frame < 400) { lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0)); }
         else if ((ng->frame / 30) & 1) lo |= 0x40;
         lo |= 0x80;
         /* reading AUDIO_COIN acks IRQ_SOUND (MAME audio_coin_r) */
@@ -665,6 +708,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         if (ng->buttons[1] & 0x200) hi &= ~0x08;
         return (hi<<8) | 0xFF;
     }
+    if (a >= 0x380050 && a < 0x380052 && (ng->mc_shift[6] & 0xF) && ng->frame < 400)   /* UPD4990A out (BIOS phase): bit6 TP, bit7 DO */
+        return (uint16_t)(((ng->mc_tp ? 0x40 : 0) | (ng->mc_dout ? 0x80 : 0)) * 0x101);
     if (a < 0x3E0000) {                     /* video registers R (mirror 0x1FFF8) */
         switch ((a & 0x6)>>1) {
         case 0: case 1: return ng->vram_readbuf;
@@ -892,29 +937,14 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         return;
     }
     if (a < 0x380002) { ng->ctrlsel = d & 0x3F; return; }
-    if (a >= 0x380050 && a < 0x380052) {    /* 4990A serial in: bit0 DI, bit1 CKI, bit2 CS */
+    if (a >= 0x380050 && a < 0x380052) {    /* UPD4990A serial: bit0 DI, bit1 CLK, bit2 STB */
         int v = d & 0xFF;
-        int cki = v & 1, cs = (v >> 2) & 1, di = (v >> 1) & 1;   /* NOTE: BIOS uses bit1=CKI? see below */
-        cki = (v >> 1) & 1; di = v & 1; cs = (v >> 2) & 1;
-        if (cki && !ng->mc_cki) {           /* rising edge */
-            ng->mc_tp ^= 1;
-            if (!ng->mc_readphase) {
-                if (ng->mc_bitcnt < 4) ng->mc_cmd = (ng->mc_cmd >> 1) | (di << 3);
-                ng->mc_bitcnt++;
-            } else {
-                ng->mc_resp <<= 1;          /* next bit out MSB-first */
-                ng->mc_dobit = (ng->mc_resp >> 7) & 1;
-            }
-        }
-        if (cs && !ng->mc_cs) {             /* CS rising: latch command, enter read phase */
-            ng->mc_resp = mc4990_response(ng, ng->mc_cmd);
-            ng->mc_dobit = (ng->mc_resp >> 7) & 1;
-            ng->mc_readphase = 1;
-            ng->mc_bitcnt = 0; ng->mc_cmd = 0;
-        } else if (!cs && ng->mc_cs) {
-            ng->mc_readphase = 0;
-        }
-        ng->mc_cki = cki; ng->mc_cs = cs;
+        int di = v & 1, clk = (v >> 1) & 1, stb = (v >> 2) & 1;
+        ng->mc_di = di;
+        if (clk && !ng->mc_clk) mc_clk_rise(ng);
+        ng->mc_clk = clk;
+        if (stb && !ng->mc_stb) mc_stb_rise(ng);
+        ng->mc_stb = stb;
         return;
     }
     if (a < 0x3C0000) {                     /* systemlatch = HC259 write_a3:
@@ -2937,6 +2967,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     m68k_init();
     m68k_set_instr_hook_callback(linoragx_pc_hook);  /* must follow m68k_init (it clears callbacks) */
     if (getenv("EXCPROBE")) { linoragx_excprobe = 1; linoragx_exc_ng = ng; }
+    mc_rtc_init(ng);
     ng->screen_enabled = 1;
     ng->mc_lock1 = 1; ng->mc_unlock2 = 1; ng->mc_regsel = 1;
 
@@ -3321,6 +3352,7 @@ void ng_run_frame(neogeo *ng)
       }
     }
     ng->frame++;
+    ng->mc_tp ^= 1;   /* UPD4990A TP ~64Hz approximation (MAME timer -> per-frame toggle) */
     { static int k68 = -2;
       if (k68 == -2) k68 = getenv("K68PC") ? 1 : 0;
       if (k68) fprintf(stderr, "68KPC f=%llu pc=%08x\n",
