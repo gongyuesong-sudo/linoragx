@@ -1198,8 +1198,14 @@ static uint8_t *sw_build(const char *zip, const rg_ent *e, int n, uint32_t cap, 
                 /* bootleg-tolerant: some sets ship the same ROM with a board
                    prefix (pnyaa "267-m1.m1" vs swlist "m1.m1") — retry by
                    name suffix before giving up */
-                if (rom_load_zip_suffix(zip, e[i].fname, &file, &fsz) != 0) { file = 0; continue; }
+                if (rom_load_zip_suffix(zip, e[i].fname, &file, &fsz) != 0) {
+                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] MISS %s\n", e[i].fname);
+                    file = 0; continue;
+                }
+                if (getenv("SWBUILD")) fprintf(stderr, "[swb] SUFFIX %s\n", e[i].fname);
             }
+            if (getenv("SWBUILD")) fprintf(stderr, "[swb] LOAD %s off=%x size=%x fsz=%x byte=%d swap=%d\n",
+                e[i].fname, e[i].offset, e[i].size, fsz, e[i].byte, e[i].swap);
             pos = 0; fswap = e[i].swap; fbyte = e[i].byte; f32 = e[i].l32;
         }
         if (!file) continue;
