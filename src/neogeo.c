@@ -2551,6 +2551,7 @@ unsigned int m68k_get_pc_snapshot(void)
 {
     return m68k_get_reg(0, M68K_REG_PC);
 }
+unsigned short dbg_r16(struct neogeo *ng, unsigned a) { return r16(ng, a); }
 void linoragx_pc_hook(unsigned int pc)
 {
     if (g_pcflow_lo < 0) return;
@@ -2561,12 +2562,20 @@ void linoragx_pc_hook(unsigned int pc)
         /* PCSTAT=1: attach SR/SP/IR at hot addresses of the aodk crash site */
         if (g_pcflow_ng &&
             (pc == 0x00c18714u || pc == 0x00c1871au || pc == 0x00c1871cu ||
-             pc == 0x00108600u || pc == 0x00108604u) && getenv("PCSTAT"))
+             pc == 0x00108600u || pc == 0x00108604u || pc == 0x00c11fb0u) && getenv("PCSTAT"))
         {
             unsigned sr = m68k_get_reg(NULL, M68K_REG_SR);
             unsigned sp = m68k_get_reg(NULL, M68K_REG_SP);
             unsigned ir = m68k_get_reg(NULL, M68K_REG_IR);
             fprintf(stderr, "S %d %08x sr=%04x sp=%08x ir=%04x\n", f, pc, sr, sp, ir);
+            if (pc == 0x00c11fb0u || pc == 0x00108600u)
+            {
+                extern unsigned short dbg_r16(struct neogeo *, unsigned);
+                fprintf(stderr, "VECTAB vbank=%d:", g_pcflow_ng->vector_bank);
+                for (int vv = 0x60; vv < 0x80; vv += 2)
+                    fprintf(stderr, " %02x:%04x", vv, dbg_r16(g_pcflow_ng, vv));
+                fprintf(stderr, "\n");
+            }
         }
     }
 }
