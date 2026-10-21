@@ -1869,6 +1869,10 @@ void ym2610::reset()
 	m_adpcm_a.reset();
 	m_adpcm_b.reset();
 
+	// LINORAGX FIX: the SSG is now clocked and mixed inside
+	// clock_fm_and_adpcm/clock_split; upstream left the ym2610 SSG resampler
+	// unconfigured (resample_nop) which made the SSG silent.
+
 	// initialize our special interrupt states
 	m_eos_status = 0x00;
 	m_flag_mask = EOS_FLAGS_MASK;
@@ -2123,8 +2127,9 @@ void ym2610::generate(output_data *output, uint32_t numsamples)
 		output->data[1] = m_last_fm.data[1];
 	}
 
-	// resample the SSG as configured
-	m_ssg_resampler.resample(output - numsamples, numsamples);
+	// LINORAGX: SSG is now mixed inside clock_fm_and_adpcm; the upstream
+	// m_ssg_resampler.resample() call was removed (it was a no-op nop-resampler
+	// for ym2610 and its buffer indexing would overrun a 2-channel output).
 }
 
 
@@ -2152,6 +2157,14 @@ void ym2610::clock_split()
 	// FM into its own staging buffer
 	m_fm.output(m_split_fm.clear(), 1, 32767, m_fm_mask);
 
+	// LINORAGX FIX: SSG mixed into the FM stream (see clock_fm_and_adpcm)
+	m_ssg.clock();
+	ymfm_output<3> ssg_out;
+	m_ssg.output(ssg_out);
+	int32_t ssg_mix = (ssg_out.data[0] + ssg_out.data[1] + ssg_out.data[2]) * 2 / 3;
+	m_split_fm.data[0] += ssg_mix;
+	m_split_fm.data[1] += ssg_mix;
+
 	// ADPCM engines add into their own zeroed buffers
 	m_split_a.clear();
 	m_split_a.data[0] = 0; m_split_a.data[1] = 0;
@@ -2178,8 +2191,7 @@ void ym2610::generate_split(output_data *fm, output_data *adpcm_a, output_data *
 		adpcm_b->data[1] = m_split_b.data[1];
 	}
 
-	// SSG belongs to the FM stream (MAME ym2610_device: stream 0 = FM + SSG)
-	m_ssg_resampler.resample(fm - numsamples, numsamples);
+	// SSG is already mixed into m_split_fm by clock_split (LINORAGX)
 }
 
 
@@ -2239,6 +2251,18 @@ void ym2610::clock_fm_and_adpcm()
 
 	// update the FM content; OPNB is 13-bit with no intermediate clipping
 	m_fm.output(m_last_fm.clear(), 1, 32767, m_fm_mask);
+
+	// LINORAGX FIX: clock the SSG and mix its three channels into the FM stream
+	// (MAME: ym2610 stream 0 = FM + SSG). Upstream never configures the SSG
+	// resampler for ym2610 (leaves it at resample_nop) and its resampler type
+	// would also write past a 2-channel output buffer, so the SSG was silent.
+	// This clock runs at the native rate clock/16, which is the SSG's own rate.
+	m_ssg.clock();
+	ymfm_output<3> ssg_out;
+	m_ssg.output(ssg_out);
+	int32_t ssg_mix = (ssg_out.data[0] + ssg_out.data[1] + ssg_out.data[2]) * 2 / 3;
+	m_last_fm.data[0] += ssg_mix;
+	m_last_fm.data[1] += ssg_mix;
 
 	// mix in the ADPCM and clamp
 	m_adpcm_a.output(m_last_fm, 0x3f);
