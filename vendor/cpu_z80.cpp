@@ -3391,6 +3391,7 @@ int cpu_z80::HandleDD()
 
 	case 0x21: // ld_ix_word
 		m_regIX = ImmedWord();
+		{ static const char* e = getenv("IXP"); if (e && *e) fprintf(stderr, "IXP imm ix=%04x pc=%04x\n", m_regIX, GetPC()); }
 		return 14;
 
 	case 0x22: // ld_xword_ix
@@ -3418,7 +3419,7 @@ int cpu_z80::HandleDD()
 		return 15;
 
 	case 0x2A: // ld_ix_xword
-		m_regIX = MemReadWord(ImmedWord());
+		{ uint16_t w = ImmedWord(); static const char* e = getenv("IXP"); if (e && *e) fprintf(stderr, "IXP ind addr=%04x ix=%04x pc=%04x\n", w, m_regIX, GetPC()); m_regIX = MemReadWord(w); }
 		return 20;
 
 	case 0x2B: // dec_ix
