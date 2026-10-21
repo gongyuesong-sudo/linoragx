@@ -3004,6 +3004,10 @@ void ng_run_frame(neogeo *ng)
     }
     { extern unsigned long long z80w_dbg_frame; z80w_dbg_frame = ng->frame; }
     ng->frame++;
+    { static int k68 = -2;
+      if (k68 == -2) k68 = getenv("K68PC") ? 1 : 0;
+      if (k68) fprintf(stderr, "68KPC f=%llu pc=%08x\n",
+                       (unsigned long long)ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
 }
 
 /* arm per-line rendering into fb (window mode); NULL disables (headless) */
