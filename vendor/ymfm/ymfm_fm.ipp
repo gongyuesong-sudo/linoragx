@@ -1296,6 +1296,9 @@ uint32_t fm_engine_base<RegisterType>::clock(uint32_t chanmask)
 			if (bitfield(chanmask, chnum))
 				if (m_channel[chnum]->prepare())
 					m_active_channels |= 1 << chnum;
+#ifdef LINORAGX_FMDBG
+		{ static int dc = 0; if ((dc++) % 200 == 1) fprintf(stderr, "[clk] mod=%x active=%x chans=%d\n", m_modified_channels, m_active_channels, (int)CHANNELS); }
+#endif
 
 		// reset the modified channels and prepare count
 		m_modified_channels = m_prepare_count = 0;

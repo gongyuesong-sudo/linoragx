@@ -2008,6 +2008,9 @@ void ym2610::write_data(uint8_t data)
 	// ignore if paired with upper address
 	if (bitfield(m_address, 8))
 		return;
+#ifdef LINORAGX_FMDBG
+	fprintf(stderr, "[wd] addr=%x data=%x\n", m_address, data);
+#endif
 
 	if (m_address < 0x0e)
 	{
@@ -2144,6 +2147,9 @@ void ym2610::clock_split()
 {
 	// clock the system (identical to clock_fm_and_adpcm)
 	uint32_t env_counter = m_fm.clock(m_fm_mask);
+#ifdef LINORAGX_FMDBG
+	{ static int dn = 0; if (++dn % 900 == 1) fprintf(stderr, "[fmdbg] n=%d env=%x prescale=%d fm_status=%x\n", dn, env_counter, m_fm.clock_prescale(), m_fm.status()); }
+#endif
 
 	if (bitfield(env_counter, 0, 2) == 0)
 		m_eos_status |= m_adpcm_a.clock(0x3f);
@@ -2156,6 +2162,9 @@ void ym2610::clock_split()
 
 	// FM into its own staging buffer
 	m_fm.output(m_split_fm.clear(), 1, 32767, m_fm_mask);
+#ifdef LINORAGX_FMDBG
+	{ static int dn2 = 0; if (++dn2 % 300 == 1) fprintf(stderr, "[fmdbg2] n=%d out=%d,%d\n", dn2, m_split_fm.data[0], m_split_fm.data[1]); }
+#endif
 
 	// LINORAGX FIX: SSG mixed into the FM stream (see clock_fm_and_adpcm)
 	m_ssg.clock();
