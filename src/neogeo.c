@@ -481,6 +481,11 @@ static void mc_stb_rise(neogeo *ng)
 {
     int m_c = ng->mc_shift[6] & 0xF;   /* serial mode: command from shift[6] */
     ng->mc_c = m_c;
+    { static int mcd = -1;
+      if (mcd < 0) mcd = getenv("MCDBG") ? 1 : 0;
+      if (mcd) fprintf(stderr, "MCSTB f=%d c=%d shift=%02x %02x %02x %02x %02x %02x do=%d\n",
+                       ng->frame, ng->mc_c, ng->mc_shift[0], ng->mc_shift[1], ng->mc_shift[2],
+                       ng->mc_shift[3], ng->mc_shift[4], ng->mc_shift[5], ng->mc_dout); }
     if (m_c == 0 || (m_c >= 4 && m_c < 15))
         ng->mc_testmode = 0;
     switch (m_c) {
@@ -700,7 +705,12 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         uint8_t b = (uint8_t)~ng->buttons[1];
         return (b<<8) | 0xFF;
     }
-    if (a < 0x380002) {                     /* SYSTEM */
+    if (a < 0x380002) {                     /* SYSTEM (MAME: 0x0f00 start/sel edge,
+                                               0x7000 memcard status, 0x8000 MVS=1).
+                                               Report card PRESENT: the uni-bios
+                                               coin-test creates and verifies a JEIDA
+                                               card through this line; absent bits
+                                               make the BIOS test fail with code 0x80. */
         uint16_t hi = 0x8F;
         if (ng->buttons[0] & 0x100) hi &= ~0x01;
         if (ng->buttons[0] & 0x200) hi &= ~0x02;
@@ -840,6 +850,13 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if ((ng->dbg_z80 == 5 || f_ramwa()) && (off) == (tgt & 0xFFFFu) &&
               (ng->frame > 3000 || f_ramwaf()))
               fprintf(stderr, "RAMWA f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
+        /* MCKEEP experiment: BIOS RAM-init must not erase the memcard test
+           request/result bytes — on real hardware the test state lives in the
+           UPD4990A chip and stays queryable after RAM re-init. */
+        { static int mck = -1;
+          if (mck < 0) mck = getenv("MCKEEP") ? 1 : 0;
+          if (mck && off >= 0xFDC4 && off <= 0xFDC7 &&
+              !((mem_mask & 0xFF00) ? (d >> 8) : (d & 0xFF))) return; }
         if (mem_mask & 0xFF00) { ng->smem[off & ~1u] = d >> 8; ng->smem_dirty[(off & ~1u) >> 3] |= 1u << ((off & ~1u) & 7); }
         if (mem_mask & 0x00FF) { ng->smem[off | 1u] = d & 0xFF; ng->smem_dirty[(off | 1u) >> 3] |= 1u << ((off | 1u) & 7); }
         return;
