@@ -1336,6 +1336,11 @@ unsigned cpu_z80::exec_opcode(uint8_t bOpcode)
 
 	case 0x70: // ld_xhl_b
 		cCycles += 7;
+		{	static int h7 = -2;
+		 if (h7 == -2) h7 = getenv("HL70") ? 1 : 0;
+		 if (h7 && z80pc >= 0x0086 && z80pc <= 0x0094)
+		  fprintf(stderr, "HL70 pc=%04x hl=%04x b=%02x a=%02x de=%04x\n",
+		          z80pc - 1, m_regHL, m_regB, m_regA, m_regDE); }
 		MemWriteByte(m_regHL, m_regB);
 		break;
 
