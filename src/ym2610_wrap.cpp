@@ -1,3 +1,4 @@
+#include <time.h>
 /* YM2610 FM + ADPCM-A/B via ymfm (MAME's FM synth core, fm.c successor).
  * YM2151 SSG stays inside ymfm's OPM: ymfm has no YM2151 (its ssg_engine is
  * the 16-register YM2149 map, YM2151 uses 128 regs).
@@ -241,6 +242,10 @@ long g_tflagA_sets = 0;   /* diagnostic: count of timer-A flag assertions */
 void ym_stream(ym2610 *y, int16_t *stereo, int frames)
 {
     g_ym_frame++;
+    static int ytm = -2; static long ytc = 0; static double ytm_acc = 0;
+    struct timespec yts0, yts1;
+    if (ytm == -2) ytm = getenv("AUDDBG") ? 1 : 0;
+    if (ytm) clock_gettime(CLOCK_MONOTONIC, &yts0);
     memset(stereo, 0, frames * 2 * sizeof(int16_t));
     if (frames <= 0) return;
 
@@ -270,4 +275,8 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
           for (int i = 0; i < need; i++) { int v = y->tA[i] < 0 ? -y->tA[i] : y->tA[i]; if (v > ma) ma = v;
                                            v = y->tB[i] < 0 ? -y->tB[i] : y->tB[i]; if (v > mb) mb = v; }
           fprintf(stderr, "[yms] need=%d frames=%d fm=%d aa=%d ab=%d\n", need, frames, mx, ma, mb); } }
+    if (ytm) { clock_gettime(CLOCK_MONOTONIC, &yts1);
+        ytm_acc += (yts1.tv_sec - yts0.tv_sec) * 1e6 + (yts1.tv_nsec - yts0.tv_nsec) / 1e3;
+        if ((ytc++ % 300) == 0) { fprintf(stderr, "[ymtm] avg=%.0fus last=%.0fus frames=%d\n", ytm_acc / 300.0,
+            (yts1.tv_sec - yts0.tv_sec) * 1e6 + (yts1.tv_nsec - yts0.tv_nsec) / 1e3, frames); ytm_acc = 0; } }
 }
