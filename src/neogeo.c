@@ -262,6 +262,19 @@ static uint32_t zbank_base(neogeo *ng, int region, int entry, uint32_t len)
     uint32_t mask = (len - 0x10000 - 1) & 0x3FFFF;
     return 0x10000 + (((uint32_t)entry << (11 + region)) & mask);
 }
+static unsigned long g_zpc_hits[8];
+static void zpcstat_hook(unsigned pc) {
+    switch (pc) {
+        case 0x0066: g_zpc_hits[0]++; break;   /* NMI entry */
+        case 0x012b: g_zpc_hits[1]++; break;   /* main scheduler */
+        case 0x0146: g_zpc_hits[2]++; break;   /* queue consume */
+        case 0x017c: g_zpc_hits[3]++; break;   /* cmd dispatch (sub 20) */
+        case 0x01dc: g_zpc_hits[4]++; break;   /* sfx dispatch path */
+        case 0x01eb: g_zpc_hits[5]++; break;   /* fd12 gate */
+        case 0x0439: g_zpc_hits[6]++; break;   /* sfx handler call */
+        case 0x1075: g_zpc_hits[7]++; break;   /* fd12 clear path */
+    }
+}
 static uint8_t z_read(uint32_t a, void *c)
 {
     neogeo *ng = (neogeo*)c;
@@ -2403,6 +2416,9 @@ void linoragx_pc_hook(unsigned int pc)
 static int g_z80flow_lo = -1, g_z80flow_hi = -1;
 void linoragx_z80_step(unsigned int pc)
 {
+    { static int zps = -2;
+      if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
+      if (zps) zpcstat_hook(pc); }
     { static int ringen = -2; static unsigned ring[128]; static unsigned short spr[128]; static int ridx = 0; static int fired = 0;
       if (ringen == -2) ringen = getenv("Z80RING") ? 1 : 0;
       if (ringen && g_ng) {
@@ -2907,6 +2923,7 @@ void ng_run_frame(neogeo *ng)
         { extern uint16_t z80w_sp(void*);
           uint16_t zpc0 = z80w_pc(ng->z);
           z80w_exec(ng->z, chunk/3);   /* MAME: Z80 = master/6 = 4MHz, 68K = master/2 = 12MHz -> 1:3 */
+          if (getenv("ZPCSTAT") && (ng->frame % 300) == 0) { static const char *zn[8] = {"nmi66","sched12b","qcons146","disp17c","sfx1dc","gate1eb","h439","clr1075"}; fprintf(stderr, "ZPCSTAT f=%llu", (unsigned long long)ng->frame); for (int zi=0; zi<8; zi++) fprintf(stderr, " %s=%lu", zn[zi], g_zpc_hits[zi]); fprintf(stderr, "\n"); }
           uint16_t zpc1 = z80w_pc(ng->z);
           if (f_znmi() && ng->frame >= 61 && ng->frame <= 63 && zpc0 != zpc1)
               fprintf(stderr, "ZNMI f=%d %04x->%04x\n", ng->frame, zpc0, zpc1);
