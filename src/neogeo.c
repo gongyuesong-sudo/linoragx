@@ -559,10 +559,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
            code tables from. */
         uint32_t base = ng->prg_bank_base ? ng->prg_bank_base : 0x100000;
         uint32_t o = base - 0x100000 + off;
+        uint32_t off1 = (off + 1) & 0xFFFF;   /* wrap: off=0xFFFF must not index dirty OOB */
         uint8_t lo = (ng->smem_dirty[off >> 3] & (1u << (off & 7))) ? ng->smem[off]
                    : ((ng->rom && o < ng->rom_size) ? ng->rom[o] : 0xFF);
-        uint32_t o1 = o + 1;
-        uint8_t hi = (ng->smem_dirty[(off + 1) >> 3] & (1u << ((off + 1) & 7))) ? ng->smem[(off + 1) & 0xFFFF]
+        uint32_t o1 = base - 0x100000 + off1;
+        uint8_t hi = (ng->smem_dirty[off1 >> 3] & (1u << (off1 & 7))) ? ng->smem[off1]
                    : ((ng->rom && o1 < ng->rom_size) ? ng->rom[o1] : 0xFF);
         return (lo << 8) | hi;
     }
