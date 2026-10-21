@@ -2242,6 +2242,11 @@ static void mame_cmc50_gfx_decrypt(uint8_t *rom, uint32_t rom_size, int extra_xo
             wi, ((wi >> 16) ^ mame_kof2000_address_16_23_xor2[(wi >> 8) & 0xff]) & 1);
     }
     uint32_t q = rom_size / 4;
+    int dbg2 = getenv("CMCDBG2") != NULL;
+    if (dbg2)
+        fprintf(stderr, "[cmc2] stage1 rom=%02x%02x%02x%02x buf=%02x%02x%02x%02x @2ed1060\n",
+                rom[0x2ed1060], rom[0x2ed1061], rom[0x2ed1062], rom[0x2ed1063],
+                buf[0x2ed1060], buf[0x2ed1061], buf[0x2ed1062], buf[0x2ed1063]);
     for (uint32_t rpos = 0; rpos < q; rpos++) {
         int32_t baser = (int32_t)rpos;
         baser ^= extra_xor;
@@ -2251,6 +2256,9 @@ static void mame_cmc50_gfx_decrypt(uint8_t *rom, uint32_t rom_size, int extra_xo
         baser ^= (int32_t)mame_kof2000_address_16_23_xor2[(baser >> 8) & 0xff] << 16;
         baser ^= (int32_t)mame_kof2000_address_0_7_xor[(baser >> 8) & 0xff];
         uint32_t b = (uint32_t)baser & (q - 1);   /* pow2 rom sizes here */
+        if (dbg2 && rpos >= 0xD5D520 && rpos < 0xD5D524)
+            fprintf(stderr, "[cmc2] rpos=%x b=%x buf=%02x%02x%02x%02x\n",
+                    rpos, b, buf[4*b], buf[4*b+1], buf[4*b+2], buf[4*b+3]);
         rom[4*rpos+0] = buf[4*b+0]; rom[4*rpos+1] = buf[4*b+1];
         rom[4*rpos+2] = buf[4*b+2]; rom[4*rpos+3] = buf[4*b+3];
     }
@@ -2268,6 +2276,11 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
             for (uint32_t i = b0; i < b0 + 0x800000 && i < sz; i++) nz += (ng->spr[i] != 0);
             fprintf(stderr, "[cmcdbg] PRE %08x nz=%u\n", b0, nz);
         }
+    }
+    if (getenv("SPRSAVE")) {  /* one-shot raw dump for offline zero-block analysis */
+        FILE *fp = fopen(getenv("SPRSAVE"), "wb");
+        if (fp) { fwrite(ng->spr, 1, sz, fp); fclose(fp);
+                  fprintf(stderr, "[sprsave] wrote %s sz=%x\n", getenv("SPRSAVE"), sz); }
     }
     if (s1data) {
         /* svcpcb family full chain (MAME init_mslug5pcb/init_svcpcb).
@@ -2299,6 +2312,11 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
     }
     if (is50) mame_cmc50_gfx_decrypt(ng->spr, sz, key);   /* MAME prot_cmc kof2000 table set, bus order */
     else cmc_gfx_decrypt(ng->spr, sz, key, &cmc42_keys);
+    if (getenv("SPRSAVE2")) {  /* post-decrypt raw dump */
+        FILE *fp = fopen(getenv("SPRSAVE2"), "wb");
+        if (fp) { fwrite(ng->spr, 1, sz, fp); fclose(fp);
+                  fprintf(stderr, "[sprsave2] wrote %s sz=%x\n", getenv("SPRSAVE2"), sz); }
+    }
     if (getenv("CMCDBG")) {
         for (uint32_t b0 = 0; b0 < sz; b0 += 0x800000) {
             uint32_t nz = 0;
