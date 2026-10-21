@@ -308,17 +308,19 @@ static uint8_t z_read(uint32_t a, void *c)
 {
     neogeo *ng = (neogeo*)c;
     a &= 0xFFFF;
-    if (getenv("VIEWDBG") && a <= 0x0012) {
+    static int zrd_tr = -1;
+    if (zrd_tr < 0) zrd_tr = (getenv("VIEWDBG")?1:0) | (getenv("BLKRD")?2:0) | (getenv("FD12RD")?4:0);
+    if ((zrd_tr&1) && a <= 0x0012) {
         static long vd = 0;
         if ((vd++ % 20) == 0) fprintf(stderr, "VIEW a=%04x cv=%d m1v=%d ca=%d zpc=%04x f=%llu\n",
             a, ng->snd ? (ng->cart_audio || ng->m1_view) : 0, ng->m1_view, ng->cart_audio,
             z80w_pc(ng->z), (unsigned long long)ng->frame);
     }
-    if (getenv("BLKRD") && a >= 0xfc30 && a < 0xff00) {
+    if ((zrd_tr&2) && a >= 0xfc30 && a < 0xff00) {
         static long brd = 0;
         if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x f=%llu\n", a, z80w_pc(ng->z), (unsigned long long)ng->frame);
     }
-    if (getenv("FD12RD") && a == 0xFD12) {
+    if ((zrd_tr&4) && a == 0xFD12) {
         static long f12 = 0;
         uint8_t v = ng->smem[0xFD12 - 0xC000];
         if ((f12++ % 200) == 0) fprintf(stderr, "FD12RD v=%02x zpc=%04x f=%llu\n", v, z80w_pc(ng->z), (unsigned long long)ng->frame);
@@ -378,7 +380,9 @@ static void z_write(uint32_t a, uint8_t v, void *c)
 {
     neogeo *ng = (neogeo*)c;
     a &= 0xFFFF;
-    if (getenv("BLKRD") && a >= 0xfc30 && a < 0xff00) {
+    static int zwr_tr = -1;
+    if (zwr_tr < 0) zwr_tr = (getenv("BLKRD")?1:0) | (getenv("SMEMWRZ")?2:0) | (getenv("STACKW")?4:0);
+    if ((zwr_tr&1) && a >= 0xfc30 && a < 0xff00) {
         static long bwr = 0;
         if ((bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x f=%llu\n", a, v, z80w_pc(ng->z), (unsigned long long)ng->frame);
     }
@@ -386,13 +390,13 @@ static void z_write(uint32_t a, uint8_t v, void *c)
        reset, first push writes 0xFFFB/0xFFFC): the high bytes are still RAM —
        dropping them corrupts NMI return addresses (crash to 0xFFFD). */
     if (a >= 0xC000 && a < 0xF800) {
-        if (getenv("SMEMWRZ")) { static long swz = 0;
+        if (zwr_tr&2) { static long swz = 0;
             if (swz++ < 200) fprintf(stderr, "SMEMWRZ f=%llu a=%04x v=%02x zpc=%04x\n",
                 (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
         ng->smem[a - 0xC000] = v; return;
     }  /* SMEM shared RAM (Z80 view) */
     if (a >= 0xF800) {
-        if (getenv("STACKW") && a >= 0xFFE0) { static long stw = 0;
+        if ((zwr_tr&4) && a >= 0xFFE0) { static long stw = 0;
             if (stw++ < 300) fprintf(stderr, "STKW f=%llu a=%04x v=%02x pc=%04x\n",
                 (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
         if (f_ztrace() && (a >= 0xF800))
@@ -978,7 +982,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             break;
         case 1:
             if (1) { static int k=0; if (ng->vram_offset>=0xC000 && ng->vram_offset<0xC800 && ++k<=20) fprintf(stderr, "VW off=%04x val=%04x\n", ng->vram_offset, d); }
-            if (getenv("VWR")) {   /* head-sprite entry write trace (n=258/259) */
+            static int vwr = -1; if (vwr < 0) vwr = getenv("VWR") ? 1 : 0;
+            if (vwr) {   /* head-sprite entry write trace (n=258/259) */
                 uint32_t o = ng->vram_offset;
                 if ((o >= 0x4080 && o < 0x40C0) ||
                     o == (0x8000u|258) || o == (0x8200u|258) || o == (0x8400u|258) ||
