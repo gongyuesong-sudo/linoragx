@@ -276,6 +276,12 @@ static uint8_t z_read(uint32_t a, void *c)
         static long brd = 0;
         if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x f=%llu\n", a, z80w_pc(ng->z), (unsigned long long)ng->frame);
     }
+    if (getenv("FD12RD") && a == 0xFD12) {
+        static long f12 = 0;
+        uint8_t v = ng->smem[0xFD12 - 0xC000];
+        if ((f12++ % 200) == 0) fprintf(stderr, "FD12RD v=%02x zpc=%04x f=%llu\n", v, z80w_pc(ng->z), (unsigned long long)ng->frame);
+        return v;
+    }
     if (f_ztrace() && a >= 0xFD25 && a <= 0xFD68 && ng->frame > 40 && ng->frame < 60)
         fprintf(stderr, "ZR f=%d a=%04x pc=%04x\n", ng->frame, a, z80w_pc(ng->z));
     { static int zsm = -2; if (zsm==-2) zsm = getenv("ZSMEM") ? 1 : 0;
@@ -806,7 +812,9 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                 ng->nmi_cnt++;
                 ng->z80_nmi_asserted = 1;
             }
-            if (ng->dbg_z80==3) fprintf(stderr, "SL1W f=%llu %02x a=%06x d=%04x m=%04x pc=%08x zpc=%04x pend=%d en=%d asrt=%d\n", (unsigned long long)ng->frame, v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC), z80w_pc(ng->z), ng->z80_nmi_pend, ng->z80_nmi_en, ng->z80_nmi_asserted);
+            if (ng->dbg_z80==3) { extern uint8_t z80w_peek(void*, uint32_t); fprintf(stderr, "SL1W f=%llu %02x a=%06x d=%04x m=%04x pc=%08x zpc=%04x pend=%d en=%d asrt=%d fe3b=%02x fe39=%02x fe58=%02x fe47=%02x fe46=%02x\n", (unsigned long long)ng->frame, v, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC), z80w_pc(ng->z), ng->z80_nmi_pend, ng->z80_nmi_en, ng->z80_nmi_asserted, z80w_peek(ng->z,0xfe3b), z80w_peek(ng->z,0xfe39), z80w_peek(ng->z,0xfe58), z80w_peek(ng->z,0xfe47), z80w_peek(ng->z,0xfe46));
+                { static int zdumped = 0; if (ng->frame >= 2000 && !zdumped) { zdumped = 1; fprintf(stderr, "ZDUMP140:"); for (int qi=0x140; qi<0x180; qi++) fprintf(stderr, " %02x", z80w_peek(ng->z, qi)); fprintf(stderr, "\nZDUMP66:"); for (int qi=0x66; qi<0x90; qi++) fprintf(stderr, " %02x", z80w_peek(ng->z, qi)); fprintf(stderr, "\n");
+                    if (ng->snd && ng->snd_size) { const char *ds = getenv("DUMPSND"); if (ds) { FILE *f = fopen(ds, "wb"); if (f) { fwrite(ng->snd, 1, ng->snd_size, f); fclose(f); fprintf(stderr, "DUMPSND wrote %u bytes\n", ng->snd_size); } } } } } }
             ng->sl1_cnt++;
         }
         return;
