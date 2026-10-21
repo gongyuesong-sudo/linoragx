@@ -705,6 +705,14 @@ static uint16_t r16(neogeo *ng, uint32_t a)
 static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
 {
     a &= 0xFFFFFF;
+    { static int ramvec = -1;
+      if (ramvec < 0) ramvec = getenv("RAMVEC") ? 1 : 0;
+      if (ramvec && a < 0x400)
+      {
+          extern unsigned int m68k_get_pc_snapshot(void);
+          fprintf(stderr, "RAMVEC f=%d a=%06x d=%04x mask=%04x pc=%08x\n",
+                  ng->frame, a, d, mem_mask, m68k_get_pc_snapshot());
+      } }
     if (ng->cart_prot == 1 && (a & ~1u) == 0x20AAAA) {   /* kof98 protection trigger */
         uint16_t w = (mem_mask == 0xFFFF) ? d : (uint16_t)(((mem_mask & 0xFF00) ? (d & 0xFF00) : (ng->kof98_trig & 0xFF00)) |
                                                            ((mem_mask & 0x00FF) ? (d & 0x00FF) : (ng->kof98_trig & 0x00FF)));
@@ -2530,12 +2538,37 @@ static void pvc_pack_color(neogeo *ng)
 /* PCFLOW=lo-hi instruction-level PC flow probe (env-gated; near-free when off) */
 static struct neogeo *g_pcflow_ng;
 static int g_pcflow_lo = -1, g_pcflow_hi = -1;
+/* EXCPROBE=1: log every 68K exception vector fetch (vector#, vaddr, value, src pc) */
+int linoragx_excprobe = 0;
+struct neogeo *linoragx_exc_ng;
+void linoragx_exc_log(unsigned int vector, unsigned int vaddr, unsigned int val, unsigned int pc)
+{
+    fprintf(stderr, "EXCP f=%d vec=%u vaddr=%08x val=%08x src=%08x\n",
+            linoragx_exc_ng ? linoragx_exc_ng->frame : -1,
+            vector, vaddr, val, pc);
+}
+unsigned int m68k_get_pc_snapshot(void)
+{
+    return m68k_get_reg(0, M68K_REG_PC);
+}
 void linoragx_pc_hook(unsigned int pc)
 {
     if (g_pcflow_lo < 0) return;
     int f = g_pcflow_ng ? g_pcflow_ng->frame : -1;
     if (f >= g_pcflow_lo && f <= g_pcflow_hi)
+    {
         fprintf(stderr, "F %d %08x\n", f, pc);
+        /* PCSTAT=1: attach SR/SP/IR at hot addresses of the aodk crash site */
+        if (g_pcflow_ng &&
+            (pc == 0x00c18714u || pc == 0x00c1871au || pc == 0x00c1871cu ||
+             pc == 0x00108600u || pc == 0x00108604u) && getenv("PCSTAT"))
+        {
+            unsigned sr = m68k_get_reg(NULL, M68K_REG_SR);
+            unsigned sp = m68k_get_reg(NULL, M68K_REG_SP);
+            unsigned ir = m68k_get_reg(NULL, M68K_REG_IR);
+            fprintf(stderr, "S %d %08x sr=%04x sp=%08x ir=%04x\n", f, pc, sr, sp, ir);
+        }
+    }
 }
 
 /* Z80FLOW=lo-hi: instruction-level Z80 PC flow (env-gated) */
@@ -2894,6 +2927,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     m68k_set_cpu_type(M68K_CPU_TYPE_68000);
     m68k_init();
     m68k_set_instr_hook_callback(linoragx_pc_hook);  /* must follow m68k_init (it clears callbacks) */
+    if (getenv("EXCPROBE")) { linoragx_excprobe = 1; linoragx_exc_ng = ng; }
     ng->screen_enabled = 1;
     ng->mc_lock1 = 1; ng->mc_unlock2 = 1; ng->mc_regsel = 1;
 

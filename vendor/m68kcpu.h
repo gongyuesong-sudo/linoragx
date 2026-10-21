@@ -1480,10 +1480,16 @@ static inline void m68ki_jump(uint new_pc)
 	m68ki_pc_changed(REG_PC);
 }
 
+void linoragx_exc_log(uint vector, uint vaddr, uint val, uint pc); /* env-gated EXCPROBE, neogeo.c */
+extern int linoragx_excprobe;
 static inline void m68ki_jump_vector(uint vector)
 {
 	REG_PC = (vector<<2) + REG_VBR;
-	REG_PC = m68ki_read_data_32(REG_PC);
+	{
+		uint _vv = m68ki_read_data_32(REG_PC);
+		if (linoragx_excprobe) linoragx_exc_log(vector, REG_PC, _vv, REG_PPC);
+		REG_PC = _vv;
+	}
 	m68ki_pc_changed(REG_PC);
 }
 
@@ -2132,6 +2138,7 @@ static inline void m68ki_exception_interrupt(uint int_level)
 
 	/* Get the new PC */
 	new_pc = m68ki_read_data_32((vector<<2) + REG_VBR);
+	if (linoragx_excprobe) linoragx_exc_log(vector, (vector<<2) + REG_VBR, new_pc, REG_PC);
 
 	/* If vector is uninitialized, call the uninitialized interrupt vector */
 	if(new_pc == 0)
