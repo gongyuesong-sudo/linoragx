@@ -221,6 +221,10 @@ uint8_t ym_read(ym2610 *y, int chipno)
     uint8_t st = (uint8_t)(y->tflag[c] & 3);
     if (y->busy[c] && y->clk >= y->busy_at[c]) y->busy[c] = 0;  /* D7 self-clears with time */
     if (y->busy[c]) { st |= 0x80; y->busy[c] = 0; }
+    /* Real YM2610 raises D6 while ADPCM-B is playing; samsho2's BGM pump polls
+       it to know when to feed the next sample segment.  With D6 stuck low the
+       driver re-triggers immediately and punches the waveform = choppy BGM. */
+    if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_PLAYING)) st |= 0x40;
     y->tflag[c] = 0;
     return st;
 }

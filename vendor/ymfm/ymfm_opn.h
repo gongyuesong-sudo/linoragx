@@ -706,6 +706,9 @@ public:
 	// LINORAGX EXTENSION: ADPCM-A channel debug state
 	void dbg_aa(int i, uint32_t &playing, uint32_t &addr) const { m_adpcm_a.dbg_state(i, playing, addr); }
 
+	// LINORAGX EXTENSION: ADPCM-B status (BSY/EOS bits for the host status port)
+	uint8_t adpcm_b_status() const { return m_adpcm_b.status(); }
+
 protected:
 	// internal helpers
 	void update_prescale();
