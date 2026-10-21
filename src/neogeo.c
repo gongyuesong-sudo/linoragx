@@ -858,8 +858,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
            request/result bytes — on real hardware the test state lives in the
            UPD4990A chip and stays queryable after RAM re-init. */
         { static int mck = -1;
-          if (mck < 0) mck = getenv("MCKEEP") ? 1 : 0;
+          if (mck < 0) { const char *e = getenv("MCKEEP"); mck = e ? atoi(e) : 0; }
           if (mck && off >= 0xFDC4 && off <= 0xFDC7 &&
+              !((mem_mask & 0xFF00) ? (d >> 8) : (d & 0xFF))) return;
+          /* MCKEEP=2: also spare the cart VBlank handler window 0x108600-0x1086FF
+             so the hybrid read serves the bank-ROM view (game code) there. */
+          if (mck >= 2 && off >= 0x8600 && off <= 0x86FF &&
               !((mem_mask & 0xFF00) ? (d >> 8) : (d & 0xFF))) return; }
         if (mem_mask & 0xFF00) { ng->smem[off & ~1u] = d >> 8; ng->smem_dirty[(off & ~1u) >> 3] |= 1u << ((off & ~1u) & 7); }
         if (mem_mask & 0x00FF) { ng->smem[off | 1u] = d & 0xFF; ng->smem_dirty[(off | 1u) >> 3] |= 1u << ((off | 1u) & 7); }
