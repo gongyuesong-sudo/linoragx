@@ -209,6 +209,14 @@ static void decode_sprites(neogeo *ng)
     ng->sprite8_mask = mask;
     ds_ctx c = { ng->spr, ng->sprite8, ng->spr_size };
     parallel_for_g(ds_run, &c, 0, ng->spr_size & ~0x7fu, 12, 0x80);   /* ds_run blocks at 0x80 granularity */
+    if (getenv("SPR8RD")) {   /* verify decoded content at head cell dest */
+        uint32_t g = strtoul(getenv("SPR8RD"), NULL, 16);
+        fprintf(stderr, "[spr8rd] spr8[%s]=%02x%02x%02x%02x%02x%02x%02x%02x  src[%x]=%02x%02x%02x%02x\n",
+                getenv("SPR8RD"), ng->sprite8[g],ng->sprite8[g+1],ng->sprite8[g+2],ng->sprite8[g+3],
+                ng->sprite8[g+4],ng->sprite8[g+5],ng->sprite8[g+6],ng->sprite8[g+7],
+                (g>>1)+((g&0xff)>>4)*4, ng->spr[(g>>1)+((g&0xff)>>4)*4], ng->spr[(g>>1)+((g&0xff)>>4)*4+1],
+                ng->spr[(g>>1)+((g&0xff)>>4)*4+2], ng->spr[(g>>1)+((g&0xff)>>4)*4+3]);
+    }
     if (getenv("SPRDUMP")) {   /* one-shot: report size + nonzero density per 8MB raw chunk */
         fprintf(stderr, "[sprdump] spr_size=%x mask=%x\n", ng->spr_size, ng->sprite8_mask);
         for (uint32_t base = 0; base < ng->spr_size; base += 0x800000) {
@@ -970,6 +978,15 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             break;
         case 1:
             if (1) { static int k=0; if (ng->vram_offset>=0xC000 && ng->vram_offset<0xC800 && ++k<=20) fprintf(stderr, "VW off=%04x val=%04x\n", ng->vram_offset, d); }
+            if (getenv("VWR")) {   /* head-sprite entry write trace (n=258/259) */
+                uint32_t o = ng->vram_offset;
+                if ((o >= 0x4080 && o < 0x40C0) ||
+                    o == (0x8000u|258) || o == (0x8200u|258) || o == (0x8400u|258) ||
+                    o == (0x8000u|259) || o == (0x8200u|259) || o == (0x8400u|259))
+                    fprintf(stderr, "VWR f=%lu off=%04x val=%04x\n", ng->frame, o, d);
+                if (d == 0x6aee3u || d == 0x3060u || d == 0x6aeeu || d == 0xaee3u)
+                    fprintf(stderr, "VWRHIT f=%lu off=%04x val=%04x\n", ng->frame, o, d);
+            }
             if (f_vwdist()) { static unsigned long hist[64]; static int done=0;
                 hist[(ng->vram_offset>>10)&63]++;
                 if (done++ == 5000) { for (int q=0;q<64;q++) if (hist[q]) fprintf(stderr, "VWDIST %04x-%04x: %lu\n", q<<10, (q<<10)|0x3FF, hist[q]); done=-1; } }
