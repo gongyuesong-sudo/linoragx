@@ -3373,7 +3373,21 @@ void ng_run_frame(neogeo *ng)
       }
     }
     ng->frame++;
-    ng->mc_tp ^= 1;   /* UPD4990A TP ~64Hz approximation (MAME timer -> per-frame toggle) */
+    /* UPD4990A TP toggle period follows the armed mode (MAME m_timer_tp):
+       TP_1S/10S/30S/60S_INT = 0.5s/5s/15s/30s halves; TEST = 32Hz;
+       everything else ~64Hz (per-frame at 60fps). */
+    {
+        int tp_div = 1;
+        switch (ng->mc_c) {
+        case 8:  tp_div = 30;  break;   /* TP_1S_INT  */
+        case 9:  tp_div = 300; break;   /* TP_10S_INT */
+        case 10: tp_div = 900; break;   /* TP_30S_INT */
+        case 11: tp_div = 1800;break;   /* TP_60S_INT */
+        case 15: tp_div = 2;   break;   /* TEST: 32Hz */
+        default: tp_div = 1;   break;   /* ~64Hz */
+        }
+        if ((ng->frame % tp_div) == 0) ng->mc_tp ^= 1;
+    }
     if (ng->mc_testmode) {
         /* MAME test_tick @1024Hz (1990A): raw ++ with carry chain, DO=(year==0).
            Approximate 1024Hz by ~17 ticks per 60fps frame. */
