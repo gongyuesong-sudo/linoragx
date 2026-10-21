@@ -8,7 +8,7 @@ SRC     = src/neogeo.c src/video.c src/rom.c src/config.c \
           src/audio.c src/wl_input.c src/render_vulkan.c src/ctl.c src/netplay.c src/main.c \
           src/xdg-shell-protocol.c
 OBJ     = $(SRC:src/%.c=build/%.o) build/z80_wrap.o build/cpu_z80.o build/m68kcpu.o build/m68kops.o build/softfloat.o \
-          build/ym2610_wrap.o build/ymfm_opn.o build/ymfm_adpcm.o build/ymfm_ssg.o
+          build/ym2610_wrap.o build/audio_engine.o build/ymfm_opn.o build/ymfm_adpcm.o build/ymfm_ssg.o
 BIN     = build/linoragx
 
 all: $(BIN)
@@ -42,6 +42,10 @@ build/z80_wrap.o: src/z80_wrap.cpp vendor/cpu_z80.cpp
 build/ym2610_wrap.o: src/ym2610_wrap.cpp vendor/ymfm/ymfm_opn.h vendor/ymfm/ymfm_ssg.h
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -Isrc -Ivendor/ymfm -c src/ym2610_wrap.cpp -o $@
+
+build/audio_engine.o: src/audio_engine.cpp
+	@mkdir -p build
+	$(CXX) $(CXXFLAGS) -Isrc -c src/audio_engine.cpp -o $@
 
 build/ymfm_opn.o: vendor/ymfm/ymfm_opn.cpp vendor/ymfm/ymfm_fm.ipp
 	@mkdir -p build

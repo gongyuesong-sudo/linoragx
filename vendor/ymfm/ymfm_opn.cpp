@@ -2129,6 +2129,61 @@ void ym2610::generate(output_data *output, uint32_t numsamples)
 
 
 //-------------------------------------------------
+//  LINORAGX EXTENSION: generate_split / clock_split
+//  Same clocking as generate(), but the three MAME
+//  streams (FM+SSG, ADPCM-A, ADPCM-B) are emitted
+//  separately instead of being summed into m_last_fm.
+//-------------------------------------------------
+
+void ym2610::clock_split()
+{
+	// clock the system (identical to clock_fm_and_adpcm)
+	uint32_t env_counter = m_fm.clock(m_fm_mask);
+
+	if (bitfield(env_counter, 0, 2) == 0)
+		m_eos_status |= m_adpcm_a.clock(0x3f);
+
+	m_adpcm_b.clock();
+
+	uint8_t live_eos = ((m_adpcm_b.status() & adpcm_b_channel::STATUS_EOS) != 0) ? 0x40 : 0x00;
+	if (((live_eos ^ m_eos_status) & 0x40) != 0)
+		m_eos_status = (m_eos_status & ~0xc0) | live_eos | (live_eos << 1);
+
+	// FM into its own staging buffer
+	m_fm.output(m_split_fm.clear(), 1, 32767, m_fm_mask);
+
+	// ADPCM engines add into their own zeroed buffers
+	m_split_a.clear();
+	m_split_a.data[0] = 0; m_split_a.data[1] = 0;
+	m_adpcm_a.output(m_split_a, 0x3f);
+
+	m_split_b.clear();
+	m_split_b.data[0] = 0; m_split_b.data[1] = 0;
+	m_adpcm_b.output(m_split_b, 1);
+
+	m_split_fm.clamp16();
+}
+
+void ym2610::generate_split(output_data *fm, output_data *adpcm_a, output_data *adpcm_b, uint32_t numsamples)
+{
+	for (uint32_t samp = 0; samp < numsamples; samp++, fm++, adpcm_a++, adpcm_b++)
+	{
+		if ((m_ssg_resampler.sampindex() + samp) % m_fm_samples_per_output == 0)
+			clock_split();
+		fm->data[0] = m_split_fm.data[0];
+		fm->data[1] = m_split_fm.data[1];
+		adpcm_a->data[0] = m_split_a.data[0];
+		adpcm_a->data[1] = m_split_a.data[1];
+		adpcm_b->data[0] = m_split_b.data[0];
+		adpcm_b->data[1] = m_split_b.data[1];
+	}
+
+	// SSG belongs to the FM stream (MAME ym2610_device: stream 0 = FM + SSG)
+	m_ssg_resampler.resample(fm - numsamples, numsamples);
+}
+
+
+//-------------------------------------------------
 //  update_prescale - update the prescale value,
 //  recomputing derived values
 //-------------------------------------------------

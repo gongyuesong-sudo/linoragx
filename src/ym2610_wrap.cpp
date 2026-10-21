@@ -1,8 +1,13 @@
 /* YM2610 FM + ADPCM-A/B via ymfm (MAME's FM synth core, fm.c successor).
- * YM2151 SSG stays on the compact square-wave model: ymfm has no YM2151
- * (its ssg_engine is the 16-register YM2149 map, YM2151 uses 128 regs).
+ * YM2151 SSG stays inside ymfm's OPM: ymfm has no YM2151 (its ssg_engine is
+ * the 16-register YM2149 map, YM2151 uses 128 regs).
  * External C interface unchanged; timer/IRQ/status handshake semantics are
- * preserved because the sm1 sound driver polls them. */
+ * preserved because the sm1 sound driver polls them.
+ *
+ * MAME-parity audio rework: the chip runs at the real NEOGEO_YM2610_CLOCK
+ * (master/3 = 8 MHz -> native rate clock/16 = 500 kHz), its three output
+ * streams are generated separately and mixed by audio_engine.cpp with
+ * MAME's speaker routing/volumes. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +16,18 @@
 #include <vector>
 
 #include "ymfm_opn.h"
+
+/* MAME-style stream mixer (src/audio_engine.cpp) */
+extern "C" {
+typedef struct audio_engine audio_engine;
+audio_engine *ae_create(double in_rate, double out_rate);
+void ae_destroy(audio_engine *);
+void ae_reset(audio_engine *);
+void ae_feed(audio_engine *, const int32_t *fmL, const int32_t *fmR,
+             const int32_t *adpcmA, const int32_t *adpcmB, int n);
+int  ae_avail(audio_engine *);
+int  ae_pull(audio_engine *, int16_t *stereo, int frames);
+}
 
 extern "C" {
 typedef struct ym2610 ym2610;
@@ -46,47 +63,36 @@ struct ym2610 {
     const uint8_t *rom = nullptr;            /* cart audio ROM (ADPCM samples) */
     uint32_t rom_size = 0;
 
-    std::vector<ymfm::ym2610::output_data> obuf;
-    std::vector<ymfm::ym2610::output_data> pend;   /* native samples not yet consumed */
-    double frac = 0.0;                             /* fractional read position in pend */
+    audio_engine *ae;                        /* MAME-style stream mixer */
+    std::vector<ymfm::ym2610::output_data> obuf_fm, obuf_a, obuf_b;
+    std::vector<int32_t> tL, tR, tA, tB;     /* deinterleave staging */
 
-    /* anti-alias filter: 4th-order Butterworth (2 cascaded biquads) LP @18k
-     * in the native 223.7k domain, applied before decimation */
-    struct Biquad {
-        double b0=1,b1=0,b2=0,a1=0,a2=0, x1=0,x2=0,y1=0,y2=0;
-        void design(double fs, double fc) {
-            double w = 2.0*3.14159265358979*fc/fs, cw = cos(w), sw = sin(w), q = 0.707106781;
-            double alpha = sw/(2.0*q), a0 = 1.0+alpha;
-            b0=(1.0-cw)/2.0/a0; b1=(1.0-cw)/a0; b2=b0; a1=-2.0*cw/a0; a2=(1.0-alpha)/a0;
-            x1=x2=y1=y2=0;
-        }
-        double step(double x) {
-            double y = b0*x + b1*x1 + b2*x2 - a1*y1 - a2*y2;
-            x2=x1; x1=x; y2=y1; y1=y; return y;
-        }
-    };
-    struct LP4 { Biquad s1, s2;
-        void design(double fs, double fc) {
-            /* Butterworth 4th order: two stages with Q 0.5412 / 1.3066 */
-            s1.design(fs, fc); s2.design(fs, fc);
-            double w = 2.0*3.14159265358979*fc/fs, cw = cos(w), sw = sin(w);
-            double a0;
-            double al1 = sw/(2.0*0.54119610), a = 1.0+al1;
-            s1.b0=(1.0-cw)/2.0/a; s1.b1=(1.0-cw)/a; s1.b2=s1.b0; s1.a1=-2.0*cw/a; s1.a2=(1.0-al1)/a;
-            double al2 = sw/(2.0*1.30656296); a = 1.0+al2;
-            s2.b0=(1.0-cw)/2.0/a; s2.b1=(1.0-cw)/a; s2.b2=s2.b0; s2.a1=-2.0*cw/a; s2.a2=(1.0-al2)/a;
-            (void)a0;
-        }
-        double step(double x) { return s2.step(s1.step(x)); }
-    };
-    LP4 bqL, bqR;
-
-    ym2610() : intf(), chip(intf, 0x7f) { intf.y = this; bqL.design(3579545.0/16.0, 18000.0); bqR = bqL; }
+    ym2610() : intf(), chip(intf, 0x7f) {
+        intf.y = this;
+        ae = ae_create(500000.0, 48000.0);   /* clock/16 native -> 48 kHz out */
+    }
 };
 
 uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t address)
 {
-    (void)type;                              /* ADPCM-A and -B share the audio ROM */
+    static int adb = -1;
+    if (adb < 0) adb = getenv("ADPCMDBG") ? 1 : 0;
+    if (adb) {
+        extern int g_ym_frame;
+        static uint32_t maxaddr[2] = {0,0}; static long oob[2] = {0,0}, tot[2] = {0,0};
+        static long lastprint = 0;
+        int t = (type == ymfm::ACCESS_ADPCM_B) ? 1 : 0;
+        tot[t]++;
+        if (address >= y->rom_size) oob[t]++;
+        if (address > maxaddr[t]) maxaddr[t] = address;
+        if (g_ym_frame != lastprint) {   /* once per frame batch */
+            lastprint = g_ym_frame;
+            static long fno = 0;
+            if ((fno++ % 60) == 0)
+                fprintf(stderr, "[adpcm] f=%d A: max=%06x oob=%ld/%ld | B: max=%06x oob=%ld/%ld | rom=%06x\n",
+                        g_ym_frame, maxaddr[0], oob[0], tot[0], maxaddr[1], oob[1], tot[1], y->rom_size);
+        }
+    }
     if (!y->rom || address >= y->rom_size) return 0;   /* MAME: no wrap, OOB reads 0 */
     return y->rom[address];
 }
@@ -94,13 +100,12 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
 /* ---- lifecycle ---- */
 
 ym2610 *ym_create(void) { return new ym2610(); }
-void ym_destroy(ym2610 *y) { delete y; }
+void ym_destroy(ym2610 *y) { ae_destroy(y->ae); delete y; }
 
 void ym_reset(ym2610 *y)
 {
     y->chip.reset();
-    y->pend.clear();
-    y->frac = 0.0;
+    ae_reset(y->ae);
     memset(&y->busy, 0, (char *)(y->irqen + 2) - (char *)&y->busy);
 }
 
@@ -115,8 +120,9 @@ void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size)
 void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 {
     static int ymdbg = -1;
+    extern int g_ym_frame;
     if (ymdbg < 0) ymdbg = getenv("YMBDBG") ? 1 : 0;
-    if (ymdbg) fprintf(stderr, "YM%c %02x=%02x\n", 'A'+chipno, reg, val);
+    if (ymdbg) fprintf(stderr, "YM%c f=%d %02x=%02x\n", 'A'+chipno, g_ym_frame, reg, val);
     if (chipno == 2) return;                 /* legacy YM2151 mirror: bank A IS the OPM FM, ymfm handles it */
     int c = chipno ? 1 : 0;
     y->chip.write(c ? 2 : 0, reg);           /* bank A: offset 0/1, bank B: 2/3 */
@@ -198,56 +204,47 @@ uint8_t ym_read(ym2610 *y, int chipno)
 
 /* ---- sound generation ---- */
 
-/* ym2610 at OPN_FIDELITY_MAX generates at clock/16; output is linearly
- * resampled to 44.1k. All sound sources (OPM FM / SSG / ADPCM-A/B) live
- * inside the ymfm chip — no external generators. */
-static const double YM_CLOCK = 3579545.0;
-static const double NAT_RATE = YM_CLOCK / 16.0;
-static const double OUT_RATE = 44100.0;
+/* ym2610 at OPN_FIDELITY_MAX generates at clock/16; the three split streams
+ * are handed to the MAME-style mixer which band-limits and resamples each
+ * stream to the output rate and applies the NeoGeo speaker routing.
+ * All sound sources (OPM FM / SSG / ADPCM-A/B) live inside the ymfm chip. */
+static const double YM_CLOCK = 8000000.0;   /* MAME: NEOGEO_YM2610_CLOCK = master/3 */
+static const double NAT_RATE = YM_CLOCK / 16.0;   /* 500 kHz native */
+static const double OUT_RATE = 48000.0;           /* MAME default output rate */
+
+/* global frame counter for debug prints (advanced by ym_stream) */
+int g_ym_frame = 0;
 
 void ym_stream(ym2610 *y, int16_t *stereo, int frames)
 {
+    g_ym_frame++;
     memset(stereo, 0, frames * 2 * sizeof(int16_t));
     if (frames <= 0) return;
 
-    /* Continuous resampling: the fractional read position carries across
-     * frames (a per-frame reset makes a waveform discontinuity every frame
-     * = audible 59Hz clicking). pend holds unconsumed native samples. */
+    /* generate exactly what this frame needs (plus kernel overlap) */
     const double STEP = NAT_RATE / OUT_RATE;
-    int need = (int)(y->frac + frames * STEP) + 2 - (int)y->pend.size();
+    int need = (int)(frames * STEP) + 96 - ae_avail(y->ae);
     if (need < 0) need = 0;
-    y->obuf.resize(need);
-    y->chip.generate(y->obuf.data(), need);
-    for (int i = 0; i < need; i++) {        /* anti-alias before decimation */
-        y->obuf[i].data[0] = (int32_t)y->bqL.step(y->obuf[i].data[0]);
-        y->obuf[i].data[1] = (int32_t)y->bqR.step(y->obuf[i].data[1]);
-        y->pend.push_back(y->obuf[i]);
+    y->obuf_fm.resize(need); y->obuf_a.resize(need); y->obuf_b.resize(need);
+    y->chip.generate_split(y->obuf_fm.data(), y->obuf_a.data(), y->obuf_b.data(), need);
+
+    y->tL.resize(need); y->tR.resize(need); y->tA.resize(need); y->tB.resize(need);
+    for (int i = 0; i < need; i++) {
+        y->tL[i] = y->obuf_fm[i].data[0];
+        y->tR[i] = y->obuf_fm[i].data[1];
+        y->tA[i] = y->obuf_a[i].data[0];      /* ADPCM streams are mono */
+        y->tB[i] = y->obuf_b[i].data[1];
     }
+    ae_feed(y->ae, y->tL.data(), y->tR.data(), y->tA.data(), y->tB.data(), need);
+    ae_pull(y->ae, stereo, frames);
 
     { static int ysd = -1; static long ysc = 0;
       if (ysd < 0) ysd = getenv("YMSTREAM") ? 1 : 0;
-      if (ysd && (ysc++ % 300) == 0)
-          fprintf(stderr, "[yms] need=%d gen0=%d,%d pend=%d\n",
-                  need, need ? (int)y->obuf[0].data[0] : 0, need ? (int)y->obuf[0].data[1] : 0,
-                  (int)y->pend.size()); }
-
-    double pos = y->frac;
-    for (int i = 0; i < frames; i++, pos += STEP) {
-        int j = (int)pos;
-        if (j + 1 >= (int)y->pend.size()) j = (int)y->pend.size() - 2;
-        double f = pos - j;
-        int32_t l0 = y->pend[j].data[0];
-        int32_t r0 = y->pend[j].data[1];
-        int32_t l1 = y->pend[j+1].data[0];
-        int32_t r1 = y->pend[j+1].data[1];
-        int32_t L = (int32_t)(l0 * (1.0 - f) + l1 * f);
-        int32_t R = (int32_t)(r0 * (1.0 - f) + r1 * f);
-        if (L > 32767) L = 32767; if (L < -32768) L = -32768;
-        if (R > 32767) R = 32767; if (R < -32768) R = -32768;
-        stereo[i*2]   = (int16_t)L;
-        stereo[i*2+1] = (int16_t)R;
-    }
-    int cons = (int)pos;
-    y->pend.erase(y->pend.begin(), y->pend.begin() + cons);
-    y->frac = pos - cons;
+      if (ysd && (ysc++ % 60) == 0) {
+          int mx = 0;
+          for (int i = 0; i < need; i++) { int v = y->tL[i] < 0 ? -y->tL[i] : y->tL[i]; if (v > mx) mx = v; }
+          int ma = 0, mb = 0;
+          for (int i = 0; i < need; i++) { int v = y->tA[i] < 0 ? -y->tA[i] : y->tA[i]; if (v > ma) ma = v;
+                                           v = y->tB[i] < 0 ? -y->tB[i] : y->tB[i]; if (v > mb) mb = v; }
+          fprintf(stderr, "[yms] need=%d frames=%d fm=%d aa=%d ab=%d\n", need, frames, mx, ma, mb); } }
 }

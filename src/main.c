@@ -194,9 +194,9 @@ int main(int argc, char **argv)
     }
 
     /* audio */
-    int16_t *sndbuf = malloc(44100*2*2);
+    int16_t *sndbuf = malloc(48000*2*2);
     double samp_acc = 0;
-    if (cfg.audio && !headless && !getenv("LINORAGX_NOALSA")) audio_init(44100);
+    if (cfg.audio && !headless && !getenv("LINORAGX_NOALSA")) audio_init(48000);
 
     /* renderer: pick window backend (wayland > x11 > headless) */
     const char *wdisp = getenv("WAYLAND_DISPLAY");
@@ -317,15 +317,15 @@ int main(int argc, char **argv)
                     fb[y*NG_W+x] = 0xFF000000u | ((y*8)<<16) | ((x*8)<<8) | 0x40;
         if (vk) vk_present(vk, fb);
         if (cfg.audio) {
-            ng_audio(ng, sndbuf, 746);          /* 44100/59.185 */
-            audio_submit(sndbuf, 746);
+            ng_audio(ng, sndbuf, 811);          /* 48000/59.185 */
+            audio_submit(sndbuf, 811);
             if (dump_audio) {
-                size_t need = wavn + 746*2;
+                size_t need = wavn + 811*2;
                 if (need > wavcap) {
                     wavcap = need < 1u<<20 ? 1u<<20 : need*2;
                     wavbuf = realloc(wavbuf, wavcap*2);
                 }
-                memcpy(wavbuf+wavn, sndbuf, 746*2*2);
+                memcpy(wavbuf+wavn, sndbuf, 811*2*2);
                 wavn = need;
             }
         }
@@ -354,12 +354,12 @@ int main(int argc, char **argv)
     if (dump_audio) {
         FILE *f = fopen(dump_audio, "wb");
         if (f) {
-            unsigned ds = (unsigned)(wavn*2), rs = 44100*4, cs = 36+ds;
+            unsigned ds = (unsigned)(wavn*2), rs = 48000*4, cs = 36+ds;
             unsigned v;
             fwrite("RIFF",1,4,f); v=cs; fwrite(&v,4,1,f); fwrite("WAVE",1,4,f);
             fwrite("fmt ",1,4,f); v=16; fwrite(&v,4,1,f);
             v=1; fwrite(&v,2,1,f); v=2; fwrite(&v,2,1,f);        /* PCM, stereo */
-            v=44100; fwrite(&v,4,1,f); v=rs; fwrite(&v,4,1,f);
+            v=48000; fwrite(&v,4,1,f); v=rs; fwrite(&v,4,1,f);
             v=4; fwrite(&v,2,1,f); v=16; fwrite(&v,2,1,f);
             fwrite("data",1,4,f); v=ds; fwrite(&v,4,1,f);
             if (wavn) fwrite(wavbuf,2,wavn,f);

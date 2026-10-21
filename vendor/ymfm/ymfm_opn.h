@@ -697,10 +697,17 @@ public:
 	// generate one sample of sound
 	void generate(output_data *output, uint32_t numsamples = 1);
 
+	// LINORAGX EXTENSION: MAME-style stream split. Produces the three
+	// independent output streams MAME's ym2610_device exposes (0=FM+SSG
+	// stereo, 1=ADPCM-A, 2=ADPCM-B) instead of the summed mix, so the host
+	// can apply per-stream volume/routing exactly like add_route() does.
+	void generate_split(output_data *fm, output_data *adpcm_a, output_data *adpcm_b, uint32_t numsamples);
+
 protected:
 	// internal helpers
 	void update_prescale();
 	void clock_fm_and_adpcm();
+	void clock_split();
 
 	// internal state
 	opn_fidelity m_fidelity;            // configured fidelity
@@ -710,6 +717,7 @@ protected:
 	uint8_t m_eos_status;               // end-of-sample signals
 	uint8_t m_flag_mask;                // flag mask control
 	fm_engine::output_data m_last_fm;   // last FM output
+	fm_engine::output_data m_split_fm, m_split_a, m_split_b; // split stream staging
 	fm_engine m_fm;                     // core FM engine
 	ssg_engine m_ssg;                   // core FM engine
 	ssg_resampler<output_data, 2, true> m_ssg_resampler; // SSG resampler helper

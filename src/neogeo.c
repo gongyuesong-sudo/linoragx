@@ -56,7 +56,8 @@ struct neogeo {
     uint8_t *rom;   uint32_t rom_size;    /* concatenated PRG p1+p2+p3 (word-swapped), up to 8MB */
     uint32_t prg_bank_base;               /* MAME write_banksel: (bank+1)*0x100000 window @0x200000 */
     uint8_t *fixed; uint32_t fixed_size;  /* s1: packed 4bpp fix tiles */
-    uint8_t *snd;   uint32_t snd_size;    /* m1: z80 program */
+    uint8_t  *snd;   uint32_t snd_size;    /* m1: z80 program */
+    uint8_t  *adpcm; uint32_t adpcm_size;  /* ymsnd:adpcma: ADPCM sample ROM (v1-v4) */
     uint8_t *acrypt; uint32_t acrypt_size; /* encrypted m1 (cmc50 carts) */
     int fixed_bank_type;                   /* MAME FIX_BANKTYPE: 1=GAROU(mslug3) 2=KOF2000 */
     uint16_t jgram[0x1000];               /* NEOGEO_JOCKEYGP/VLINER cart RAM @200000-201fff */
@@ -2491,6 +2492,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             ng->fixed = sw_build(gamezip, ents, ne, 0x100000, asz, &ng->fixed_size);
                         if (!(sno & 8) && !ng->snd && sw_area(sw, "audiocpu", ents, 96, &ne, &asz) == 0)
                             ng->snd = sw_build(gamezip, ents, ne, 0x80000, asz, &ng->snd_size);
+                        if (!(sno & 8) && !ng->adpcm && sw_area(sw, "ymsnd:adpcma", ents, 96, &ne, &asz) == 0)
+                            ng->adpcm = sw_build(gamezip, ents, ne, 0x10000000, asz, &ng->adpcm_size);
+                        if (getenv("SWDBG")) fprintf(stderr, "[sw] adpcma: sno8=%d adpcm=%p size=%x\n", (sno>>3)&1, (void*)ng->adpcm, ng->adpcm_size);
                         if (!(sno & 16) && !ng->acrypt && sw_area(sw, "audiocrypt", ents, 96, &ne, &asz) == 0)
                             ng->acrypt = sw_build(gamezip, ents, ne, 0x80000, asz, &ng->acrypt_size);
                         if (ng->rom && !getenv("NOPROT")) {
@@ -2744,7 +2748,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
 void ng_destroy(neogeo *ng)
 {
     if (!ng) return;
-    free(ng->rom); free(ng->fixed); free(ng->snd); free(ng->spr); free(ng->sprite8);
+    free(ng->rom); free(ng->fixed); free(ng->snd); free(ng->adpcm); free(ng->spr); free(ng->sprite8);
     free(ng->bios); free(ng->sm1); free(ng->sfix);
     if (ng->z) z80w_destroy(ng->z);
     if (ng->ym) ym_destroy(ng->ym);
@@ -3218,7 +3222,7 @@ unsigned long ng_dbg_hsk(void *v, int i) {
 int ng_dbg_irqen(void *v) { return ((neogeo*)v)->irq_enable; }
 int ng_dbg_dcnt(void *v)  { return ((neogeo*)v)->display_counter; }
 void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
-    if (ng->ym && ng->snd && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->snd, ng->snd_size); ng->ym_rom_set = 1; }
+    if (ng->ym && ng->adpcm && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
     ym_stream(ng->ym, stereo, frames);
 }
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }
