@@ -231,6 +231,16 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
 
             const uint16_t *pens = &cram[((attr >> 8) << 4) | bank];   /* MAME: m_pens base = palette + bank */
             uint32_t gfx = ((code << 8) | (sprite_y << 4)) & spr_mask;
+            {   static int sprmax = -2; static uint32_t rawmax = 0;
+                if (sprmax == -2) { sprmax = getenv("SPRMAX") ? 1 : 0; }
+                if (sprmax) {
+                    uint32_t raw = ((code << 8) | (sprite_y << 4));
+                    if (raw > rawmax) { rawmax = raw; }
+                    static long sc = 0;
+                    if ((sc++ % 600000) == 0)
+                        fprintf(stderr, "[sprmax] rawmax=%x mask=%x\n", rawmax, spr_mask);
+                }
+            }
             int x_inc = 1;
             if (attr & 0x01) { gfx += 0x0F; x_inc = -1; }   /* hflip */
 
