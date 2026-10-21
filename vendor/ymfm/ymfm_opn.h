@@ -708,6 +708,7 @@ public:
 
 	// LINORAGX EXTENSION: ADPCM-B status (BSY/EOS bits for the host status port)
 	uint8_t adpcm_b_status() const { return m_adpcm_b.status(); }
+	void adpcm_b_clear_eos() { m_adpcm_b.clear_status(adpcm_b_channel::STATUS_EOS); }
 
 protected:
 	// internal helpers
