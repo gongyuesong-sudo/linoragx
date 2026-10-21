@@ -67,9 +67,16 @@ int audio_level_adj(int base)
     if (p_delay(pcm, &d) < 0) return base;      /* not RUNNING yet: no adjust */
     int level = (int)d + ring_count;            /* frames queued behind the DAC */
     int target = rate_g * 30 / 1000;            /* 30 ms */
-    int adj = (target - level) / 4;             /* gentle first-order loop */
-    if (adj > 96) adj = 96;
-    if (adj < -96) adj = -96;
+    int err = target - level;
+    int dead = rate_g * 4 / 1000;               /* +/-4 ms dead zone: keep the
+        resample ratio EXACTLY constant inside it. Without the dead zone the
+        loop trims every frame and the audible result is BGM tempo/pitch wobble. */
+    int adj = 0;
+    if (err > dead || err < -dead) {
+        adj = err / 16;                         /* gentle pull once outside dead zone */
+        if (adj > 24) adj = 24;
+        if (adj < -24) adj = -24;
+    }
     static int aldbg = -2; static long ac = 0;
     if (aldbg == -2) aldbg = getenv("AUDDBG") ? 1 : 0;
     if (aldbg && (ac++ % 300) == 0) fprintf(stderr, "[audlvl] delay=%ld ring=%d adj=%d\n", d, ring_count, adj);
