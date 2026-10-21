@@ -2233,12 +2233,13 @@ static void mame_cmc50_gfx_decrypt(uint8_t *rom, uint32_t rom_size, int extra_xo
     uint8_t *buf = malloc(rom_size);
     if (!buf) return;
     for (uint32_t rpos = 0; rpos + 4 <= rom_size; rpos += 4) {
+        uint32_t wi = rpos >> 2;   /* MAME gfx_decrypt loops on WORD index for base/invert */
         mame_cmc_decrypt(buf+rpos+0, buf+rpos+3, rom[rpos+0], rom[rpos+3],
             mame_kof2000_type0_t03, mame_kof2000_type0_t12, mame_kof2000_type1_t03,
-            rpos, (rpos >> 8) & 1);
+            wi, (wi >> 8) & 1);
         mame_cmc_decrypt(buf+rpos+1, buf+rpos+2, rom[rpos+1], rom[rpos+2],
             mame_kof2000_type0_t12, mame_kof2000_type0_t03, mame_kof2000_type1_t12,
-            rpos, ((rpos >> 16) ^ mame_kof2000_address_16_23_xor2[(rpos >> 8) & 0xff]) & 1);
+            wi, ((wi >> 16) ^ mame_kof2000_address_16_23_xor2[(wi >> 8) & 0xff]) & 1);
     }
     uint32_t q = rom_size / 4;
     for (uint32_t rpos = 0; rpos < q; rpos++) {
@@ -2260,6 +2261,14 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
 {
     uint32_t sz = ng->spr_size & ~3u;   /* odd +1 from load16_byte stride spans */
     if (!ng->spr || sz < 0x80000) return;
+    if (getenv("CMCDBG")) {   /* nonzero-byte census per 8MB, before the chain */
+        fprintf(stderr, "[cmcdbg] PRE sz=%x s1=%d is50=%d key=%02x\n", sz, s1data, is50, key);
+        for (uint32_t b0 = 0; b0 < sz; b0 += 0x800000) {
+            uint32_t nz = 0;
+            for (uint32_t i = b0; i < b0 + 0x800000 && i < sz; i++) nz += (ng->spr[i] != 0);
+            fprintf(stderr, "[cmcdbg] PRE %08x nz=%u\n", b0, nz);
+        }
+    }
     if (s1data) {
         /* svcpcb family full chain (MAME init_mslug5pcb/init_svcpcb).
          * Our spr buffer is bus-order; MAME chain works in region byte
@@ -2279,9 +2288,24 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
         wordswap(fxm, fsz);
         for (uint32_t i = 0; i < fsz && i < ng->fixed_size; i++) ng->fixed[i] |= fxm[i];
         free(fxm);
+        if (getenv("CMCDBG")) {
+            for (uint32_t b0 = 0; b0 < sz; b0 += 0x800000) {
+                uint32_t nz = 0;
+                for (uint32_t i = b0; i < b0 + 0x800000 && i < sz; i++) nz += (ng->spr[i] != 0);
+                fprintf(stderr, "[cmcdbg] POST %08x nz=%u\n", b0, nz);
+            }
+        }
         return;
     }
-    cmc_gfx_decrypt(ng->spr, sz, key, is50 ? &cmc50_keys : &cmc42_keys);
+    if (is50) mame_cmc50_gfx_decrypt(ng->spr, sz, key);   /* MAME prot_cmc kof2000 table set, bus order */
+    else cmc_gfx_decrypt(ng->spr, sz, key, &cmc42_keys);
+    if (getenv("CMCDBG")) {
+        for (uint32_t b0 = 0; b0 < sz; b0 += 0x800000) {
+            uint32_t nz = 0;
+            for (uint32_t i = b0; i < b0 + 0x800000 && i < sz; i++) nz += (ng->spr[i] != 0);
+            fprintf(stderr, "[cmcdbg] POST %08x nz=%u\n", b0, nz);
+        }
+    }
     if (sfix) {
         /* MAME: sfix_decrypt(spr, spr_size, fix, FIX_REGION_SIZE) — tail of C */
         uint32_t fsz = ng->fixed_size ? ng->fixed_size : 0x20000;
