@@ -268,11 +268,11 @@ static void zpcstat_hook(unsigned pc) {
         case 0x0066: g_zpc_hits[0]++; break;   /* NMI entry */
         case 0x012b: g_zpc_hits[1]++; break;   /* main scheduler */
         case 0x0146: g_zpc_hits[2]++; break;   /* queue consume */
-        case 0x017c: g_zpc_hits[3]++; break;   /* cmd dispatch (sub 20) */
-        case 0x01dc: g_zpc_hits[4]++; break;   /* sfx dispatch path */
-        case 0x01eb: g_zpc_hits[5]++; break;   /* fd12 gate */
-        case 0x0439: g_zpc_hits[6]++; break;   /* sfx handler call */
-        case 0x1075: g_zpc_hits[7]++; break;   /* fd12 clear path */
+        case 0x0175: g_zpc_hits[3]++; break;   /* cmd dispatch entry (CP 20) */
+        case 0x0D6B: g_zpc_hits[4]++; break;   /* sfx dispatch JP target */
+        case 0x0F29: g_zpc_hits[5]++; break;   /* sfx gate CALL target */
+        case 0x0F51: g_zpc_hits[6]++; break;   /* sfx gate AND result */
+        case 0x01AC: g_zpc_hits[7]++; break;   /* inner gate CALL */
     }
 }
 static uint8_t z_read(uint32_t a, void *c)
@@ -2923,7 +2923,7 @@ void ng_run_frame(neogeo *ng)
         { extern uint16_t z80w_sp(void*);
           uint16_t zpc0 = z80w_pc(ng->z);
           z80w_exec(ng->z, chunk/3);   /* MAME: Z80 = master/6 = 4MHz, 68K = master/2 = 12MHz -> 1:3 */
-          if (getenv("ZPCSTAT") && (ng->frame % 300) == 0) { static const char *zn[8] = {"nmi66","sched12b","qcons146","disp17c","sfx1dc","gate1eb","h439","clr1075"}; fprintf(stderr, "ZPCSTAT f=%llu", (unsigned long long)ng->frame); for (int zi=0; zi<8; zi++) fprintf(stderr, " %s=%lu", zn[zi], g_zpc_hits[zi]); fprintf(stderr, "\n"); }
+          if (getenv("ZPCSTAT") && (ng->frame % 300) == 0) { static const char *zn[8] = {"nmi66","sched12b","qcons146","disp175","sfxD6B","gateF29","andF51","g1AC"}; fprintf(stderr, "ZPCSTAT f=%llu", (unsigned long long)ng->frame); for (int zi=0; zi<8; zi++) fprintf(stderr, " %s=%lu", zn[zi], g_zpc_hits[zi]); fprintf(stderr, "\n"); }
           uint16_t zpc1 = z80w_pc(ng->z);
           if (f_znmi() && ng->frame >= 61 && ng->frame <= 63 && zpc0 != zpc1)
               fprintf(stderr, "ZNMI f=%d %04x->%04x\n", ng->frame, zpc0, zpc1);
