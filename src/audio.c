@@ -13,6 +13,7 @@ static int (*p_set_hw_params_all)(void*,unsigned,int,unsigned,int,int,int);
 static int (*p_writei)(void*,const void*,unsigned);
 static int (*p_prepare)(void*);
 static int (*p_drop)(void*);
+static int (*p_delay)(void*, long*);   /* snd_pcm_sframes_t = long */
 
 static int16_t *ring;            /* stereo frames, capacity rate_g*2 */
 static int ring_cap, ring_head, ring_count;
@@ -29,11 +30,12 @@ int audio_init(int rate)
     p_writei = dlsym(hnd, "snd_pcm_writei");
     p_prepare = dlsym(hnd, "snd_pcm_prepare");
     p_drop = dlsym(hnd, "snd_pcm_drop");
+    p_delay = dlsym(hnd, "snd_pcm_delay");
     if (!p_open || !p_set_hw_params_all || !p_writei) { dlclose(hnd); hnd=0; return -1; }
     int err = p_open(&pcm, "default", 0 /*SND_PCM_STREAM_PLAYBACK*/, 1 /*NONBLOCK: a full buffer must never stall the video frame loop*/);
     if (err < 0) { fprintf(stderr, "[audio] no device (%s), silent\n", strerror(-err)); hnd=0; return -1; }
     /* snd_pcm_set_params(pcm, format, access, channels, rate, soft_resample, latency) */
-    err = p_set_hw_params_all(pcm, 2 /*S16_LE*/, 3 /*RW_INTERLEAVED*/, 2, rate, 1, 100000);
+    err = p_set_hw_params_all(pcm, 2 /*S16_LE*/, 3 /*RW_INTERLEAVED*/, 2, rate, 1, 60000);
     if (err < 0) { p_close(pcm); pcm=0; hnd=0; return -1; }
     rate_g = rate;
     conv = malloc(rate*2*4);
@@ -50,6 +52,28 @@ void audio_close(void)
     hnd = 0;
     free(conv); conv = 0;
     free(ring); ring = 0; ring_cap = ring_head = ring_count = 0;
+}
+
+/* Rate feedback: the frame loop runs at whatever the compositor's vsync gives
+   (measured 59.06 fps under a 60 Hz X11 compositor), but audio is produced
+   per-frame — a 0.2 % production deficit drains the ALSA buffer until every
+   underrun punches an audible hole (draggy logo sound, swallowed hit SFX).
+   Measure the real unplayed level (snd_pcm_delay + our ring) and nudge the
+   per-frame sample count so the level converges on ~30 ms. */
+int audio_level_adj(int base)
+{
+    if (!pcm || !p_delay) return base;
+    long d = 0;
+    if (p_delay(pcm, &d) < 0) return base;      /* not RUNNING yet: no adjust */
+    int level = (int)d + ring_count;            /* frames queued behind the DAC */
+    int target = rate_g * 30 / 1000;            /* 30 ms */
+    int adj = (target - level) / 4;             /* gentle first-order loop */
+    if (adj > 96) adj = 96;
+    if (adj < -96) adj = -96;
+    static int aldbg = -2; static long ac = 0;
+    if (aldbg == -2) aldbg = getenv("AUDDBG") ? 1 : 0;
+    if (aldbg && (ac++ % 300) == 0) fprintf(stderr, "[audlvl] delay=%ld ring=%d adj=%d\n", d, ring_count, adj);
+    return base + adj;
 }
 
 /* submit 44100 stereo s16; resample to rate_g by nearest.

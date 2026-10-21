@@ -317,15 +317,16 @@ int main(int argc, char **argv)
                     fb[y*NG_W+x] = 0xFF000000u | ((y*8)<<16) | ((x*8)<<8) | 0x40;
         if (vk) vk_present(vk, fb);
         if (cfg.audio) {
-            ng_audio(ng, sndbuf, 811);          /* 48000/59.185 */
-            audio_submit(sndbuf, 811);
+            int ns = audio_level_adj(811);       /* 48000/59.185, rate-corrected */
+            ng_audio(ng, sndbuf, ns);
+            audio_submit(sndbuf, ns);
             if (dump_audio) {
-                size_t need = wavn + 811*2;
+                size_t need = wavn + ns*2;
                 if (need > wavcap) {
                     wavcap = need < 1u<<20 ? 1u<<20 : need*2;
                     wavbuf = realloc(wavbuf, wavcap*2);
                 }
-                memcpy(wavbuf+wavn, sndbuf, 811*2*2);
+                memcpy(wavbuf+wavn, sndbuf, ns*2*2);
                 wavn = need;
             }
         }

@@ -85,6 +85,7 @@ void ym_set_rom_b(ym2610 *y, const uint8_t *rom, uint32_t size);
 
 /* audio out (ALSA via dlopen, silent fallback) */
 int  audio_init(int rate);
+int  audio_level_adj(int base);
 void audio_close(void);
 void audio_submit(const int16_t *stereo, int frames);
 
