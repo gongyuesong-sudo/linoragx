@@ -97,13 +97,11 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
                         g_ym_frame, maxaddr[0], oob[0], tot[0], maxaddr[1], oob[1], tot[1], y->rom_size, y->b_rom_size);
         }
     }
-    if (type == ymfm::ACCESS_ADPCM_B) {
-        /* ADPCM-B samples live in the m1 program (Z80 space); m1 drivers bank
-         * the sample region into view, so linear modulo is the standard
-         * approximation (old build did exactly this and had working BGM). */
-        if (!y->b_rom || !y->b_rom_size) return 0;
-        return y->b_rom[address % y->b_rom_size];
-    }
+    /* MAME parity (ymopn.cpp ym2610_device_base): ADPCM-A and ADPCM-B read the
+     * SAME cart sample region (ymsnd:adpcma = v1..v4 linear) unless the set
+     * defines a separate adpcmb region; uninstalled/OOB addresses read 0, no
+     * wrap. The BIOS defines no sample region at all -> BIOS ADPCM reads 0. */
+    if (type != ymfm::ACCESS_ADPCM_A && type != ymfm::ACCESS_ADPCM_B) return 0;
     if (!y->rom || address >= y->rom_size) return 0;   /* MAME: no wrap, OOB reads 0 */
     return y->rom[address];
 }

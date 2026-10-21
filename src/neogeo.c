@@ -3278,10 +3278,8 @@ int ng_dbg_irqen(void *v) { return ((neogeo*)v)->irq_enable; }
 int ng_dbg_dcnt(void *v)  { return ((neogeo*)v)->display_counter; }
 void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
     if (ng->ym && ng->adpcm && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
-    if (ng->ym) {   /* ADPCM-B sample rom follows the audio driver: BIOS sp1v1 while sm1 owns audio, cart m1 after handoff */
-        if (!ng->cart_audio && ng->adsp_bios && ng->adsp_bios_size) ym_set_rom_b(ng->ym, ng->adsp_bios, ng->adsp_bios_size);
-        else if (ng->snd && ng->snd_size) ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
-    }
+    /* MAME parity: ADPCM-B shares the cart sample region; BIOS has no sample
+     * region (reads 0). No per-phase rom swapping needed. */
     ym_stream(ng->ym, stereo, frames);
 }
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }
