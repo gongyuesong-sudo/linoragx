@@ -143,6 +143,11 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     int c = chipno ? 1 : 0;
     y->chip.write(c ? 2 : 0, reg);           /* bank A: offset 0/1, bank B: 2/3 */
     y->chip.write(c ? 3 : 1, val);
+    if (c && reg == 0x00 && getenv("AADBG")) {
+        static int an = 0;
+        if ((an++ % 8) == 0) { for (int ai = 0; ai < 5; ai++) { uint32_t pl, ad; y->chip.dbg_aa(ai, pl, ad);
+            fprintf(stderr, "AADBG bd=%02x ch%d play=%u addr=%x\n", val, ai, pl, ad); } }
+    }
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 

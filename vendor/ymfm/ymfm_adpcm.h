@@ -148,6 +148,11 @@ public:
 	template<int NumOutputs>
 	void output(ymfm_output<NumOutputs> &output) const;
 
+	// LINORAGX EXTENSION: debug accessors
+	uint32_t dbg_playing() const { return m_playing; }
+	uint32_t dbg_addr() const { return m_curaddress; }
+	uint32_t dbg_nibble() const { return m_curnibble; }
+
 private:
 	// internal state
 	uint32_t const m_choffs;              // channel offset
@@ -202,6 +207,9 @@ public:
 
 	// return a reference to our registers
 	adpcm_a_registers &regs() { return m_regs; }
+
+	// LINORAGX EXTENSION: debug channel state
+	void dbg_state(int i, uint32_t &playing, uint32_t &addr) const { playing = m_channel[i]->dbg_playing(); addr = m_channel[i]->dbg_addr(); }
 
 private:
 	// internal state

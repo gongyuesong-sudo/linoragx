@@ -703,6 +703,9 @@ public:
 	// can apply per-stream volume/routing exactly like add_route() does.
 	void generate_split(output_data *fm, output_data *adpcm_a, output_data *adpcm_b, uint32_t numsamples);
 
+	// LINORAGX EXTENSION: ADPCM-A channel debug state
+	void dbg_aa(int i, uint32_t &playing, uint32_t &addr) const { m_adpcm_a.dbg_state(i, playing, addr); }
+
 protected:
 	// internal helpers
 	void update_prescale();
