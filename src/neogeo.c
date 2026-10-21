@@ -554,6 +554,9 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     }
     if (a < 0x80) {                         /* vectors (mirror of bank base) */
         if (ng->dbg_z80==4 && (a==0x64||a==0x68)) fprintf(stderr, "VFETCH%02x vbank=%d pc=%08x\n", a, ng->vector_bank, m68k_get_reg(NULL,M68K_REG_PC));
+        /* MAME banked_vectors_r: cart vectors = maincpu region[0..0x3FF]
+           (region order == our rom[] load order, ROM_CONTINUE swaps halves);
+           Q1 is a boolean use_cart_vectors flag, NOT a bank number. */
         const uint8_t *v = ng->vector_bank ? ng->rom : ng->bios;
         uint32_t sz = ng->vector_bank ? ng->rom_size : 0x20000;
         if (!v || a+2 > sz) return 0xFFFF;
