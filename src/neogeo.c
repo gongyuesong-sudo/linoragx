@@ -536,6 +536,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
           return (hi<<8) | lo; }
     }
     if (a < 0x320002) {                     /* AUDIO_COIN */
+        { static int ac = -2;
+          if (ac == -2) ac = getenv("ACRD") ? 1 : 0;
+          if (ac) { static long nac = 0;
+            if ((nac++ % 200) == 0) fprintf(stderr, "ACRD f=%llu pc=%08x sl2=%02x\n",
+                (unsigned long long)ng->frame, m68k_get_reg(NULL,M68K_REG_PC), ng->soundlatch2); } }
         if (getenv("COINDBG") && (ng->buttons[0] & 0x400))
             { static int cd = 0; if (cd++ < 20) fprintf(stderr, "[coindbg] f=%d coin-active read a=%06x\n", ng->frame, a); }
         if (ng->dbg_vw == 3 && ng->frame > 7900) { fprintf(stderr, "COINRD f=%d a=%06x pc=%08x sl2=%02x\n", ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC), ng->soundlatch2); if (++ng->sl1_trace > 40) ng->dbg_vw=0; }
