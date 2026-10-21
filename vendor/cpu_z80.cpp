@@ -693,6 +693,11 @@ unsigned cpu_z80::mz80step()
 	 if (c0 == -2) c0 = getenv("CORE0CA0") ? 1 : 0;
 	 if (c0 && z80pc == 0x0ca0) { extern unsigned long long z80w_dbg_frame;
 	  fprintf(stderr, "CORE0CA0 f=%llu\n", z80w_dbg_frame); } }
+	{	static int p2f = -2;
+	 if (p2f == -2) p2f = getenv("P22F8") ? 1 : 0;
+	 if (p2f && z80pc == 0x22f8) { uint16_t sp = GetSP();
+	  fprintf(stderr, "P22F8 ret=%02x%02x ix=%04x\n",
+	    ram_array()[(sp+1)&0xFFFF], ram_array()[sp], m_regIX); } }
 
 	// EI acceptance shadow: EI already set IFF1/IFF2 (hardware-accurate); this
 	// counter only holds off interrupt ACCEPTANCE until after the instruction
