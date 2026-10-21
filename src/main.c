@@ -166,6 +166,7 @@ int main(int argc, char **argv)
     char err[512];
     fprintf(stderr, "[paths] rompath=%s gamezip=%s\n", cfg.rompath, cfg.gamezip);
     neogeo *ng = ng_create(cfg.rompath, cfg.gamezip, err, sizeof err);
+    if (ng && getenv("PCPROF")) ng_dbg_pcprof(ng, 1);
     if (err[0]) fprintf(stderr, "[ng] %s\n", err);
     if (!ng) return 1;
     if (getenv("Z80DBG")) ng_dbg_z80(ng, atoi(getenv("Z80DBG")));

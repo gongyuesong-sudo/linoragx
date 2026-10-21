@@ -3043,7 +3043,7 @@ void ng_run_frame(neogeo *ng)
                     fprintf(stderr, "PCP %05x %lu\n", k<<6, (unsigned long)hist[k]);
                 dump_at = -2;
             }
-            if (dump_at == -1) dump_at = (int)ng->frame + 100;
+            if (dump_at == -1) { const char *e = getenv("PCPROF"); dump_at = e ? atoi(e) : (int)ng->frame + 100; }
         }
         ng->mc_cycles += chunk;
         left -= chunk;
