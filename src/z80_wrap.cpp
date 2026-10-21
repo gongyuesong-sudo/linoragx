@@ -86,6 +86,8 @@ int z80w_im(void *v) { return ((z80w*)v)->cpu->get_state().NIM; }
 void z80w_force_ei(void *v) { cpu_z80::State st = ((z80w*)v)->cpu->get_state();
                               if (!st.IFF1) { st.IFF1 = 1; st.IFF2 = 1; ((z80w*)v)->cpu->set_state(st); } }
 uint8_t z80w_a(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().AF >> 8); }
+uint16_t z80w_hl(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().HL); }
+uint16_t z80w_de(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().DE); }
 unsigned long long z80w_dbg_frame = 0;
 void z80w_set_step_hook(void *v, void (*h)(unsigned pc)) { ((z80w*)v)->cpu->set_step_hook(h); }
 void z80w_irq(void *v, uint8_t vector) { ((z80w*)v)->cpu->mz80int(vector); }

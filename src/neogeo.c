@@ -74,6 +74,7 @@ struct neogeo {
     uint16_t cram[0x10000];
     uint16_t workram[0x8000];
     uint8_t  sndram[0x800];
+    uint8_t  smem[0x10000];   /* 64K shared RAM: 68K 0x100000-0x10FFFF <-> Z80 0xC000-0xF7FF */
     uint8_t  sram[0x10000];
     uint8_t  mc_data[0x800];
     int      mc_lock1, mc_unlock2, mc_regsel;
@@ -276,6 +277,9 @@ static uint8_t z_read(uint32_t a, void *c)
     }
     if (f_ztrace() && a >= 0xFD25 && a <= 0xFD68 && ng->frame > 40 && ng->frame < 60)
         fprintf(stderr, "ZR f=%d a=%04x pc=%04x\n", ng->frame, a, z80w_pc(ng->z));
+    { static int zsm = -2; if (zsm==-2) zsm = getenv("ZSMEM") ? 1 : 0;
+      if (zsm && ng->frame >= 760 && ng->frame <= 3000 && a >= 0x8000)
+          fprintf(stderr, "ZSM f=%d a=%04x v=%02x pc=%04x\n", ng->frame, a, z_read(a, ng), z80w_pc(ng->z)); }
     /* MAME audio_map parity: 0x0000-0x7FFF = bank_audio_main (entry1=cart
        audiocpu at INIT — set_entry(1) in init_audio — entry0=sm1 when HC259
        ch5=0); 0x8000-0xF7FF = cart banks ALWAYS (never sm1). Z80 never
@@ -289,6 +293,7 @@ static uint8_t z_read(uint32_t a, void *c)
     const uint8_t *r = cart_visible ? ng->snd : (ng->sm1 ? ng->sm1 : ng->snd);
     uint32_t sz = cart_visible ? ng->snd_size : (ng->sm1 ? 0x20000 : ng->snd_size);
     if (!r) { r = ng->snd; sz = ng->snd_size; }
+    if (a >= 0xC000 && a < 0xF800) return ng->smem[a - 0xC000];  /* SMEM shared RAM (Z80 view) */
     if (a < 0x8000) {
         return (r && a < sz) ? r[a] : 0xFF;
     }
@@ -331,7 +336,16 @@ static void z_write(uint32_t a, uint8_t v, void *c)
     /* Z80 RAM is 0xF800-0xFFFF (2K). The stack starts at 0xFFFC (SP=0xFFFF at
        reset, first push writes 0xFFFB/0xFFFC): the high bytes are still RAM —
        dropping them corrupts NMI return addresses (crash to 0xFFFD). */
+    if (a >= 0xC000 && a < 0xF800) {
+        if (getenv("SMEMWRZ")) { static long swz = 0;
+            if (swz++ < 200) fprintf(stderr, "SMEMWRZ f=%llu a=%04x v=%02x zpc=%04x\n",
+                (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
+        ng->smem[a - 0xC000] = v; return;
+    }  /* SMEM shared RAM (Z80 view) */
     if (a >= 0xF800) {
+        if (getenv("STACKW") && a >= 0xFFE0) { static long stw = 0;
+            if (stw++ < 300) fprintf(stderr, "STKW f=%llu a=%04x v=%02x pc=%04x\n",
+                (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
         if (f_ztrace() && (a >= 0xF800))
             fprintf(stderr, "ZW f=%d a=%04x v=%02x pc=%04x\n", ng->frame, a, v, z80w_pc(ng->z));
         ng->sndram[a & 0x7FF] = v;
@@ -351,7 +365,7 @@ static uint16_t z_in(uint32_t p, void *c)
            so its track blocks never initialized and BGM stayed silent. */
         extern uint8_t z80w_a(void*);
         ng->zbank[port - 0x08] = z80w_a(ng->z);
-        { static long zbn = 0; if ((zbn++ % 50) == 0) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
+        { static long zbn = 0; if (zbn++ < 120) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
         return 0;
     }
     switch (port) {
@@ -380,7 +394,9 @@ static void z_out(uint32_t p, uint8_t v, void *c)
       if (zio && (p & 0xFF) != 0x0C) fprintf(stderr, "ZIO %02x=%02x\n", p & 0xFF, v); }
     switch (p & 0xFF) {
     case 0x04: ng->ym_reg[0] = v; break;                    /* YM2610 A: register latch (YM2151 shares bus) */
-    case 0x05: ym_write(ng->ym, 0, ng->ym_reg[0], v); break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
+    case 0x05: { static int ymw=-2; if(ymw==-2) ymw=getenv("YMWR")?1:0;
+        if (ymw && ng->frame>=760 && ng->frame<=900) fprintf(stderr,"YMWR f=%d c0 r=%02x v=%02x zpc=%04x\n", ng->frame, ng->ym_reg[0], v, z80w_pc(ng->z));
+        ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
     case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
@@ -476,6 +492,10 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         }
         return (ng->rom[a]<<8)|ng->rom[a+1];
     }
+    if (a < 0x110000) {   /* SMEM: 64K shared RAM (68K view) */
+        uint32_t off = a & 0xFFFF;
+        return (ng->smem[off] << 8) | ng->smem[(off + 1) & 0xFFFF];
+    }
     if (a < 0x200000) {
         if (f_pcw() && (a & 0xFFFFFFFE) == 0x100182) {
             fprintf(stderr, "RD182 f=%d a=%06x val=%04x pc=%08x\n", ng->frame, a,
@@ -528,6 +548,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return (ng->rom[o]<<8)|ng->rom[o+1];
     }
     if (a < 0x320000) {                     /* P1 control @0x300000 (mirror 0x01FF7E
+        if (getenv("SMEMWIN") && a < 0x301000 && (ng->frame % 1 == 0)) {
+            static long swc = 0;
+            if (swc++ < 400) fprintf(stderr, "SMEMRD f=%llu a=%06x pc=%08x\n",
+                (unsigned long long)ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC));
+        }
                                                excludes TEST 0x300080-81):
                                                upper byte = edge(P1 buttons), lower = DSW */
         if ((a & 0x81) == 0x80) return 0xFFC0;                     /* TEST port + mirror */
@@ -684,6 +709,17 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         return;
     }
     if (a < 0x100000) return;
+    if (a < 0x110000) {   /* SMEM: 64K shared RAM (68K view) */
+        uint32_t off = a & 0xFFFF;
+        { static uint32_t tgt = 0xFFFFFFFF; static int ini = 0;
+          if (!ini) { const char *e = getenv("RAMWA"); tgt = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; ini = 1; }
+          if ((ng->dbg_z80 == 5 || f_ramwa()) && (off) == (tgt & 0xFFFFu) &&
+              (ng->frame > 3000 || f_ramwaf()))
+              fprintf(stderr, "RAMWA f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
+        if (mem_mask & 0xFF00) ng->smem[off & ~1u] = d >> 8;
+        if (mem_mask & 0x00FF) ng->smem[off | 1u] = d & 0xFF;
+        return;
+    }
     if (a < 0x200000) {
         { static uint32_t tgt = 0xFFFFFFFF; static int ini = 0;
           if (!ini) { const char *e = getenv("RAMWA"); tgt = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; ini = 1; }
@@ -2358,9 +2394,27 @@ void linoragx_pc_hook(unsigned int pc)
 static int g_z80flow_lo = -1, g_z80flow_hi = -1;
 void linoragx_z80_step(unsigned int pc)
 {
+    { static int ringen = -2; static unsigned ring[128]; static unsigned short spr[128]; static int ridx = 0; static int fired = 0;
+      if (ringen == -2) ringen = getenv("Z80RING") ? 1 : 0;
+      if (ringen && g_ng) {
+          extern uint16_t z80w_sp(void*);
+          ring[ridx & 127] = pc; spr[ridx & 127] = z80w_sp(g_ng->z); ridx++;
+          if (pc == 0xfffd && !fired) {
+              fired = 1;
+              fprintf(stderr, "ZRING f=%d (oldest->newest):\n", g_ng->frame);
+              int n = ridx < 128 ? ridx : 128;
+              for (int i = ridx - n; i < ridx; i++)
+                  fprintf(stderr, "ZRING  %04x sp=%04x\n", ring[i & 127], spr[i & 127]);
+          }
+      } }
     if (g_z80flow_lo < 0) return;
     int f = g_ng ? g_ng->frame : -1;
     if (f >= g_z80flow_lo && f <= g_z80flow_hi) {
+        if (getenv("ZBYTES") && pc < 0x8000 && g_ng->snd) {
+            fprintf(stderr, "ZB %d %04x:", f, pc);
+            for (int i = 0; i < 6; i++) fprintf(stderr, " %02x", z_read(pc + i, g_ng));
+            fprintf(stderr, "\n");
+        }
         static long zc = 0;
         extern void z80w_force_ei(void*);
         if (pc == 0x24cb && (zc++ % 400) == 0 && g_ng) {
@@ -2386,6 +2440,12 @@ void linoragx_z80_step(unsigned int pc)
             unsigned cmd = z80w_peek(g_ng->z, 0xfe3d);
             unsigned tgt = z_read(0x0cad + 3u*cmd + 1, g_ng) | (z_read(0x0cad + 3u*cmd + 2, g_ng) << 8);
             fprintf(stderr, "RST10 cmd=%02x -> %04x f=%llu\n", cmd, tgt, (unsigned long long)g_ng->frame);
+        }
+        if (pc == 0x2b7c && g_ng && getenv("BANKCHK")) {
+            extern uint8_t z80w_peek(void*, uint32_t); extern uint8_t z80w_a(void*);
+            fprintf(stderr, "BANKCHK f=%d pc=%04x e=%02x zbank=%02x%02x%02x%02x peek2b7c=%02x snd=%02x\n",
+                g_ng->frame, pc, z80w_a(g_ng->z), g_ng->zbank[3], g_ng->zbank[2], g_ng->zbank[1], g_ng->zbank[0],
+                z80w_peek(g_ng->z, 0x2b7c), g_ng->snd ? g_ng->snd[0x2b7c] : 0xFF);
         }
         fprintf(stderr, "Z %d %04x\n", f, pc);
     }
@@ -3008,6 +3068,50 @@ void ng_run_frame(neogeo *ng)
         } else ng->ch5_on_frame = ng->frame;   /* still in BIOS: keep waiting */
     }
     { extern unsigned long long z80w_dbg_frame; z80w_dbg_frame = ng->frame; }
+    { static int zp_lo = -2;
+      if (zp_lo == -2) { const char *e = getenv("ZPTRACE"); zp_lo = e ? (int)strtol(e, NULL, 10) : -1; }
+      if (zp_lo >= 0 && (int)ng->frame >= zp_lo && (int)ng->frame <= zp_lo + 120) {
+          extern uint16_t z80w_hl(void*); extern uint8_t z80w_a(void*); extern uint16_t z80w_sp(void*);
+          uint16_t zp = z80w_pc(ng->z);
+          fprintf(stderr, "ZP f=%llu zpc=%04x sp=%04x\n", (unsigned long long)ng->frame, zp, z80w_sp(ng->z));
+          if (zp == 0x24bc)
+              fprintf(stderr, "ZPCONTEXT f=%llu a=%02x hl=%04x hl_v=%02x fe3c=%02x\n",
+                  (unsigned long long)ng->frame, z80w_a(ng->z), z80w_hl(ng->z),
+                  z_read(z80w_hl(ng->z), ng), z_read(0xFE3C, ng));
+      }
+    }
+    { static int stk = -2;
+      if (stk == -2) { const char *e = getenv("STKDUMP"); stk = e ? (int)strtol(e, NULL, 10) : -1; }
+      if (stk >= 0 && (int)ng->frame == stk) {
+          extern uint8_t z80w_peek(void*, uint32_t); extern uint16_t z80w_sp(void*);
+          uint16_t sp = z80w_sp(ng->z);
+          fprintf(stderr, "STKD f=%llu pc=%04x sp=%04x stack:", (unsigned long long)ng->frame, z80w_pc(ng->z), sp);
+          for (int i = 0; i < 32; i++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xFFE0 + i));
+          fprintf(stderr, "\n");
+      }
+    }
+    { static int smd = -2;
+      if (smd == -2) { const char *e = getenv("SMEMDUMP"); smd = e ? (int)strtol(e, NULL, 10) : -1; }
+      if (smd >= 0 && (int)ng->frame == smd) {
+          for (int b = 0; b < 0x10000; b += 0x400) {
+              int nz = 0;
+              for (int i = b; i < b + 0x400; i++) if (ng->smem[i]) nz++;
+              if (nz) fprintf(stderr, "SMEMDUMP %04x nz=%d\n", b, nz);
+          }
+          fprintf(stderr, "SMEMDUMP done f=%d\n", smd);
+      }
+    }
+    { static int inj = -2, inj2 = -2;
+      if (inj == -2) { const char *e = getenv("INJECT_CMD"); inj = e ? (int)strtol(e, NULL, 16) : -1; }
+      if (inj2 == -2) { const char *e = getenv("INJECT_CMD2"); inj2 = e ? (int)strtol(e, NULL, 16) : -1; }
+      if ((inj >= 0 && ng->frame == 800) || (inj2 >= 0 && ng->frame == 900)) {   /* experiment: force a soundlatch1 cmd from the host side */
+          int c = (ng->frame == 800) ? inj : inj2;
+          ng->soundlatch1 = (uint8_t)c;
+          if (!ng->z80_nmi_pend) ng->z80_nmi_pend = 1;
+          if (ng->z80_nmi_en) { z80w_nmi(ng->z); ng->nmi_cnt++; ng->z80_nmi_asserted = 1; }
+          fprintf(stderr, "INJECT f=%llu cmd=%02x en=%d\n", (unsigned long long)ng->frame, c, ng->z80_nmi_en);
+      }
+    }
     ng->frame++;
     { static int k68 = -2;
       if (k68 == -2) k68 = getenv("K68PC") ? 1 : 0;
@@ -3063,6 +3167,41 @@ void ng_dbg_nmi(neogeo *ng, int *pend, int *en, int *asserted, int *cart, unsign
 int ng_dbg_vbank(neogeo *ng) { return (int)ng->vector_bank; }
 void ng_dbg_btn(neogeo *ng, int p, int mask) { ng->buttons[p] |= mask; }
 void ng_dbg_pcprof(neogeo *ng, int on) { ng->pcprof = on; }
+/* per-instruction hook wired via M68K_INSTRUCTION_HOOK (vendor/m68kcpu.c exec loop).
+   PCHOOK=<lo>-<hi> (hex pc window) prints each matching instruction with frame no. */
+void your_instruction_hook_function(unsigned pc);
+void your_instruction_hook_function(unsigned pc)
+{
+    static int lo = -2, hi = -2, dumpf = -2;
+    static unsigned char *pcbm = 0;
+    static unsigned long long hook_calls = 0;
+    hook_calls++;
+    if (lo == -2) { const char *e = getenv("PCHOOK"); const char *d = e ? strchr(e, '-') : 0;
+        lo = e ? (int)strtol(e, 0, 16) : -1; hi = d ? (int)strtol(d + 1, 0, 16) : -1;
+        const char *pd = getenv("PCDUMP");
+        if (pd) { pcbm = (unsigned char *)calloc(1, 0x400000/8); dumpf = (int)atoi(pd); if (!dumpf) dumpf = 1200; }
+        else dumpf = -1; }
+    if (pcbm) {
+        if (pc < 0x400000) pcbm[pc >> 3] |= (unsigned char)(1u << (pc & 7));
+        { static unsigned long long h0=0,h1=0,h2=0,h3=0;
+          if (pc < 0x100000) h0++; else if (pc < 0x200000) h1++; else if (pc < 0x300000) h2++; else h3++;
+          if (g_ng && g_ng->frame == dumpf) fprintf(stderr, "PCDIST <100k=%llu 100k-200k=%llu 200k-300k=%llu >=300k=%llu\n", h0,h1,h2,h3); }
+        if (g_ng && g_ng->frame == dumpf) {
+            FILE *fp = fopen("/tmp/pcbm.bin", "wb");
+            if (fp) { fwrite(pcbm, 1, 0x400000/8, fp); fclose(fp); fprintf(stderr, "PCDUMP done f=%d hook_calls=%llu\n", dumpf, hook_calls); }
+            free(pcbm); pcbm = 0;
+        }
+    }
+    if (lo >= 0 && g_ng && (int)pc >= lo && (int)pc <= hi) {
+        static long cnt = 0;
+        unsigned ret = 0, r2 = 0, r3 = 0, d0v = 0;
+        unsigned sp = m68k_get_reg(0, M68K_REG_SP);
+        d0v = m68k_get_reg(0, M68K_REG_D0);
+        if (pc == (unsigned)lo && sp) { ret = m68k_read_memory_32((unsigned)sp);
+            r2 = m68k_read_memory_32((unsigned)sp + 4); r3 = m68k_read_memory_32((unsigned)sp + 8); }
+        if (cnt++ < 300) fprintf(stderr, "PCHOOK f=%d pc=%06x d0=%04x ret=%06x r2=%06x r3=%06x\n", g_ng->frame, pc, d0v & 0xFFFF, ret, r2, r3);
+    }
+}
 uint8_t *ng_rom(neogeo *ng, uint32_t *sz) { *sz = ng->rom_size; return ng->rom; }
 extern uint16_t z80w_pc(void*);
 int ng_z80_pc(neogeo *ng) { return z80w_pc(ng->z); }

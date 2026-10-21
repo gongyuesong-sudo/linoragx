@@ -168,6 +168,7 @@ int main(int argc, char **argv)
     neogeo *ng = ng_create(cfg.rompath, cfg.gamezip, err, sizeof err);
     if (err[0]) fprintf(stderr, "[ng] %s\n", err);
     if (!ng) return 1;
+    if (getenv("Z80DBG")) ng_dbg_z80(ng, atoi(getenv("Z80DBG")));
 
     /* LAN netplay: lockstep input exchange (host = local P1, client = local P2) */
     int netfd = -1, lplayer = 0;

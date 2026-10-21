@@ -215,8 +215,13 @@
  * instruction.
  */
 #ifndef M68K_INSTRUCTION_HOOK
-#define M68K_INSTRUCTION_HOOK       M68K_OPT_ON
+#ifdef NG_PCHOOK   /* build with -DNG_PCHOOK to enable the per-instruction PCHOOK/PCDUMP probe (perf cost) */
+#define M68K_INSTRUCTION_HOOK       M68K_OPT_SPECIFY_HANDLER
+extern void your_instruction_hook_function(unsigned pc);
 #define M68K_INSTRUCTION_CALLBACK(pc) your_instruction_hook_function(pc)
+#else
+#define M68K_INSTRUCTION_HOOK       M68K_OPT_ON
+#endif
 #endif
 
 
