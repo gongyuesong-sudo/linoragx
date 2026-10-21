@@ -272,6 +272,7 @@ static void zpcstat_hook(unsigned pc) {
         case 0x0D6B: g_zpc_hits[4]++; break;   /* sfx dispatch JP target */
         case 0x0F29: g_zpc_hits[5]++; break;   /* sfx gate CALL target */
         case 0x0F51: g_zpc_hits[6]++; break;   /* sfx gate AND result */
+            break;
         case 0x01AC: g_zpc_hits[7]++; break;   /* inner gate CALL */
     }
 }
@@ -2419,6 +2420,14 @@ void linoragx_z80_step(unsigned int pc)
     { static int zps = -2;
       if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
       if (zps) zpcstat_hook(pc); }
+    { static int f51 = -2;
+      if (f51 == -2) f51 = getenv("F51RD") ? 1 : 0;
+      if (f51 && pc == 0x0F51 && g_ng) {
+          extern uint16_t z80w_hl(void*); extern uint16_t z80w_af(void*); extern uint8_t z80w_peek(void*, uint32_t);
+          static int fn = 0;
+          if (fn < 40) { uint16_t hl = z80w_hl(g_ng->z); uint16_t af = z80w_af(g_ng->z);
+              fprintf(stderr, "F51RD hl=%04x a=%02x z=%d f=%llu\n", hl, af >> 8, (af & 1) ? 1 : 0, (unsigned long long)g_ng->frame); fn++; }
+      } }
     { static int ringen = -2; static unsigned ring[128]; static unsigned short spr[128]; static int ridx = 0; static int fired = 0;
       if (ringen == -2) ringen = getenv("Z80RING") ? 1 : 0;
       if (ringen && g_ng) {
