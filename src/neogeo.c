@@ -2971,6 +2971,8 @@ void ng_run_frame(neogeo *ng)
            the heartbeat swallow every IRQ before it is ever delivered
            (samsho2 m1 track sequencer is timer-driven and deadlocks without it). */
         { int p = ym_irq_pending(ng->ym);
+          extern int z80w_iff1(void*);
+          if (ng->dbg_z80 == 7) { static long ipc = 0; extern long g_tflagA_sets; if ((ipc++ % 3000) == 0) fprintf(stderr, "YMIRQ f=%d p=%d iff1=%d zpc=%04x tsets=%ld\n", ng->frame, p, z80w_iff1(ng->z), z80w_pc(ng->z), g_tflagA_sets); }
           if (p) z80w_irq(ng->z, 0xff);   /* level semantics: re-assert every chunk */
           ng->ym_irq_prev = p; }
         { static int zram_mask = 0;
@@ -3223,6 +3225,7 @@ int ng_dbg_irqen(void *v) { return ((neogeo*)v)->irq_enable; }
 int ng_dbg_dcnt(void *v)  { return ((neogeo*)v)->display_counter; }
 void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
     if (ng->ym && ng->adpcm && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
+    if (ng->ym && ng->snd && ng->snd_size) ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
     ym_stream(ng->ym, stereo, frames);
 }
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }

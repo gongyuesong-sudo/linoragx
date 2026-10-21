@@ -60,8 +60,10 @@ struct ym2610 {
     int tcnt[2], tload[2], ten[2], tflag[2], tfrac;
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
 
-    const uint8_t *rom = nullptr;            /* cart audio ROM (ADPCM samples) */
+    const uint8_t *rom = nullptr;            /* cart audio ROM (ADPCM-A samples) */
     uint32_t rom_size = 0;
+    const uint8_t *b_rom = nullptr;          /* m1 program ROM (ADPCM-B samples, Z80 space) */
+    uint32_t b_rom_size = 0;
 
     audio_engine *ae;                        /* MAME-style stream mixer */
     std::vector<ymfm::ym2610::output_data> obuf_fm, obuf_a, obuf_b;
@@ -83,15 +85,23 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
         static long lastprint = 0;
         int t = (type == ymfm::ACCESS_ADPCM_B) ? 1 : 0;
         tot[t]++;
-        if (address >= y->rom_size) oob[t]++;
+        uint32_t rsz = (t == 1) ? y->b_rom_size : y->rom_size;
+        if (address >= rsz) oob[t]++;
         if (address > maxaddr[t]) maxaddr[t] = address;
         if (g_ym_frame != lastprint) {   /* once per frame batch */
             lastprint = g_ym_frame;
             static long fno = 0;
             if ((fno++ % 60) == 0)
-                fprintf(stderr, "[adpcm] f=%d A: max=%06x oob=%ld/%ld | B: max=%06x oob=%ld/%ld | rom=%06x\n",
-                        g_ym_frame, maxaddr[0], oob[0], tot[0], maxaddr[1], oob[1], tot[1], y->rom_size);
+                fprintf(stderr, "[adpcm] f=%d A: max=%06x oob=%ld/%ld | B: max=%06x oob=%ld/%ld | romA=%06x romB=%06x\n",
+                        g_ym_frame, maxaddr[0], oob[0], tot[0], maxaddr[1], oob[1], tot[1], y->rom_size, y->b_rom_size);
         }
+    }
+    if (type == ymfm::ACCESS_ADPCM_B) {
+        /* ADPCM-B samples live in the m1 program (Z80 space); m1 drivers bank
+         * the sample region into view, so linear modulo is the standard
+         * approximation (old build did exactly this and had working BGM). */
+        if (!y->b_rom || !y->b_rom_size) return 0;
+        return y->b_rom[address % y->b_rom_size];
     }
     if (!y->rom || address >= y->rom_size) return 0;   /* MAME: no wrap, OOB reads 0 */
     return y->rom[address];
@@ -113,6 +123,12 @@ void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size)
 {
     y->rom = rom;
     y->rom_size = size;
+}
+
+extern "C" void ym_set_rom_b(ym2610 *y, const uint8_t *rom, uint32_t size)
+{
+    y->b_rom = rom;
+    y->b_rom_size = size;
 }
 
 /* ---- register writes ---- */
@@ -161,6 +177,7 @@ void ym_advance(ym2610 *y, int zcycles)
             if (!(y->ten[c] & 2)) continue;
             if (--y->tcnt[c] <= 0) {
                 y->tflag[c] |= 1;
+                extern long g_tflagA_sets; g_tflagA_sets++;
                 y->tcnt[c] = y->tload[c] ? y->tload[c] : 256;
                 if (c == 0) y->intf.fire_timer(0);
             }
@@ -214,6 +231,7 @@ static const double OUT_RATE = 48000.0;           /* MAME default output rate */
 
 /* global frame counter for debug prints (advanced by ym_stream) */
 int g_ym_frame = 0;
+long g_tflagA_sets = 0;   /* diagnostic: count of timer-A flag assertions */
 
 void ym_stream(ym2610 *y, int16_t *stereo, int frames)
 {

@@ -33,7 +33,7 @@ int audio_init(int rate)
     int err = p_open(&pcm, "default", 0 /*SND_PCM_STREAM_PLAYBACK*/, 1 /*NONBLOCK: a full buffer must never stall the video frame loop*/);
     if (err < 0) { fprintf(stderr, "[audio] no device (%s), silent\n", strerror(-err)); hnd=0; return -1; }
     /* snd_pcm_set_params(pcm, format, access, channels, rate, soft_resample, latency) */
-    err = p_set_hw_params_all(pcm, 2 /*S16_LE*/, 3 /*RW_INTERLEAVED*/, 2, rate, 1, 500000);
+    err = p_set_hw_params_all(pcm, 2 /*S16_LE*/, 3 /*RW_INTERLEAVED*/, 2, rate, 1, 100000);
     if (err < 0) { p_close(pcm); pcm=0; hnd=0; return -1; }
     rate_g = rate;
     conv = malloc(rate*2*4);
@@ -70,15 +70,9 @@ static void ring_push(const int16_t *src, int n)
 void audio_submit(const int16_t *stereo, int frames)
 {
     if (!pcm) return;
-    int outn = (int)((long)frames * rate_g / 44100);
-    if (outn > rate_g) outn = rate_g;
-    for (int i = 0; i < outn; i++) {
-        int s = (int)((long)i * 44100 / rate_g);
-        if (s >= frames) s = frames-1;
-        conv[i*2]   = stereo[s*2];
-        conv[i*2+1] = stereo[s*2+1];
-    }
-    ring_push(conv, outn);
+    /* Input is already at rate_g (the mixer resamples natively); no re-map. */
+    if (frames > rate_g) frames = rate_g;
+    ring_push(stereo, frames);
 
     int guard = 8;
     while (ring_count > 0 && guard-- > 0) {
@@ -101,7 +95,7 @@ void audio_submit(const int16_t *stereo, int frames)
     if (audbg == -2) audbg = getenv("AUDDBG") ? 1 : 0;
     if (audbg && (acnt++ % 300) == 0) {
         int peak = 0;
-        for (int i = 0; i < outn*2; i++) { int v = conv[i] < 0 ? -conv[i] : conv[i]; if (v > peak) peak = v; }
-        fprintf(stderr, "[aud] in_frames=%d out=%d peak=%d queued=%d\n", frames, outn, peak, ring_count);
+        for (int i = 0; i < frames*2; i++) { int v = stereo[i] < 0 ? -stereo[i] : stereo[i]; if (v > peak) peak = v; }
+        fprintf(stderr, "[aud] in_frames=%d peak=%d queued=%d\n", frames, peak, ring_count);
     }
 }

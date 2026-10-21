@@ -81,6 +81,7 @@ int ym_irq_pending(ym2610 *y);
 void ym_stream(ym2610 *y, int16_t *stereo, int frames);
 void ym_advance(ym2610 *y, int zcycles);
 void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size);
+void ym_set_rom_b(ym2610 *y, const uint8_t *rom, uint32_t size);
 
 /* audio out (ALSA via dlopen, silent fallback) */
 int  audio_init(int rate);
