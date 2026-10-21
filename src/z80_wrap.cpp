@@ -24,7 +24,7 @@ struct z80w {
 static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
 { if (getenv("BLKRD") && off >= 0xFEB0 && off < 0xFF00) {
     static long brd = 0; z80w *w0 = (z80w*)h->pUserArea;
-    if ((brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x\n", off, w0->cpu->get_state().PC); }
+    if (off < 0xFED0 || (brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x\n", off, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
   /* THE FIX: the core's Push/Pop walk m_rgbStack as a POINTER into
      m_rgbMemory and read back via the internal array (mz80GetMemory's
