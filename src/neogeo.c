@@ -78,6 +78,7 @@ struct neogeo {
     uint16_t workram[0x8000];
     uint8_t  sndram[0x800];
     uint8_t  smem[0x10000];   /* 64K shared RAM: 68K 0x100000-0x10FFFF <-> Z80 0xC000-0xF7FF */
+    uint8_t  smem_dirty[0x2000]; /* 64K bits: byte written -> RAM, else legacy bank-ROM view */
     uint8_t  sram[0x10000];
     uint8_t  mc_data[0x800];
     int      mc_lock1, mc_unlock2, mc_regsel;
@@ -552,7 +553,18 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     }
     if (a < 0x110000) {   /* SMEM: 64K shared RAM (68K view) */
         uint32_t off = a & 0xFFFF;
-        return (ng->smem[off] << 8) | ng->smem[(off + 1) & 0xFFFF];
+        /* Per-byte hybrid: written bytes read as RAM (soundlatch2 handshake
+           intact); untouched bytes fall back to the legacy bank-ROM view
+           (rom[prg_bank_base-0x100000+i]) that hack carts (kf2k2ps2) read
+           code tables from. */
+        uint32_t base = ng->prg_bank_base ? ng->prg_bank_base : 0x100000;
+        uint32_t o = base - 0x100000 + off;
+        uint8_t lo = (ng->smem_dirty[off >> 3] & (1u << (off & 7))) ? ng->smem[off]
+                   : ((ng->rom && o < ng->rom_size) ? ng->rom[o] : 0xFF);
+        uint32_t o1 = o + 1;
+        uint8_t hi = (ng->smem_dirty[(off + 1) >> 3] & (1u << ((off + 1) & 7))) ? ng->smem[(off + 1) & 0xFFFF]
+                   : ((ng->rom && o1 < ng->rom_size) ? ng->rom[o1] : 0xFF);
+        return (lo << 8) | hi;
     }
     if (a < 0x200000) {
         if (f_pcw() && (a & 0xFFFFFFFE) == 0x100182) {
@@ -774,8 +786,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if ((ng->dbg_z80 == 5 || f_ramwa()) && (off) == (tgt & 0xFFFFu) &&
               (ng->frame > 3000 || f_ramwaf()))
               fprintf(stderr, "RAMWA f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
-        if (mem_mask & 0xFF00) ng->smem[off & ~1u] = d >> 8;
-        if (mem_mask & 0x00FF) ng->smem[off | 1u] = d & 0xFF;
+        if (mem_mask & 0xFF00) { ng->smem[off & ~1u] = d >> 8; ng->smem_dirty[(off & ~1u) >> 3] |= 1u << ((off & ~1u) & 7); }
+        if (mem_mask & 0x00FF) { ng->smem[off | 1u] = d & 0xFF; ng->smem_dirty[(off | 1u) >> 3] |= 1u << ((off | 1u) & 7); }
         return;
     }
     if (a < 0x200000) {
