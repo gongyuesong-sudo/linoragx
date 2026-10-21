@@ -361,7 +361,7 @@ static uint16_t z_in(uint32_t p, void *c)
                  ng->z80_nmi_pend = 0; ng->z80_nmi_asserted = 0; ng->p0_cnt++; return v; }
     case 0x04: { uint8_t v = ym_read(ng->ym, 0);
                  { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
-                   if (st_rd) { static long c4=0; if ((c4++ % 200)==0) fprintf(stderr,"STATRD A=%02x f=%d\n", v, ng->frame); } }
+                   if (st_rd) { static long c4=0; if ((c4++ % 200)==0) fprintf(stderr,"STATRD A=%02x f=%d pc=%04x\n", v, ng->frame, z80w_pc(ng->z)); } }
                  return v; }   /* YM2610 A status (timer flags) */
     case 0x06: { uint8_t v = ym_read(ng->ym, 1);
                  { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
