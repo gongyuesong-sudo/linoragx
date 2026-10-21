@@ -3277,9 +3277,12 @@ unsigned long ng_dbg_hsk(void *v, int i) {
 int ng_dbg_irqen(void *v) { return ((neogeo*)v)->irq_enable; }
 int ng_dbg_dcnt(void *v)  { return ((neogeo*)v)->display_counter; }
 void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
-    if (ng->ym && ng->adpcm && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
-    /* MAME parity: ADPCM-B shares the cart sample region; BIOS has no sample
-     * region (reads 0). No per-phase rom swapping needed. */
+    /* MAME parity: the sample region belongs to the CART (ymsnd:adpcma). During
+       the BIOS/sm1 phase MAME's ADPCM spaces are empty -> reads 0. Feeding the
+       cart v-region early made sm1 decode garbage: random 0x7F end markers set
+       EOS early = coin sound chopped, logo audio double-speed. */
+    int cart_vis = ng->snd ? (ng->cart_audio || ng->m1_view) : 0;
+    if (ng->ym && ng->adpcm && cart_vis && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
     ym_stream(ng->ym, stereo, frames);
 }
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }
