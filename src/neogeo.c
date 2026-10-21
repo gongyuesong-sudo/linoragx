@@ -480,6 +480,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
 static void mc_stb_rise(neogeo *ng)
 {
     int m_c = ng->mc_shift[6] & 0xF;   /* serial mode: command from shift[6] */
+    if (m_c == 7) m_c = 15;            /* MAME: serial mode remaps cmd 7 -> MODE_TEST */
     ng->mc_c = m_c;
     { static int mcd = -1;
       if (mcd < 0) mcd = getenv("MCDBG") ? 1 : 0;
@@ -3373,6 +3374,16 @@ void ng_run_frame(neogeo *ng)
     }
     ng->frame++;
     ng->mc_tp ^= 1;   /* UPD4990A TP ~64Hz approximation (MAME timer -> per-frame toggle) */
+    if (ng->mc_testmode) {
+        /* MAME test_tick @1024Hz (1990A): raw ++ with carry chain, DO=(year==0).
+           Approximate 1024Hz by ~17 ticks per 60fps frame. */
+        for (int k = 0; k < 17; k++) {
+            int i;
+            for (i = 0; i < 6; i++) { if (++ng->mc_time[i]) break; }
+            (void)i;
+        }
+        ng->mc_dout = (ng->mc_time[5] == 0);
+    }
     { static int k68 = -2;
       if (k68 == -2) k68 = getenv("K68PC") ? 1 : 0;
       if (k68) fprintf(stderr, "68KPC f=%llu pc=%08x\n",
