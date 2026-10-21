@@ -246,6 +246,19 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
 
             static int sprdbg_line = -2;
             if (sprdbg_line == -2) { const char *e = getenv("SPRDBG"); sprdbg_line = e ? atoi(e) : -1; }
+            {   /* SPRROW=<line>: dump every sprite entry touching that line */
+                static int sprrow = -2;
+                if (sprrow == -2) { const char *e = getenv("SPRROW"); sprrow = e ? atoi(e) : -1; }
+                if (line == sprrow) {
+                    const uint8_t *gd = spr8 + gfx;
+                    extern uint64_t ng_frame_no(neogeo *ng);
+                    fprintf(stderr, "SPRROW f=%llu si=%d n=%d x=%d y=%d tile=%d sy=%d code=%x attr=%x gfx=%x "
+                        "bytes=%02x %02x %02x %02x %02x %02x %02x %02x pens=%04x %04x %04x %04x\n",
+                        (unsigned long long)ng_frame_no(ng), si, n, x, y, tile, sprite_y, (unsigned)code, attr,
+                        (unsigned)gfx, gd[0],gd[1],gd[2],gd[3],gd[4],gd[5],gd[6],gd[7],
+                        pens[0],pens[1],pens[2],pens[3]);
+                }
+            }
             if (line == sprdbg_line && si < 3) {
                 const uint8_t *gd = spr8 + gfx;
                 extern uint64_t ng_frame_no(neogeo *ng);

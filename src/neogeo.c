@@ -209,6 +209,24 @@ static void decode_sprites(neogeo *ng)
     ng->sprite8_mask = mask;
     ds_ctx c = { ng->spr, ng->sprite8, ng->spr_size };
     parallel_for_g(ds_run, &c, 0, ng->spr_size & ~0x7fu, 12, 0x80);   /* ds_run blocks at 0x80 granularity */
+    if (getenv("SPRDUMP")) {   /* one-shot: report size + nonzero density per 8MB raw chunk */
+        fprintf(stderr, "[sprdump] spr_size=%x mask=%x\n", ng->spr_size, ng->sprite8_mask);
+        for (uint32_t base = 0; base < ng->spr_size; base += 0x800000) {
+            uint32_t nz = 0;
+            for (uint32_t i = base; i < base + 0x800000 && i < ng->spr_size; i += 64)
+                if (ng->spr[i]) nz++;
+            fprintf(stderr, "[sprdump] raw %08x nz=%u\n", base, nz);
+        }
+        const char *hx = getenv("SPRHEX");   /* hex raw offset: dump raw + decoded bytes there */
+        if (hx) {
+            uint32_t o = (uint32_t)strtoul(hx, 0, 16);
+            fprintf(stderr, "[sprhex] raw @%08x:", o);
+            for (int i = 0; i < 32; i++) fprintf(stderr, " %02x", ng->spr[o + i]);
+            fprintf(stderr, "\n[sprhex] dec @%08x:", o << 1);
+            for (int i = 0; i < 32; i++) fprintf(stderr, " %02x", ng->sprite8[(o << 1) + i]);
+            fprintf(stderr, "\n");
+        }
+    }
 }
 
 /* ---- Z80 side ---- */
