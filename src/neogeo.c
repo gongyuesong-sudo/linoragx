@@ -1267,15 +1267,18 @@ static int load_bios_pref(neogeo *ng, const char *dir, const char *pref)
         fclose(f);
     }
     /* BIOS ADSP sample ROM (sp-1v1): the YM2610 ADPCM-B sample source while the
-       sm1 BIOS driver owns audio (logo/coin sounds). Without it the BIOS phase
-       read garbage = wrong-duration samples = mistimed logo audio. */
+       sm1 BIOS driver owns audio (logo/coin sounds). The sm1 driver addresses
+       samples in the JOINT sm1+sp1v1 audiocpu space (sp1v1 at offset 0x20000),
+       so b_rom must be the concatenation, not sp1v1 alone. */
     { const char *cand[2] = {"%s/sp1v1.bin", "%s/sp-1v1_3db8c.bin"};
       for (int si = 0; si < 2; si++) {
           snprintf(p, sizeof p, cand[si], dir);
           if ((f = fopen(p, "rb"))) {
               fseek(f,0,SEEK_END); long m = ftell(f); fseek(f,0,SEEK_SET);
-              ng->adsp_bios = calloc(1, m ? m : 1); ng->adsp_bios_size = (uint32_t)m;
-              if (fread(ng->adsp_bios,1,m,f) != (size_t)m) {}
+              uint32_t sm = ng->sm1 ? 0x20000 : 0;
+              ng->adsp_bios = calloc(1, sm + (uint32_t)m); ng->adsp_bios_size = sm + (uint32_t)m;
+              if (sm) memcpy(ng->adsp_bios, ng->sm1, sm);
+              if (fread(ng->adsp_bios+sm,1,m,f) != (size_t)m) {}
               fclose(f);
               break;
           }
