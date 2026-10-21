@@ -64,6 +64,8 @@ struct neogeo {
     uint8_t *spr;   uint32_t spr_size;    /* c1-c4 byte-interleaved sprite planes */
     uint8_t *sprite8; uint32_t sprite8_mask;  /* predecoded 8bpp sprite gfx */
     uint8_t *sm1;                         /* sound bios (sm1.sm1, 128K) */
+    uint8_t *adsp_bios;                   /* bios ADSP sample rom (sp1v1.bin) */
+    uint32_t adsp_bios_size;
     int ym_rom_set;                       /* audio ROM handed to ymfm once */
     uint8_t *bios;  uint32_t bios_size;   /* 68k bios (NEO-GEO.ROM, 128K) */
     uint8_t *sfix;                        /* fixed bios (NG-SFIX.ROM / sfix.sfix, 128K) */
@@ -1264,6 +1266,20 @@ static int load_bios_pref(neogeo *ng, const char *dir, const char *pref)
         if (fread(ng->sm1,1,m,f) != (size_t)m) {}
         fclose(f);
     }
+    /* BIOS ADSP sample ROM (sp-1v1): the YM2610 ADPCM-B sample source while the
+       sm1 BIOS driver owns audio (logo/coin sounds). Without it the BIOS phase
+       read garbage = wrong-duration samples = mistimed logo audio. */
+    { const char *cand[2] = {"%s/sp1v1.bin", "%s/sp-1v1_3db8c.bin"};
+      for (int si = 0; si < 2; si++) {
+          snprintf(p, sizeof p, cand[si], dir);
+          if ((f = fopen(p, "rb"))) {
+              fseek(f,0,SEEK_END); long m = ftell(f); fseek(f,0,SEEK_SET);
+              ng->adsp_bios = calloc(1, m ? m : 1); ng->adsp_bios_size = (uint32_t)m;
+              if (fread(ng->adsp_bios,1,m,f) != (size_t)m) {}
+              fclose(f);
+              break;
+          }
+      } }
     return 0;
 }
 static int load_bios(neogeo *ng, const char *dir) { return load_bios_pref(ng, dir, NULL); }
@@ -3259,7 +3275,10 @@ int ng_dbg_irqen(void *v) { return ((neogeo*)v)->irq_enable; }
 int ng_dbg_dcnt(void *v)  { return ((neogeo*)v)->display_counter; }
 void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
     if (ng->ym && ng->adpcm && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
-    if (ng->ym && ng->snd && ng->snd_size) ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
+    if (ng->ym) {   /* ADPCM-B sample rom follows the audio driver: BIOS sp1v1 while sm1 owns audio, cart m1 after handoff */
+        if (!ng->cart_audio && ng->adsp_bios && ng->adsp_bios_size) ym_set_rom_b(ng->ym, ng->adsp_bios, ng->adsp_bios_size);
+        else if (ng->snd && ng->snd_size) ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
+    }
     ym_stream(ng->ym, stereo, frames);
 }
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }
