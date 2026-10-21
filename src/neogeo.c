@@ -460,7 +460,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
         ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2 */
+    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && ng->frame >= 400) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2; BIOS phase: keep quiet so the BIOS/game Timer-C handshake wins */
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
                       z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
@@ -3377,6 +3377,12 @@ void ng_run_frame(neogeo *ng)
       }
     }
     ng->frame++;
+    { static int srd = -1;
+      if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
+      if (srd) fprintf(stderr, "SRDBG f=%d sr=%04x v1=%d v2=%d pc=%08x\n",
+          ng->frame, (unsigned)m68k_get_reg(NULL, M68K_REG_SR),
+          m68k_get_virq(1), m68k_get_virq(2),
+          (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
     /* UPD4990A TP toggle period follows the armed mode (MAME m_timer_tp):
        TP_1S/10S/30S/60S_INT = 0.5s/5s/15s/30s halves; TEST = 32Hz;
        everything else ~64Hz (per-frame at 60fps). */
