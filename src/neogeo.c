@@ -286,6 +286,7 @@ DBGFLAG("VWDIST", f_vwdist)
 DBGFLAG("LINORAGX_TRACE_VC", f_vc)
 DBGFLAG("VCKILL", f_vckill)
 DBGFLAG("SNDIRQ3", f_sndirq3)
+DBGFLAG("IRQ2LEGACY", f_irq2legacy)
 DBGFLAG("SRAMW", f_sramw)
 DBGFLAG("ZNMIT", f_znmit)
 DBGFLAG("NORASTER", f_noraster)
@@ -465,7 +466,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
         ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { if (f_sndirq3()) { ng->irq_sound = 1; m68k_set_virq(3, 1); } else if (ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); } }   /* MAME: soundlatch2 feeds IRQ3 (vec $6C), NOT IRQ2. Legacy path (IRQ2 + L2GATE) kept for A/B. */
+    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && f_irq2legacy() && ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME parity DEFAULT (2026-10-22): soundlatch2 writes fire NO IRQ — MAME's irq3_pending is set once at construction only (neogeo.cpp:1559), soundlatch2_w has no IRQ line. Legacy homebrew path (IRQ2 + L2GATE) behind IRQ2LEGACY=1. Matrix @20000f: kof2000 30->393, kof98 157->368, fatfury3 177->294, sengoku2 1->103, zero regressions. */
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
                       z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
