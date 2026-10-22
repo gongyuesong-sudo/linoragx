@@ -2559,6 +2559,36 @@ static void cthd_patch(neogeo *ng)
       memcpy(r + 0x99354, &d, 2); memcpy(r + 0x9943e, &d, 2); }
 }
 
+/* PCM2 ADPCM region scramble (MAME prot_pcm2.cpp:59 swap()). Only the kof2k2
+   cart family calls it (kof2002 value=0); plain pcm2 carts (mslug4/rotd/pnyaa)
+   do NOT swap in MAME either. */
+static void pcm2_swap(uint8_t *ym, int value)
+{
+    static const uint32_t addrs[7][2]={
+        {0x000000,0xa5000},{0xffce20,0x01000},{0xfe2cf6,0x4e001},{0xffac28,0xc2000},
+        {0xfeb2c0,0x0a000},{0xff14ea,0xa7001},{0xffb440,0x02000}};
+    static const uint8_t xordata[7][8]={
+        {0xf9,0xe0,0x5d,0xf3,0xea,0x92,0xbe,0xef},
+        {0xc4,0x83,0xa8,0x5f,0x21,0x27,0x64,0xaf},
+        {0xc3,0xfd,0x81,0xac,0x6d,0xe7,0xbf,0x9e},
+        {0xc3,0xfd,0x81,0xac,0x6d,0xe7,0xbf,0x9e},
+        {0xcb,0x29,0x7d,0x43,0xd2,0x3a,0xc2,0xb4},
+        {0x4b,0xa4,0x63,0x46,0xf0,0x91,0xea,0x62},
+        {0x4b,0xa4,0x63,0x46,0xf0,0x91,0xea,0x62}};
+    static const int bs[24]={23,22,21,20,19,18,17,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,16};
+    uint8_t *buf = (uint8_t *)malloc(0x1000000);
+    if (!buf) return;
+    memcpy(buf, ym, 0x1000000);
+    for (uint32_t i = 0; i < 0x1000000; i++) {
+        uint32_t j = 0;
+        for (int k = 0; k < 24; k++) if ((i >> bs[k]) & 1u) j |= 1u << k;
+        j ^= addrs[value][1];
+        uint32_t d = (i + addrs[value][0]) & 0xffffff;
+        ym[j] = buf[d] ^ xordata[value][j & 7];
+    }
+    free(buf);
+}
+
 /* kof2k2 family CPU sector shuffles (MAME prot_kof2k2.cpp); sector tables are
  * region-byte offsets; our bus-order rom buffer shares byte offsets for whole
  * 0x80000 blocks so the shuffle is order-independent. */
@@ -2843,6 +2873,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     break;
                                 }
                             }
+                            /* MAME kof2002 cart: pcm2 swap(ym,0) on the ADPCM sample region */
+                            if (sw_has(sw, swend, "k2k2_kof2k2\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
+                                pcm2_swap(ng->adpcm, 0);
                             if (ng->k3bl_px && ng->rom && ng->rom_size >= 0x700000) {
                                 /* kof2k3bl bootleg static PX decrypt (MAME prot_kof2k3bl.cpp) */
                                 uint16_t *r16 = (uint16_t*)ng->rom;
