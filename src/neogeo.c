@@ -2637,6 +2637,13 @@ static void samsho5_dec68k(neogeo *ng)
                                 0x300000,0x780000,0x600000,0x280000,0x100000,0x580000,0x400000,0x380000};
     k2k2_shuffle(ng, sec, 16, 0);
 }
+/* MAME prot_kof2k2.cpp samsh5sp_decrypt_68k (k2k2_sams5s cart) */
+static void samsh5sp_dec68k(neogeo *ng)
+{
+    static const int sec[16] = {0x000000,0x080000,0x500000,0x480000,0x600000,0x580000,0x700000,0x280000,
+                                0x100000,0x680000,0x400000,0x780000,0x200000,0x380000,0x300000,0x180000};
+    k2k2_shuffle(ng, sec, 16, 0);
+}
 
 static void pvc_unpack_color(neogeo *ng)
 {
@@ -2853,6 +2860,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "boot_cthd2k3\"")) { cthd2003_decrypt(ng); cthd_patch(ng); ng->cart_prot = 9; }
                             else if (sw_has(sw, swend, "k2k2_matrim\"")) { matrim_dec68k(ng);  ng->cart_prot = 10; ng->fixed_bank_type = 2; }
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
+                            else if (sw_has(sw, swend, "k2k2_sams5s\"")) { samsh5sp_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_kof2k2\"")) { matrim_dec68k(ng);  ng->fixed_bank_type = 2; }  /* MAME kof2002: same 8x0x80000 sec table as matrim */
                             if (sw_has(sw, swend, "cmc50_jockeygp\"") || sw_has(sw, swend, "rom_vliner\""))
                                 ng->cart_prot = 12;         /* cart RAM window @200000 */
@@ -2879,6 +2887,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"cmc50_kof2001\"",50,0x1e,1,1},{"cmc50_kof2000n\"",50,0x00,1,1},{"cmc50_jockeygp\"",50,0xac,1,1},
                                     {"pcm2_mslug4\"",50,0x31,1,1},{"pcm2_ms4p\"",50,0x31,0,1},{"pcm2_rotd\"",50,0x3f,1,1},
                                     {"pcm2_pnyaa\"",50,0x2e,1,1},{"k2k2_matrim\"",50,0x6a,1,1},{"k2k2_samsh5\"",50,0x0f,1,1},
+                                    {"k2k2_sams5s\"",50,0x0d,1,1},
                                     {"k2k2_kof2k2\"",50,0xec,1,1},
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
                                     {"boot_kf2k3pl\"",50,0x9d,1,0},{"boot_kf2k3upl\"",50,0x9d,1,0},
@@ -2903,6 +2912,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             /* MAME kof2002 cart: pcm2 swap(ym,0) on the ADPCM sample region */
                             if (sw_has(sw, swend, "k2k2_kof2k2\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
                                 pcm2_swap(ng->adpcm, 0);
+                            /* MAME samsh5sp cart: pcm2 swap(ym,6) */
+                            if (sw_has(sw, swend, "k2k2_sams5s\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
+                                pcm2_swap(ng->adpcm, 6);
                             if (ng->k3bl_px && ng->rom && ng->rom_size >= 0x700000) {
                                 /* kof2k3bl bootleg static PX decrypt (MAME prot_kof2k3bl.cpp) */
                                 uint16_t *r16 = (uint16_t*)ng->rom;
