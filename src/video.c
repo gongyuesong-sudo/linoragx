@@ -103,6 +103,15 @@ static inline uint32_t cram24(uint16_t c, int shadow)
 
 /* MAME parse_sprites: the priority lists are built by the emulator each line
    (games never write them) — objects in table order, max 110 per line. */
+/* PIXDBG=x,y pixel probe state (file scope so fix-layer path can query it) */
+static int g_pdx = -2, g_pdy = -1;
+int ng_pixdbg(int x, int y)
+{
+    if (g_pdx == -2) { const char *e = getenv("PIXDBG");
+        if (e) sscanf(e, "%d,%d", &g_pdx, &g_pdy); else g_pdx = -1; }
+    return g_pdx >= 0 && y == g_pdy && x == g_pdx;
+}
+
 static void parse_sprites(uint16_t *vram, int scanline)
 {
     uint16_t *list = &vram[(scanline & 1) ? 0x8680 : 0x8600];
@@ -138,6 +147,10 @@ void ng_render_begin(neogeo *ng, uint32_t *fb)
     uint32_t bank = ng_cram_bank_render(ng);
     uint32_t sh = ng_screen_shadow(ng);
     render_shadow = (int)sh;
+    { extern int ng_pixdbg(int,int);
+      static uint64_t lastf = ~0ull; extern uint64_t ng_frame_no(neogeo*);
+      if (ng_pixdbg(300,140) && ng_frame_no(ng) != lastf && ng_frame_no(ng) >= 19990) { lastf = ng_frame_no(ng);
+          fprintf(stderr, "PIX begin f=%llu sh=%u\n", (unsigned long long)lastf, sh); } }
     uint32_t bg = cram24(cram[bank | 0xFFF], sh);
     for (int i = 0; i < NG_W*NG_H; i++) fb[i] = bg;
 
@@ -271,12 +284,15 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
 
             uint16_t zt = zoom_x_tables[zoom_x];
             const uint8_t *g = spr8 + gfx;
+            /* PIXDBG=x,y : trace every sprite write to one screen pixel */
+            #define PIXHIT(dx) ng_pixdbg(dx, dline)
             if (x <= 0x1F0) {                       /* MAME: no wrap-around */
                 int dx = x;
                 for (int px = 0; px < 16; px++) {
                     if (zt & 0x8000) {
                         if (dx < NG_W) {
                             uint8_t p = g[0];
+                            if (PIXHIT(dx)) fprintf(stderr, "PIX spr si=%d n=%d tile=%d code=%x attr=%x gfx=%x p=%d pens=%04x\n", si, n, tile, (unsigned)code, attr, (unsigned)gfx, p, pens[p]);
                             if (p) fb[dline*NG_W + dx] = cram24(pens[p], sh);
                         }
                         dx++;
@@ -293,6 +309,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                         if (xw >= 0x200) {
                             if (dx < NG_W) {
                                 uint8_t p = g[0];
+                                if (PIXHIT(dx)) fprintf(stderr, "PIX sprW si=%d n=%d tile=%d code=%x attr=%x gfx=%x p=%d pens=%04x\n", si, n, tile, (unsigned)code, attr, (unsigned)gfx, p, pens[p]);
                                 if (p) fb[dline*NG_W + dx] = cram24(pens[p], sh);
                             }
                             dx++;
@@ -338,6 +355,8 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
             }
             uint8_t d = fixed[( ((code << 5) | (line & 7)) & fix_mask ) | pbyte[x & 7]];
             uint8_t p = (x & 1) ? (d >> 4) : (d & 0x0F);
+            { extern int ng_pixdbg(int,int);
+              if (ng_pixdbg(x, line)) fprintf(stderr, "PIX fix code=%x e=%04x p=%d\n", (unsigned)code, e, p); }
             if (p) drow[x] = cram24(cram[((e >> 12) << 4) | p | bank], render_shadow);
         }
     }

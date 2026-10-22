@@ -1002,9 +1002,16 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         ng->mc_stb = stb;
         return;
     }
-    if (a < 0x3C0000) {                     /* systemlatch = HC259 write_a3:
+    if (a < 0x3C0000) {
+        if (a < 0x3A0000) return;           /* 0x380002-0x39FFFF = Z80 RAM mirror
+                                               (BIOS comms buffer); NOT the latch.
+                                               MAME: systemlatch map(0x3a0000,0x3a001f)
+                                               .mirror(0x01ffe0) — BIOS writes here
+                                               (0x380031/0x380041) every frame and
+                                               were misread as HC259 ch0, pinning
+                                               screen_shadow=1 (preisle2 grey wash). */
+        int off = (a >> 1) & 0xF;          /* systemlatch = HC259 write_a3:
                                                channel = addr bits 1-3, value = addr bit 4 */
-        int off = (a >> 1) & 0xF;
         int ch  = off & 7, v = (off >> 3) & 1;
         switch (ch) {
         case 0:
@@ -2248,6 +2255,7 @@ static void cmc_gfx_decrypt(uint8_t *rom, uint32_t rom_size, int extra_xor, cons
     uint8_t *buf = calloc(1, rom_size);
     if (!buf) return;
     { cmc_p1_ctx c1 = { rom, buf, K }; parallel_for(cmc_p1, &c1, 0, n, 12); }
+    if (getenv("CMCBUF1")) { FILE *fp = fopen(getenv("CMCBUF1"), "wb"); if (fp) { fwrite(buf, 1, rom_size, fp); fclose(fp); } }
     { cmc_p2_ctx c2 = { rom, buf, K, n, extra_xor, rom_size }; parallel_for(cmc_p2, &c2, 0, n, 12); }
     free(buf);
 }
