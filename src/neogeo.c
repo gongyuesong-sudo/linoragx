@@ -3173,6 +3173,30 @@ void ng_run_frame(neogeo *ng)
         ng->mc_cycles += chunk;
         left -= chunk;
         ng->scanline = (int)((CYCLES_PER_FRAME - left) / CYCLES_PER_LINE) % LINES_PER_FRAME;
+        /* L1PULSE=<lines> experiment: re-assert level-1 every N scanlines
+           (models the real UPD4990A timer output pulsing multiple times
+           per frame instead of our once-per-frame edge). Games that spin
+           waiting for their frame counter to change mid-loop (wh2/ncombat)
+           only release if a pulse lands between the two reads.
+           AUTO mode (L1PULSE unset or =auto): engage ONLY while the 68K PC
+           sits frozen on one instruction for >6 frames (deadlock watchdog)
+           - normal cards' PC always moves, so they never see extra pulses
+           (L1PULSE=8 globally regressed kof2000 236c->1c). */
+        { static int l1pulse = -2; static int l1_last = -1; static int l1_auto = 0;
+          static unsigned l1_frozen_pc = 0xFFFFFFFFu; static unsigned long l1_frozen_cyc = 0;
+          static int l1_engaged = 0;
+          if (l1pulse == -2) { const char *e = getenv("L1PULSE");
+              if (!e || !strcmp(e, "auto")) { l1pulse = 8; l1_auto = 1; }
+              else l1pulse = atoi(e); }
+          { unsigned pcnow = m68k_get_reg(NULL, M68K_REG_PC);
+            if (pcnow == l1_frozen_pc) l1_frozen_cyc++; else { l1_frozen_pc = pcnow; l1_frozen_cyc = 0; } }
+          if (l1_auto) l1_engaged = (l1_frozen_cyc > 6 * 200);   /* ~6 frames frozen */
+          else l1_engaged = 1;
+          if (l1pulse > 0 && ng->frame > 600 && l1_engaged) {
+              int bucket = ng->scanline / l1pulse;
+              if (bucket != l1_last) { l1_last = bucket; if (!m68k_get_virq(1)) m68k_set_virq(1, 1); }
+          }
+        }
         /* per-line draw: fb row r = scanline r+40 (frame start = MAME line 240,
            visible lines start at s=40); a line is complete once the beam passed it */
         if (ng->fb && ng->perline) {
