@@ -152,7 +152,17 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 
     if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0xFF00) | val; y->tloadb[c] = (y->tloadb[c] & 0x300) | val; }
     if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x00FF) | ((val & 0x03) << 8); y->tloadb[c] = (y->tloadb[c] & 0x0FF) | ((val & 0x03) << 8); }
-    if (reg == 0x27) {  /* timer/irq control: bit1=/LOAD B, bit2=/LOAD A, bit6=IRQB en, bit7=IRQA en */
+    if (reg == 0x27) {  /* timer/irq control (LEGACY mapping - sm1 BIOS driver depends on it):
+                          bit1=/LOAD B, bit2=/LOAD A-ish, bit6/7=IRQ enables.
+                          Datasheet-strict remap (bit0/1=/LOAD, bit5/6=enable) was tried
+                          and killed the sm1 one-shot tick (BIOS BGM silent) - the BIOS
+                          driver toggles 0x1f/0x2f and relies on timer B running in BOTH
+                          states. kof2000 m1 arms 0x35 (enable B + /LOAD B=0) which no
+                          interpretation runs - m1 BGM tick remains an open question. */
+        { static int r27 = -1;
+          if (r27 < 0) r27 = getenv("R27DBG") ? 1 : 0;
+          if (r27) { extern int g_ym_frame;
+                     fprintf(stderr, "R27 bank%c f=%d val=%02x\n", 'A'+c, g_ym_frame, val); } }
         if (!(val & 0x02)) { y->tcntb[c] = y->tloadb[c] ? y->tloadb[c] : 1024; }
         if (!(val & 0x04)) { y->tcnt[c] = y->tload[c] ? y->tload[c] : 256; }
         y->ten[c] = ((val >> 1) & 3);
