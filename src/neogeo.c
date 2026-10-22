@@ -2670,7 +2670,7 @@ void linoragx_pc_hook(unsigned int pc)
             (pc == 0x00c18714u || pc == 0x00c1871au || pc == 0x00c1871cu ||
              pc == 0x00108600u || pc == 0x00108604u || pc == 0x00c11fb0u ||
              pc == 0x00000810u || pc == 0x00000814u || pc == 0x00000832u ||
-             pc == 0x0000085eu || pc == 0x00000800u) && getenv("PCSTAT"))
+             pc == 0x0000085eu || pc == 0x00000800u || pc == 0x000012ceu) && getenv("PCSTAT"))
         {
             unsigned sr = m68k_get_reg(NULL, M68K_REG_SR);
             unsigned sp = m68k_get_reg(NULL, M68K_REG_SP);
@@ -2679,6 +2679,9 @@ void linoragx_pc_hook(unsigned int pc)
             if (pc == 0x00000810u || pc == 0x00000814u)
                 fprintf(stderr, " a0=%08x d0=%08x",
                         m68k_get_reg(NULL, M68K_REG_A0), m68k_get_reg(NULL, M68K_REG_D0));
+            if (pc == 0x000012ceu)
+                fprintf(stderr, " a5=%08x d0=%08x",
+                        m68k_get_reg(NULL, M68K_REG_A5), m68k_get_reg(NULL, M68K_REG_D0));
             fprintf(stderr, "\n");
             if (pc == 0x00c11fb0u || pc == 0x00108600u)
             {
