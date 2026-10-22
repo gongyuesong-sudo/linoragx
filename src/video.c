@@ -292,7 +292,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                     if (zt & 0x8000) {
                         if (dx < NG_W) {
                             uint8_t p = g[0];
-                            if (PIXHIT(dx)) fprintf(stderr, "PIX spr si=%d n=%d tile=%d code=%x attr=%x gfx=%x p=%d pens=%04x\n", si, n, tile, (unsigned)code, attr, (unsigned)gfx, p, pens[p]);
+                            if (PIXHIT(dx)) fprintf(stderr, "PIX spr si=%d n=%d x=%d y=%d rows=%d zx=%d zy=%d tile=%d code=%x attr=%x gfx=%x p=%d pens=%04x\n", si, n, x, y, rows, zoom_x, zoom_y, tile, (unsigned)code, attr, (unsigned)gfx, p, pens[p]);
                             if (p) fb[dline*NG_W + dx] = cram24(pens[p], sh);
                         }
                         dx++;
@@ -309,7 +309,7 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
                         if (xw >= 0x200) {
                             if (dx < NG_W) {
                                 uint8_t p = g[0];
-                                if (PIXHIT(dx)) fprintf(stderr, "PIX sprW si=%d n=%d tile=%d code=%x attr=%x gfx=%x p=%d pens=%04x\n", si, n, tile, (unsigned)code, attr, (unsigned)gfx, p, pens[p]);
+                                if (PIXHIT(dx)) fprintf(stderr, "PIX sprW si=%d n=%d x=%d y=%d rows=%d zx=%d zy=%d tile=%d code=%x attr=%x gfx=%x p=%d pens=%04x\n", si, n, x, y, rows, zoom_x, zoom_y, tile, (unsigned)code, attr, (unsigned)gfx, p, pens[p]);
                                 if (p) fb[dline*NG_W + dx] = cram24(pens[p], sh);
                             }
                             dx++;
