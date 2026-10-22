@@ -2882,7 +2882,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"pvc_mslug5\"",50,0x19,1,1,0},{"pvc_svc\"",50,0x57,1,1,0},
                                     {"pvc_kf2k3h\"",50,0x9d,1,1},{"pvc_kf2k3\"",50,0x9d,1,1},
                                     {"cmc42_zupapa\"",42,0xbd,0,0},{"cmc42_mslug3h\"",42,0xad,0,0},{"cmc42_ganryu\"",42,0x07,0,0},
-                                    {"cmc42_s1945p\"",42,0x05,0,0},{"cmc42_preisle2\"",42,0x9f,0,0},{"cmc42_bangbead\"",42,0xf8,0,0},
+                                    {"cmc42_s1945p\"",42,0x05,0,0},{"cmc42_preisle2\"",42,0x9f,1,0},{"cmc42_bangbead\"",42,0xf8,0,0},
                                     {"cmc42_nitd\"",42,0xff,0,0},{"cmc42_sengoku3\"",42,0xfe,0,0},{"cmc42_kof99k\"",42,0x00,0,0},
                                     {"cmc50_kof2001\"",50,0x1e,1,1},{"cmc50_kof2000n\"",50,0x00,1,1},{"cmc50_jockeygp\"",50,0xac,1,1},
                                     {"pcm2_mslug4\"",50,0x31,1,1},{"pcm2_ms4p\"",50,0x31,0,1},{"pcm2_rotd\"",50,0x3f,1,1},
