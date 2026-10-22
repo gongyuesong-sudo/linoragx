@@ -2669,7 +2669,8 @@ void linoragx_pc_hook(unsigned int pc)
         if (g_pcflow_ng &&
             (pc == 0x00c18714u || pc == 0x00c1871au || pc == 0x00c1871cu ||
              pc == 0x00108600u || pc == 0x00108604u || pc == 0x00c11fb0u ||
-             pc == 0x00000810u || pc == 0x00000814u) && getenv("PCSTAT"))
+             pc == 0x00000810u || pc == 0x00000814u || pc == 0x00000832u ||
+             pc == 0x0000085eu || pc == 0x00000800u) && getenv("PCSTAT"))
         {
             unsigned sr = m68k_get_reg(NULL, M68K_REG_SR);
             unsigned sp = m68k_get_reg(NULL, M68K_REG_SP);
