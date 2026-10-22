@@ -2796,6 +2796,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "boot_cthd2k3\"")) { cthd2003_decrypt(ng); cthd_patch(ng); ng->cart_prot = 9; }
                             else if (sw_has(sw, swend, "k2k2_matrim\"")) { matrim_dec68k(ng);  ng->cart_prot = 10; ng->fixed_bank_type = 2; }
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
+                            else if (sw_has(sw, swend, "k2k2_kof2k2\"")) { matrim_dec68k(ng);  ng->fixed_bank_type = 2; }  /* MAME kof2002: same 8x0x80000 sec table as matrim */
                             if (sw_has(sw, swend, "cmc50_jockeygp\"") || sw_has(sw, swend, "rom_vliner\""))
                                 ng->cart_prot = 12;         /* cart RAM window @200000 */
                             if (sw_has(sw, swend, "boot_kf2k3pl\"") || sw_has(sw, swend, "boot_kf2k3upl\""))
@@ -2821,6 +2822,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"cmc50_kof2001\"",50,0x1e,1,1},{"cmc50_kof2000n\"",50,0x00,1,1},{"cmc50_jockeygp\"",50,0xac,1,1},
                                     {"pcm2_mslug4\"",50,0x31,1,1},{"pcm2_ms4p\"",50,0x31,0,1},{"pcm2_rotd\"",50,0x3f,1,1},
                                     {"pcm2_pnyaa\"",50,0x2e,1,1},{"k2k2_matrim\"",50,0x6a,1,1},{"k2k2_samsh5\"",50,0x0f,1,1},
+                                    {"k2k2_kof2k2\"",50,0xec,1,1},
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
                                     {"boot_kf2k3pl\"",50,0x9d,1,0},{"boot_kf2k3upl\"",50,0x9d,1,0},
                                 };
