@@ -781,6 +781,19 @@ static uint16_t r16(neogeo *ng, uint32_t a)
 static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
 {
     a &= 0xFFFFFF;
+    /* 0x2F00 IRQ control register (MAME neogeo_irqline_w): bit5 -> IRQ2
+       line, bit7&bit6 -> TimerC line. This — not soundlatch2 — is the
+       game-facing IRQ2 source on real hardware. */
+    if (a == 0x2F00) {
+        static int s_dbg = -1;
+        if (s_dbg < 0) s_dbg = getenv("IRQ2F00") ? 1 : 0;
+        if (s_dbg) fprintf(stderr, "IRQ2F00 f=%llu d=%04x pc=%08x\n",
+                           (unsigned long long)ng->frame, d, m68k_get_reg(NULL,M68K_REG_PC));
+        if (mem_mask & 0x00FF) ng->irq_line = (uint8_t)d;
+        else ng->irq_line = (uint8_t)((ng->irq_line & 0xFF) );   /* hi byte ignored */
+        m68k_set_virq(2, (ng->irq_line & 0x20) ? 1 : 0);
+        return;
+    }
     { static int ramvec = -1;
       if (ramvec < 0) ramvec = getenv("RAMVEC") ? 1 : 0;
       if (ramvec && a < 0x400)
