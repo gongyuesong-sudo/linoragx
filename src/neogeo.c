@@ -261,6 +261,8 @@ DBGFLAG("PROTDBG", f_protdbg)
 DBGFLAG("SMAPROT", f_smaprot)
 DBGFLAG("RAMWA",   f_ramwa)
 DBGFLAG("RAMWAF",  f_ramwaf)
+DBGFLAG("SAMCTR",  f_samctr)
+DBGFLAG("SAMPOKE", f_sampoke)
 DBGFLAG("SCRW",    f_scrw)
 DBGFLAG("LATCH_TR",f_latch_tr)
 DBGFLAG("WDTR",    f_wdtr)
@@ -884,6 +886,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if ((ng->dbg_z80 == 5 || f_ramwa()) && (off) == (tgt & 0xFFFFu) &&
               (ng->frame > 3000 || f_ramwaf()))
               fprintf(stderr, "RAMWA f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
+        if (f_samctr() && (off) == (({ static uint32_t t2 = 0xFFFFFFFF; static int i2 = 0;
+              if (!i2) { const char *e = getenv("RAMWA"); t2 = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; i2 = 1; } t2; }) & 0xFFFFu)) { uint32_t sp = m68k_get_reg(NULL,M68K_REG_A7);
+            fprintf(stderr, "STK f=%d pc=%08x sp=%08x r=%08x,%08x,%08x,%08x\n", ng->frame,
+                m68k_get_reg(NULL,M68K_REG_PC), sp, m68k_read_memory_32(sp), m68k_read_memory_32(sp+4),
+                m68k_read_memory_32(sp+8), m68k_read_memory_32(sp+12)); }
         /* MCKEEP experiment: BIOS RAM-init must not erase the memcard test
            request/result bytes — on real hardware the test state lives in the
            UPD4990A chip and stays queryable after RAM re-init. */
@@ -3516,6 +3523,7 @@ void ng_run_frame(neogeo *ng)
           fprintf(stderr, "INJECT f=%llu cmd=%02x en=%d\n", (unsigned long long)ng->frame, c, ng->z80_nmi_en);
       }
     }
+    if (f_sampoke()) ng->smem[0x0a76] = 1;   /* SAMPOKE experiment: force samsho wait-flag */
     ng->frame++;
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
