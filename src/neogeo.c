@@ -2625,6 +2625,13 @@ void linoragx_pc_hook(unsigned int pc)
     if (f >= g_pcflow_lo && f <= g_pcflow_hi)
     {
         fprintf(stderr, "F %d %08x\n", f, pc);
+        /* SSPDBG: log every SSP change (catches exception/rte SSP restore bugs) */
+        { static unsigned last_sp = 0; static int sd = -1;
+          if (sd < 0) sd = getenv("SSPDBG") ? 1 : 0;
+          if (sd) { unsigned sp0 = m68k_get_reg(NULL, M68K_REG_SP);
+                    if (last_sp && sp0 != last_sp)
+                        fprintf(stderr, "SSPCHG f=%d %08x->%08x pc=%08x\n", f, last_sp, sp0, pc);
+                    last_sp = sp0; } }
         /* PCSTAT=1: attach SR/SP/IR at hot addresses of the aodk crash site */
         if (g_pcflow_ng &&
             (pc == 0x00c18714u || pc == 0x00c1871au || pc == 0x00c1871cu ||
