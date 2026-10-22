@@ -588,6 +588,12 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             }
         }
         if (!ng->rom || a+2 > ng->rom_size) return 0xFFFF;
+        { static int jm = -1;
+          if (jm < 0) jm = getenv("JMDBG") ? 1 : 0;
+          if (jm && a >= 0x122 && a <= 0x127 && ng->frame > 380 && ng->frame < 410)
+              fprintf(stderr, "JMDBG f=%d a=%06x val=%04x pc=%08x\n", ng->frame, a,
+                      (unsigned)((ng->rom[a]<<8)|ng->rom[a+1]),
+                      (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
         if (f_romrd() && a >= 0x108 && a <= 0x12F && ng->frame < 260) {
             static int rr = 0;
             if (rr < 24) { rr++;
@@ -617,6 +623,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         uint32_t o1 = base - 0x100000 + off1;
         uint8_t hi = (ng->smem_dirty[off1 >> 3] & (1u << (off1 & 7))) ? ng->smem[off1]
                    : ((ng->rom && o1 < ng->rom_size) ? ng->rom[o1] : 0xFF);
+        { static int rd = -1;
+          if (rd < 0) rd = getenv("RDDBG") ? (int)strtol(getenv("RDDBG"), 0, 16) : -1;
+          if (rd >= 0 && off == (uint32_t)rd)
+              fprintf(stderr, "RDDBG f=%d a=%06x v=%04x pc=%08x\n", ng->frame, off,
+                      (lo << 8) | hi, (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
         return (lo << 8) | hi;
     }
     if (a < 0x200000) {
@@ -715,7 +726,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                                                coin-test creates and verifies a JEIDA
                                                card through this line; absent bits
                                                make the BIOS test fail with code 0x80. */
-        uint16_t hi = 0x8F;
+        uint16_t hi = getenv("SYSNOCARD") ? 0xFF : 0x8F;
         if (ng->buttons[0] & 0x100) hi &= ~0x01;
         if (ng->buttons[0] & 0x200) hi &= ~0x02;
         if (ng->buttons[1] & 0x100) hi &= ~0x04;
@@ -2617,12 +2628,17 @@ void linoragx_pc_hook(unsigned int pc)
         /* PCSTAT=1: attach SR/SP/IR at hot addresses of the aodk crash site */
         if (g_pcflow_ng &&
             (pc == 0x00c18714u || pc == 0x00c1871au || pc == 0x00c1871cu ||
-             pc == 0x00108600u || pc == 0x00108604u || pc == 0x00c11fb0u) && getenv("PCSTAT"))
+             pc == 0x00108600u || pc == 0x00108604u || pc == 0x00c11fb0u ||
+             pc == 0x00000810u || pc == 0x00000814u) && getenv("PCSTAT"))
         {
             unsigned sr = m68k_get_reg(NULL, M68K_REG_SR);
             unsigned sp = m68k_get_reg(NULL, M68K_REG_SP);
             unsigned ir = m68k_get_reg(NULL, M68K_REG_IR);
-            fprintf(stderr, "S %d %08x sr=%04x sp=%08x ir=%04x\n", f, pc, sr, sp, ir);
+            fprintf(stderr, "S %d %08x sr=%04x sp=%08x ir=%04x", f, pc, sr, sp, ir);
+            if (pc == 0x00000810u || pc == 0x00000814u)
+                fprintf(stderr, " a0=%08x d0=%08x",
+                        m68k_get_reg(NULL, M68K_REG_A0), m68k_get_reg(NULL, M68K_REG_D0));
+            fprintf(stderr, "\n");
             if (pc == 0x00c11fb0u || pc == 0x00108600u)
             {
                 extern unsigned short dbg_r16(struct neogeo *, unsigned);
