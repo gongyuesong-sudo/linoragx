@@ -105,7 +105,7 @@ struct neogeo {
     /* VLOAD / video ctrl */
     uint16_t vram_offset, vram_modulo, vram_readbuf;
     uint8_t  auto_speed; int auto_disabled; uint8_t auto_counter;
-    int irq_enable; uint32_t display_counter; int raster_pending, raster_armed; unsigned long vload_count, nmi_cnt, p0_cnt, sl1_cnt;
+    int irq_enable; uint32_t display_counter; int raster_pending, raster_armed; int vbl_line;   /* VBLHOLD: vblank line asserted, awaiting $3C000C bit2 ack */ unsigned long vload_count, nmi_cnt, p0_cnt, sl1_cnt;
     int irq_line;
     int vblank_enable;
 
@@ -284,6 +284,8 @@ DBGFLAG("FD98W", f_fd98w)
 DBGFLAG("LINORAGX_TRACE_VLOAD", f_vload)
 DBGFLAG("VWDIST", f_vwdist)
 DBGFLAG("LINORAGX_TRACE_VC", f_vc)
+DBGFLAG("VCKILL", f_vckill)
+DBGFLAG("SNDIRQ3", f_sndirq3)
 DBGFLAG("SRAMW", f_sramw)
 DBGFLAG("ZNMIT", f_znmit)
 DBGFLAG("NORASTER", f_noraster)
@@ -463,7 +465,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
         ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2; quiet during BIOS phase AND game init window (game's transient SR=0x2000 boot window would vector into its empty 0x108600 data flag). Default gate 600; L2GATE=<frame> overrides. */
+    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2()) { if (f_sndirq3()) { ng->irq_sound = 1; m68k_set_virq(3, 1); } else if (ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); } }   /* MAME: soundlatch2 feeds IRQ3 (vec $6C), NOT IRQ2. Legacy path (IRQ2 + L2GATE) kept for A/B. */
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
                       z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
@@ -716,7 +718,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         else if ((ng->frame / 30) & 1) lo |= 0x40;
         lo |= 0x80;
         /* reading AUDIO_COIN acks IRQ_SOUND (MAME audio_coin_r) */
-        if (ng->irq_sound) { ng->irq_sound = 0; if (!ng->raster_pending) m68k_set_virq(2, 0); }
+        if (ng->irq_sound) { ng->irq_sound = 0; if (f_sndirq3()) m68k_set_virq(3, 0); else if (!ng->raster_pending) m68k_set_virq(2, 0); }
         return (ng->soundlatch2<<8) | lo;
     }
     if (a < 0x340002) {                     /* P2 */
@@ -1102,6 +1104,13 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             ng->auto_disabled = (d >> 3) & 1;
             ng->irq_enable = (d >> 4) & 0xF;   /* IRQ2CTRL bits4-7 */
             ng->vblank_enable = d & 1;
+            /* MAME parity (VCKILL=1): IRQ2CTRL bit0 is the VBLANK enable, NOT
+               a raster/timer-C enable. Raster IRQ fires only when the display
+               counter is armed via $3C0008/$3C000A. Games that write $3C0006
+               with bit4 set (e.g. sengoku2 self-service VBlank handler writes
+               $820) must NOT arm raster — otherwise vec $68 (often an empty
+               RAM placeholder) storms and kills the game task. */
+            if (f_vckill()) ng->raster_armed = 0;
             break;
         case 4: ng->display_counter = (ng->display_counter & 0x0000FFFF) | ((uint32_t)(d & 0xFF) << 16); break;
         case 5:
@@ -1110,7 +1119,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             break;
         case 6:
             if (d & 2) { ng->raster_pending = 0; ng->irq_line = 0; m68k_set_virq(2, 0); }
-            if (d & 4) { m68k_set_virq(1, 0); }                          /* vblank */
+            if (d & 4) { m68k_set_virq(1, 0); ng->vbl_line = 0; }          /* vblank ack (VBLHOLD) */
             if (d & 1) { }                                                /* irq3 (cart) */
             break;
         case 7: break;
@@ -3100,8 +3109,16 @@ void ng_run_frame(neogeo *ng)
         if (ng->fc == 0) { ng->fc = ng->auto_speed ? ng->auto_speed : 1; ng->auto_counter++; }
         else ng->fc--;
     }
-    /* vertical interrupt: level 1 (vector 0x64), fires every frame (LSPC auto) */
-    m68k_set_virq(1, 1);
+    /* vertical interrupt: level 1 (vector 0x64), fires every frame (LSPC auto).
+       VBLHOLD=1 (MAME LS74 semantics): the vblank line is a latch that stays
+       asserted until the CPU acks via $3C000C bit2. Games that mask interrupts
+       for a whole frame (ori #0x700,sr self-service VBlank handlers) must keep
+       the line pending, otherwise the BIOS main loop starves (sengoku2: BIOS
+       never processes the cart's $10fd82 transition request -> deadlock). */
+    { static int vblhold = -2;
+      if (vblhold == -2) vblhold = getenv("VBLHOLD") ? 1 : 0;
+      if (!vblhold || !ng->vbl_line) m68k_set_virq(1, 1);
+      ng->vbl_line = 1; }
     /* MAME per-line rendering: arm the framebuffer for this frame; lines are
        drawn at their start inside the chunk loop (mid-frame VRAM/CRAM writes
        become visible, like sprite_line_timer + update_partial in MAME).
@@ -3367,7 +3384,7 @@ void ng_run_frame(neogeo *ng)
        m68k_execute entry and set_sr, so a dropped line is lost until the next
        frame — the BIOS coin screen then never reaches its ISR). */
     if (getenv("VB_CLEAR")) m68k_set_virq(1, 0);    /* A/B: old frame-end clear */
-    if (ng->irq_enable & 5) ng->raster_armed = 1;   /* AUTOLOAD_VBLANK or REPEAT */
+    if (ng->irq_enable & (f_vckill() ? 4 : 5)) ng->raster_armed = 1;   /* VCKILL: only REPEAT bit2 arms raster (bit0 = vblank en) */
     if (ng->fb) {   /* frame-end whole-frame draw (MAME vblank semantics) unless per-line */
         if (!ng->perline) { ng_render_begin(ng, ng->fb); ng->draw_next = 0; }
         while (ng->draw_next < NG_H) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
