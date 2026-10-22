@@ -245,6 +245,9 @@ extern uint16_t z80w_pc(void*);
 /* cached env-flag accessors: getenv on every hot-path call was ~56% of CPU */
 #define DBGFLAG(name, var) static int var(void) { static int v = -1; if (v < 0) v = getenv(name) ? 1 : 0; return v; }
 DBGFLAG("NOIRQ2", f_noirq2)
+static int g_l2gate = 0;   /* L2GATE=<frame>: override soundlatch2 level-2 IRQ gate frame */
+static int g_l2gate_init = 0;
+static inline int l2gate(void) { if (!g_l2gate_init) { g_l2gate_init = 1; const char *e = getenv("L2GATE"); g_l2gate = e ? atoi(e) : 4800; } return g_l2gate; }
 DBGFLAG("ZTRACE",  f_ztrace)
 static int ztf0(void){ static int v=-1; if(v<0){const char*e=getenv("ZTF0"); v=e?atoi(e):3;} return v; }
 static int ztf1(void){ static int v=-1; if(v<0){const char*e=getenv("ZTF1"); v=e?atoi(e):12;} return v; }
@@ -460,7 +463,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
         ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && ng->frame >= 600) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2; quiet during BIOS phase AND game init window (game's transient SR=0x2000 boot window would vector into its empty 0x108600 data flag) */
+    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME soundlatch2_w: sets IRQ_SOUND -> 68K level 2; quiet during BIOS phase AND game init window (game's transient SR=0x2000 boot window would vector into its empty 0x108600 data flag). Default gate 600; L2GATE=<frame> overrides. */
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
                       z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
