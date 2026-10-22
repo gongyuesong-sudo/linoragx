@@ -3256,13 +3256,13 @@ void ng_run_frame(neogeo *ng)
         }
         if (ng->pcprof) {
             static unsigned hist[4096]; static unsigned long tot;
-            unsigned pc = m68k_get_reg(NULL, M68K_REG_PC) & 0xFFFFF;
-            hist[(pc>>6)&4095]++; tot++;
+            unsigned pc = m68k_get_reg(NULL, M68K_REG_PC) & 0xFFFFFF;
+            hist[(pc>>12)&4095]++; tot++;   /* 4KB blocks over full 16MB space (was 64B/1MB, aliased BIOS) */
             ng->pcprof_tot = tot;
             static int dump_at = -1;
             if (dump_at >= 0 && (long)ng->frame == dump_at) {
                 for (int k=0;k<4096;k++) if (hist[k] > (int)(tot/200))
-                    fprintf(stderr, "PCP %05x %lu\n", k<<6, (unsigned long)hist[k]);
+                    fprintf(stderr, "PCP %06x %lu\n", k<<12, (unsigned long)hist[k]);
                 dump_at = -2;
             }
             if (dump_at == -1) { const char *e = getenv("PCPROF"); dump_at = e ? atoi(e) : (int)ng->frame + 100; }
