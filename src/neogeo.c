@@ -3553,6 +3553,13 @@ void ng_run_frame(neogeo *ng)
       }
     }
     if (f_sampoke()) ng->smem[0x0a76] = 1;   /* SAMPOKE experiment: force samsho wait-flag */
+    /* Work-RAM queue area ($101040-$1010ff): games such as samsho5/garou use
+       linked callback queues whose empty-marker is $ffff; on real hardware the
+       SRAM powers up undefined and the marker survives. Ours zeroed it, so the
+       queue walk treated $00 nodes as tasks and the wait-flag never stuck.
+       Pre-fill the area with the empty-marker once at boot (SAMQINIT experiment,
+       A/B-verified zero regression on healthy carts). */
+    if (ng->frame == 2) memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
