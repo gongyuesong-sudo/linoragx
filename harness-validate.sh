@@ -30,5 +30,6 @@ fi
 BMP=/tmp/hv_$ROM.bmp
 LINORAGX_INPUT="5000:10:30,5100:10:30,5200:10:30,5400:8:30" timeout 170 "$BIN" --rom /home/gill/linoragx/roms/$ROM.zip --bios /home/gill/linoragx --frames 12000 --headless --no-audio --dump "$BMP" >/dev/null 2>&1
 n=$($PY -c "from PIL import Image;print(len(Image.open('$BMP').convert('RGB').getcolors(1000000)))" 2>/dev/null)
+[ -z "$MIN" ] && { echo "ERROR: missing min_colors arg (usage: $0 <rom> <min>)"; exit 2; }
 echo "$ROM colors=${n:-0} min=$MIN"
 [ "${n:-0}" -ge "$MIN" ]

@@ -3578,7 +3578,7 @@ void ng_run_frame(neogeo *ng)
        Pre-fill the area with the empty-marker once at boot. Scoped to the
        carts that need it (A/B: blanket prefill regressed mslug3 73c->2c). */
     if (ng->frame == 2 && !getenv("NOQPRE") &&
-        (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5)))
+        (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
     { static int srd = -1;
