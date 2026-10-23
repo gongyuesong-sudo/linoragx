@@ -104,10 +104,21 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
     if (type != ymfm::ACCESS_ADPCM_A && type != ymfm::ACCESS_ADPCM_B) return 0;
     /* LINORAGX FIX: sets without a dedicated ADPCM-B region (no ym_set_rom_b
      * call -> b_rom_size==0) must share the ADPCM-A sample region, per the
-     * MAME-parity note above; previously every B read was OOB -> silent. */
-    const uint8_t *src = (type == ymfm::ACCESS_ADPCM_B && y->b_rom && y->b_rom_size)
-                         ? y->b_rom : y->rom;
-    uint32_t sz = (type == ymfm::ACCESS_ADPCM_B && y->b_rom_size) ? y->b_rom_size : y->rom_size;
+     * MAME-parity note above; previously every B read was OOB -> silent.
+     * ADBSHARE=0 disables the fallback (SMA self-decrypt carts like mslug3
+     * sample their audiocpu program space through ADPCM-B reads and expect
+     * the old zero-fill). */
+    static int adbs = -1;
+    if (adbs < 0) adbs = getenv("ADBSHARE") ? atoi(getenv("ADBSHARE")) : 1;
+    /* Priority: game sample region (y->rom, installed at m1 boot) wins; the
+     * BIOS sm1+sp1v1 concat (b_rom) serves only while no game samples are
+     * installed. Reversed priority starved SMA self-decrypt carts (mslug3)
+     * whose audiocpu program reads its own sample space via ADPCM-B. */
+    const uint8_t *src = y->rom;
+    uint32_t sz = y->rom_size;
+    if ((!src || !sz) && type == ymfm::ACCESS_ADPCM_B && adbs && y->b_rom && y->b_rom_size) {
+        src = y->b_rom; sz = y->b_rom_size;
+    }
     if (!src || address >= sz) return 0;   /* MAME: no wrap, OOB reads 0 */
     return src[address];
 }
