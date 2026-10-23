@@ -102,8 +102,14 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
      * defines a separate adpcmb region; uninstalled/OOB addresses read 0, no
      * wrap. The BIOS defines no sample region at all -> BIOS ADPCM reads 0. */
     if (type != ymfm::ACCESS_ADPCM_A && type != ymfm::ACCESS_ADPCM_B) return 0;
-    if (!y->rom || address >= y->rom_size) return 0;   /* MAME: no wrap, OOB reads 0 */
-    return y->rom[address];
+    /* LINORAGX FIX: sets without a dedicated ADPCM-B region (no ym_set_rom_b
+     * call -> b_rom_size==0) must share the ADPCM-A sample region, per the
+     * MAME-parity note above; previously every B read was OOB -> silent. */
+    const uint8_t *src = (type == ymfm::ACCESS_ADPCM_B && y->b_rom && y->b_rom_size)
+                         ? y->b_rom : y->rom;
+    uint32_t sz = (type == ymfm::ACCESS_ADPCM_B && y->b_rom_size) ? y->b_rom_size : y->rom_size;
+    if (!src || address >= sz) return 0;   /* MAME: no wrap, OOB reads 0 */
+    return src[address];
 }
 
 /* ---- lifecycle ---- */
