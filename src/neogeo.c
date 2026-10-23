@@ -3557,9 +3557,11 @@ void ng_run_frame(neogeo *ng)
        linked callback queues whose empty-marker is $ffff; on real hardware the
        SRAM powers up undefined and the marker survives. Ours zeroed it, so the
        queue walk treated $00 nodes as tasks and the wait-flag never stuck.
-       Pre-fill the area with the empty-marker once at boot (SAMQINIT experiment,
-       A/B-verified zero regression on healthy carts). */
-    if (ng->frame == 2) memset(&ng->smem[0x1040], 0xff, 0x100);
+       Pre-fill the area with the empty-marker once at boot. Scoped to the
+       carts that need it (A/B: blanket prefill regressed mslug3 73c->2c). */
+    if (ng->frame == 2 && !getenv("NOQPRE") &&
+        (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5)))
+        memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
