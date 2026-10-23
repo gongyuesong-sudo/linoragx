@@ -97,6 +97,7 @@ struct neogeo {
     uint8_t k3bl_px;               /* 1=pl_px_decrypt applied, 2=upl variant */
     uint16_t pvc_ram[0x1000];          /* PVC protection RAM @ $2FE000-$2FFFFF */
     uint16_t msl_cmd, msl_ctr;         /* mslugx PROGEOP protection (MAME prot_mslugx.cpp) */
+    uint16_t msl_smacmd; unsigned msl_busy_until;  /* mslugx SMA cmd port $2ffff0 busy echo */
     uint32_t cram_bank;
     uint32_t screen_shadow;   /* systemlatch ch0: MAME set_screen_shadow (150R pulldown) */
     uint32_t cram_bank_render;  /* bank at first CRAM write of the frame (MAME line-render parity) */
@@ -656,8 +657,19 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     if (a < 0x300000) {   /* cart PRG bank window (MAME install_read_bank 0x200000-0x2fffff) */
         if (ng->cart_prot == 12 && a <= 0x201FFF)          /* JOCKEYGP cart RAM */
             return ng->jgram[(a >> 1) & 0xFFF];
+        if (ng->cart_prot == 14 && a >= 0x2FFFF0 && getenv("SMASTREAM")) {
+            static long ssc = 0;
+            if (ssc++ < 3000) fprintf(stderr, "SMSS r f=%u a=%06x pc=%08x\n", ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC)); }
         if (ng->cart_prot == 14 && a >= 0x2FFFE0 && a <= 0x2FFFFF) {  /* mslugx PROGEOP protection_r */
-            if (a >= 0x2FFFFE) return 0x0001;   /* SMA-style ready: game polls $2fffff==1 after cmd write */
+            if (a >= 0x2FFFFE) {   /* SMA-style busy handshake: $2fffff echoes last $2ffff0 cmd
+                                      (game at 0xd282 writes cmd then spins cmp.b $2fffff;
+                                      MAME leaves this to the SMA/m1 device which clears busy
+                                      once the sound CPU consumes the command) */
+                uint8_t cmd = (uint8_t)(ng->msl_smacmd & 0xFF);
+                if (cmd == 0) return 0x0000;
+                if (ng->frame > ng->msl_busy_until) return 0x0000;   /* consumed -> ready */
+                return cmd;                                          /* still busy -> echo */
+            }
             uint16_t res = 0;
             if (ng->msl_cmd == 0x0001) {
                 uint32_t o = 0xdedd2 + ((ng->msl_ctr >> 3) & 0xfff);
@@ -831,6 +843,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             ng->frame, w, mem_mask, ng->kof98_state, m68k_get_reg(NULL, M68K_REG_PC));
         return;
     }
+    if (ng->cart_prot == 14 && a >= 0x2FFFF0 && a <= 0x2FFFF1) {  /* mslugx SMA cmd port: latch + busy window */
+        ng->msl_smacmd = d; ng->msl_busy_until = ng->frame + 4;      /* m1 consumes within a few frames */
+    }
+    if (ng->cart_prot == 14 && a >= 0x2FFFF0 && getenv("SMASTREAM")) {  /* cmd-port traffic log */
+        static long ssw = 0;
+        if (ssw++ < 3000) fprintf(stderr, "SMSS w f=%u a=%06x d=%04x pc=%08x\n", ng->frame, a, d, m68k_get_reg(NULL,M68K_REG_PC)); }
     if (ng->cart_prot == 14 && a >= 0x2FFFE0 && a <= 0x2FFFef) {  /* mslugx PROGEOP protection_w */
         switch ((a - 0x2FFFE0) >> 1) {
             case 0x0: ng->msl_cmd = 0; break;                    /* start new read */
