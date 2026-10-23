@@ -809,10 +809,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
       return (ng->sram[o]<<8)|ng->sram[o+1]; }
 }
 
+int ng_vwrn_get(void) { static int v = -2; if (v == -2) { const char *e = getenv("VWRN"); v = e ? atoi(e) : -1; } return v; }
+
 static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
 {
-    a &= 0xFFFFFF;
-    /* 0x2F00 IRQ control register (MAME neogeo_irqline_w): bit5 -> IRQ2
+    a &= 0xFFFFFF;    /* 0x2F00 IRQ control register (MAME neogeo_irqline_w): bit5 -> IRQ2
        line, bit7&bit6 -> TimerC line. This — not soundlatch2 — is the
        game-facing IRQ2 source on real hardware. */
     if (a == 0x2F00) {
@@ -1243,6 +1244,13 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                                                writeonly16 -> vram bytes, word index = (a&0x1FFFF)>>1) */
         uint32_t o = (a & 0x1FFFF) >> 1;
         if (o < 0x10000) {
+            {   /* VWRN=<n>: also trace the direct-window write path */
+                extern int ng_vwrn_get(void);
+                int vwrn = ng_vwrn_get();
+                if (vwrn >= 0 && (o == (0x8000u|(unsigned)vwrn) || o == (0x8200u|(unsigned)vwrn) || o == (0x8400u|(unsigned)vwrn) ||
+                    o == ((unsigned)vwrn << 6) || (o >= ((unsigned)vwrn << 6) && o < (((unsigned)vwrn << 6) | 0x20))))
+                    fprintf(stderr, "VWRN f=%lu off=%04x val=%04x pc=%08x\n", ng->frame, o, d, m68k_get_reg(NULL,M68K_REG_PC));
+            }
             if (mem_mask & 0xFF00) ng->vram[o] = (ng->vram[o] & 0x00FF) | (d & 0xFF00);
             if (mem_mask & 0x00FF) ng->vram[o] = (ng->vram[o] & 0xFF00) | (d & 0x00FF);
         }
