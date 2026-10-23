@@ -673,12 +673,13 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             uint16_t res = 0;
             if (ng->msl_cmd == 0x0001) {
                 uint32_t o = 0xdedd2 + ((ng->msl_ctr >> 3) & 0xfff);
-                uint8_t b = (o < ng->rom_size) ? ng->rom[o] : 0xFF;
+                /* MAME: space.read_byte — CPU view (SMA-decrypted), NOT raw ng->rom */
+                uint8_t b = (uint8_t)m68k_read_memory_8(o);
                 res = (uint16_t)((b >> (~ng->msl_ctr & 7)) & 1); ng->msl_ctr++;
             } else if (ng->msl_cmd == 0x0fff) {
                 int32_t sel = (int32_t)m68k_read_memory_16(0x10f00a) - 1;
                 uint32_t o = 0xdedd2 + (((uint32_t)sel >> 3) & 0xfff);
-                uint8_t b = (o < ng->rom_size) ? ng->rom[o] : 0xFF;
+                uint8_t b = (uint8_t)m68k_read_memory_8(o);
                 res = (uint16_t)((b >> (~(uint32_t)sel & 7)) & 1);
             }
             if (f_protdbg()) fprintf(stderr, "MSLP r=%06x cmd=%04x res=%d pc=%08x\n", a, ng->msl_cmd, res, m68k_get_reg(NULL,M68K_REG_PC));
