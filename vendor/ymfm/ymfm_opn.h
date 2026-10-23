@@ -654,7 +654,10 @@ public:
 	using output_data = ymfm_output<OUTPUTS>;
 
 	// constructor
-	ym2610(ymfm_interface &intf, uint8_t channel_mask = 0x36);
+	// LINORAGX FIX: default 0x36 (YM2608 rhythm mask) silenced FM channels
+	// 1 and 4, which Neo Geo sm1 drivers use heavily (keyon data 0x34/0x35
+	// target channel 1). The YM2610 has 6 plain FM channels -> 0x3f.
+	ym2610(ymfm_interface &intf, uint8_t channel_mask = 0x3f);
 
 	// configuration
 	void ssg_override(ssg_override &intf) { m_ssg.override(intf); }
