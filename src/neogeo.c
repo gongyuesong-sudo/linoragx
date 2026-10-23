@@ -3137,7 +3137,16 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
         uint8_t *fx = calloc(fsz, 1);
         int cart_has_fix = 0;
         for (uint32_t i = 0; i < ng->fixed_size && i < fsz; i++) if (ng->fixed[i]) { cart_has_fix = 1; break; }
-        if (ng->sfix && !cart_has_fix) for (uint32_t i = 0; i < 0x20000; i++) fx[i] = ng->sfix[i];
+        /* MAME parity: BIOS sfix overlays ONLY carts whose config loads it as the
+         * fixed source (kof2000/kof2001/kof99k/garou family, mslug3 family,
+         * preisle2). Other fix-less carts keep a zero fixed region (MAME ERASEFF). */
+        static const char *sfix_carts[] = {
+            "kof2000","kof2000n","kof2001","kof99","kof99k","garou","garouh",
+            "mslug3","mslug3h","mslug3a","preisle2","preis2", NULL };
+        int want_sfix = 0;
+        for (int si = 0; sfix_carts[si]; si++)
+            if (!strncmp(ng->gamename, sfix_carts[si], strlen(sfix_carts[si]))) { want_sfix = 1; break; }
+        if (ng->sfix && !cart_has_fix && want_sfix) for (uint32_t i = 0; i < 0x20000; i++) fx[i] = ng->sfix[i];
         for (uint32_t i = 0; i < ng->fixed_size && i < fsz; i++) fx[i] |= ng->fixed[i];
         free(ng->fixed); ng->fixed = fx; ng->fixed_size = fsz;
         if (getenv("FIXDUMP")) {
