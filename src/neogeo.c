@@ -96,6 +96,7 @@ struct neogeo {
     uint16_t k3bl_overlay;         /* kof2k3bl bootleg overlay register */
     uint8_t k3bl_px;               /* 1=pl_px_decrypt applied, 2=upl variant */
     uint16_t pvc_ram[0x1000];          /* PVC protection RAM @ $2FE000-$2FFFFF */
+    uint16_t msl_cmd, msl_ctr;         /* mslugx PROGEOP protection (MAME prot_mslugx.cpp) */
     uint32_t cram_bank;
     uint32_t screen_shadow;   /* systemlatch ch0: MAME set_screen_shadow (150R pulldown) */
     uint32_t cram_bank_render;  /* bank at first CRAM write of the frame (MAME line-render parity) */
@@ -655,6 +656,22 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     if (a < 0x300000) {   /* cart PRG bank window (MAME install_read_bank 0x200000-0x2fffff) */
         if (ng->cart_prot == 12 && a <= 0x201FFF)          /* JOCKEYGP cart RAM */
             return ng->jgram[(a >> 1) & 0xFFF];
+        if (ng->cart_prot == 14 && a >= 0x2FFFE0 && a <= 0x2FFFFF) {  /* mslugx PROGEOP protection_r */
+            if (a >= 0x2FFFFE) return 0x0001;   /* SMA-style ready: game polls $2fffff==1 after cmd write */
+            uint16_t res = 0;
+            if (ng->msl_cmd == 0x0001) {
+                uint32_t o = 0xdedd2 + ((ng->msl_ctr >> 3) & 0xfff);
+                uint8_t b = (o < ng->rom_size) ? ng->rom[o] : 0xFF;
+                res = (uint16_t)((b >> (~ng->msl_ctr & 7)) & 1); ng->msl_ctr++;
+            } else if (ng->msl_cmd == 0x0fff) {
+                int32_t sel = (int32_t)m68k_read_memory_16(0x10f00a) - 1;
+                uint32_t o = 0xdedd2 + (((uint32_t)sel >> 3) & 0xfff);
+                uint8_t b = (o < ng->rom_size) ? ng->rom[o] : 0xFF;
+                res = (uint16_t)((b >> (~(uint32_t)sel & 7)) & 1);
+            }
+            if (f_protdbg()) fprintf(stderr, "MSLP r=%06x cmd=%04x res=%d pc=%08x\n", a, ng->msl_cmd, res, m68k_get_reg(NULL,M68K_REG_PC));
+            return res;
+        }
         if (ng->cart_prot >= 2 && ng->cart_prot <= 7) {      /* SMA protection ports */
             int rndr = 0;                                    /* random_r port per cart type (MAME neogeo.cpp) */
             switch (ng->cart_prot) {
@@ -812,6 +829,17 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         else if (w == 0x00f0) ng->kof98_state = 2;
         if (f_protdbg()) fprintf(stderr, "PROTW f=%d d=%04x m=%04x st=%d pc=%08x\n",
             ng->frame, w, mem_mask, ng->kof98_state, m68k_get_reg(NULL, M68K_REG_PC));
+        return;
+    }
+    if (ng->cart_prot == 14 && a >= 0x2FFFE0 && a <= 0x2FFFef) {  /* mslugx PROGEOP protection_w */
+        switch ((a - 0x2FFFE0) >> 1) {
+            case 0x0: ng->msl_cmd = 0; break;                    /* start new read */
+            case 0x1: case 0x2: ng->msl_cmd |= (uint16_t)d; break; /* command bits */
+            case 0x3: break;                                     /* finished */
+            case 0x5: ng->msl_cmd = 0; ng->msl_ctr = 0; break;   /* init */
+            default: break;
+        }
+        if (f_protdbg()) fprintf(stderr, "MSLP w=%06x d=%04x cmd=%04x pc=%08x\n", a, d, ng->msl_cmd, m68k_get_reg(NULL,M68K_REG_PC));
         return;
     }
     if (ng->cart_prot >= 2 && ng->cart_prot <= 7) {          /* SMA write_bankprot, port per cart type */
@@ -2868,6 +2896,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "sma_mslug3a\"") && sz >= 0x900000) { sma_dec_mslug3a(ng->rom); ng->cart_prot = 6; }
                             else if (sw_has(sw, swend, "sma_mslug3\"")  && sz >= 0x900000) { sma_dec_mslug3(ng->rom);  ng->cart_prot = 5; }
                             else if (sw_has(sw, swend, "sma_kof2k\"")   && sz >= 0x900000) { sma_dec_kof2000(ng->rom); ng->cart_prot = 7; }
+                            else if (sw_has(sw, swend, "rom_mslugx\"")  && sz >= 0x500000) { ng->cart_prot = 14; }
                             else if (sw_has(sw, swend, "pvc_mslug5\"")  && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_mslug5);  ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_svc\"")     && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_svc);     ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_kf2k3h\"")  && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003h);ng->cart_prot = 8; }
