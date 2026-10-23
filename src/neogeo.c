@@ -1154,6 +1154,17 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         case 1:
             if (1) { static int k=0; if (ng->vram_offset>=0xC000 && ng->vram_offset<0xC800 && ++k<=20) fprintf(stderr, "VW off=%04x val=%04x\n", ng->vram_offset, d); }
             static int vwr = -1; if (vwr < 0) vwr = getenv("VWR") ? 1 : 0;
+            {   /* VWRN=<n>: trace all writes to sprite entry n (zoom/y/x words) with 68k PC */
+                static int vwrn = -2;
+                if (vwrn == -2) { const char *e = getenv("VWRN"); vwrn = e ? atoi(e) : -1; }
+                if (vwrn >= 0) {
+                    uint32_t o = ng->vram_offset;
+                    if ((o & 0xFE00u) != 0x8000u && (o>>8) != 0) {}
+                    if ((o|0u) == (0x8000u|(unsigned)vwrn) || (o|0u) == (0x8200u|(unsigned)vwrn) || (o|0u) == (0x8400u|(unsigned)vwrn) ||
+                        (o|0u) == (unsigned)vwrn || (o|0u) == (0x200u|(unsigned)vwrn) || (o|0u) == (0x400u|(unsigned)vwrn))
+                        fprintf(stderr, "VWRN f=%lu off=%04x val=%04x pc=%08x\n", ng->frame, o, d, m68k_get_reg(NULL,M68K_REG_PC));
+                }
+            }
             if (vwr) {   /* head-sprite entry write trace (n=258/259) */
                 uint32_t o = ng->vram_offset;
                 if ((o >= 0x4080 && o < 0x40C0) ||
