@@ -157,16 +157,37 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     if (ymdbg) fprintf(stderr, "YM%c f=%d %02x=%02x\n", 'A'+chipno, g_ym_frame, reg, val);
     if (chipno == 2) return;                 /* legacy YM2151 mirror: bank A IS the OPM FM, ymfm handles it */
     int c = chipno ? 1 : 0;
-    y->chip.write(c ? 2 : 0, reg);           /* bank A: offset 0/1, bank B: 2/3 */
-    y->chip.write(c ? 3 : 1, val);
-    if (c && reg == 0x00 && getenv("AADBG")) {
-        static int an = 0;
-        if ((an++ % 8) == 0) { for (int ai = 0; ai < 5; ai++) { uint32_t pl, ad; y->chip.dbg_aa(ai, pl, ad);
-            fprintf(stderr, "AADBG bd=%02x ch%d play=%u addr=%x\n", val, ai, pl, ad); } }
+    /* MAME ym2610 bank semantics (ymopn.cpp): bank A (0x2A0000/1) is the pure
+       OPM FM register file; bank B (0x2A0002/3) is SSG(00-0F)/ADPCM-B(10-1B)/
+       EOS(1C)/ADPCM-A(20-3F)/test+IRQ-mask(80+).  ymfm's lower port mixes
+       SSG+ADPCM-B+FM in one address space, so route explicitly: FM regs only
+       reach ymfm via the lower port at >=0x1D; bank B SSG/ADPCM-B also use the
+       lower port (their 00-1C aliases), ADPCM-A the upper port (0x100+ alias).
+       Previous direct bank->port mapping sent bank A 00-1C to SSG/ADPCM-B and
+       bank B 00-1C to ADPCM-A: the BIOS SSG test beeps (00/01 tone writes)
+       never reached the SSG engine (FM+SSG stream identically zero). */
+    if (chipno == 0) {
+        if (reg >= 0x1d) { y->chip.write(0, reg); y->chip.write(1, val); }
+        /* reg < 0x1D: OPM timer/noise — host-owned timers below.  Forwarding
+           these to ymfm's lower port aliased them as SSG volume / ADPCM-B
+           START writes (BIOS OPM timer loads polluted both). */
+    } else if (reg <= 0x2f) {
+        /* ADPCM-A register file (dump/total/test 00-02, levels 08-0D,
+           start 10-1D, end 20-2D) — game m1 drivers write it here. */
+        y->chip.write(2, reg); y->chip.write(3, val);
+    } else if (reg == 0xb5) {
+        y->irqen[0] = (y->irqen[0] & 0x80) | (val & 0x40);   /* IRQA mask (0=enable) */
+    } else if (reg == 0xb6) {
+        y->irqen[1] = (y->irqen[1] & 0x40) | (val & 0x80);   /* IRQB mask */
     }
+    /* bank B 40-7F are YM2610 TEST registers: the old mapping aliased them
+       into ymfm's upper port at 0x140+ which routed straight into FM slot
+       registers 40-7F (BIOS writes 41-4E=7F every self-test -> FM muted,
+       the identically-zero FM stream).  Drop them. */
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
+    if (c == 0) { /* timers belong to bank A only; bank B 24/25/27 are ADPCM-A regs */
     if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0xFF00) | val; y->tloadb[c] = (y->tloadb[c] & 0x300) | val; }
     if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x00FF) | ((val & 0x03) << 8); y->tloadb[c] = (y->tloadb[c] & 0x0FF) | ((val & 0x03) << 8); }
     if (reg == 0x27) {  /* timer/irq control (LEGACY mapping - sm1 BIOS driver depends on it):
@@ -186,6 +207,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
         y->irqen[c] = val & 0xC0;
         if (!(val & 0x02)) y->tflag[c] &= ~2;
         if (!(val & 0x04)) y->tflag[c] &= ~1;
+    }
     }
 }
 
