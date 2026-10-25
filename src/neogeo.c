@@ -3358,6 +3358,12 @@ void ng_run_frame(neogeo *ng)
                 uint32_t base = (a5 - 0x8000) & 0xFFFFFF;
                 fprintf(stderr, "PCSTOP f=%d pc=%08x a5=%08x a4=%08x a0=%08x sp=%08x\n",
                     ng->frame, pc, a5, a4, a0, sp);
+                fprintf(stderr, "PCSTOP d0=%08x d1=%08x d2=%08x d3=%08x d6=%08x d7=%08x a1=%08x a2=%08x a3=%08x a6=%08x\n",
+                    m68k_get_reg(NULL,M68K_REG_D0), m68k_get_reg(NULL,M68K_REG_D1),
+                    m68k_get_reg(NULL,M68K_REG_D2), m68k_get_reg(NULL,M68K_REG_D3),
+                    m68k_get_reg(NULL,M68K_REG_D6), m68k_get_reg(NULL,M68K_REG_D7),
+                    m68k_get_reg(NULL,M68K_REG_A1), m68k_get_reg(NULL,M68K_REG_A2),
+                    m68k_get_reg(NULL,M68K_REG_A3), m68k_get_reg(NULL,M68K_REG_A6));
                 fprintf(stderr, "PCSTOP [%06x]=%04x:%04x\n", base,
                     ng->workram[(base & 0xFFFF) >> 1], ng->workram[((base + 2) & 0xFFFF) >> 1]);
                 for (int z = 0; z < 8; z++)
