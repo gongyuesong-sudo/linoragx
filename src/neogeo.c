@@ -1463,6 +1463,13 @@ static uint8_t *sw_build(const char *zip, const rg_ent *e, int n, uint32_t cap, 
                    prefix (pnyaa "267-m1.m1" vs swlist "m1.m1") — retry by
                    name suffix before giving up */
                 if (rom_load_zip_suffix(zip, e[i].fname, &file, &fsz) != 0) {
+                    /* old dump sets rename ROMs wholesale (pnyaa zip "267-p1.p1"
+                       vs swlist "pn202.p1") — retry by extension + size match */
+                    const char *ext = strrchr(e[i].fname, '.');
+                    if (ext && rom_load_zip_suffix(zip, ext, &file, &fsz) == 0 &&
+                        fsz == e[i].size) {
+                        if (getenv("SWBUILD")) fprintf(stderr, "[swb] EXT %s\n", e[i].fname);
+                    } else {
                     /* SMA chip dumps are colour-prefixed in MAME ("green.neo-sma",
                        "white.neo-sma") but plain in many sets ("neo-sma") */
                     const char *dot = strchr(e[i].fname, '.');
@@ -1471,6 +1478,7 @@ static uint8_t *sw_build(const char *zip, const rg_ent *e, int n, uint32_t cap, 
                         file = 0; continue;
                     }
                     if (getenv("SWBUILD")) fprintf(stderr, "[swb] DOT %s\n", e[i].fname);
+                    }
                 } else if (getenv("SWBUILD")) fprintf(stderr, "[swb] SUFFIX %s\n", e[i].fname);
             } else if (getenv("SWBUILD")) fprintf(stderr, "[swb] LOAD %s off=%x size=%x fsz=%x byte=%d swap=%d\n",
                 e[i].fname, e[i].offset, e[i].size, fsz, e[i].byte, e[i].swap);
