@@ -141,6 +141,7 @@ struct neogeo {
     int      mc_testmode;
     int      mc_dout;          /* current DO bit (OE=1 -> direct) */
     int      mc_tp;
+    int      mc_tp_en;         /* TP square-wave timer enabled (REGISTER_HOLD/TP modes) */
     uint8_t  adpcm_a[4];
     uint8_t  adpcm_b[4];
     uint8_t  ym_reg[2];          /* YM2610 A/B register latch (two-port protocol) */
@@ -499,6 +500,11 @@ static void mc_stb_rise(neogeo *ng)
                        ng->mc_shift[3], ng->mc_shift[4], ng->mc_shift[5], ng->mc_dout); }
     if (m_c == 0 || (m_c >= 4 && m_c < 15))
         ng->mc_testmode = 0;
+    /* MAME upd1990a: REGISTER_HOLD and all TP/INT modes run the TP square
+     * wave timer (64Hz typical); MODE_TEST drives TP low.  Approximate the
+     * square wave by a per-frame toggle (~30Hz) — the BIOS only detects edges. */
+    ng->mc_tp_en = (m_c == 0 || (m_c >= 3 && m_c < 15)) ? 1 : 0;
+    if (m_c == 15) ng->mc_tp = 0;
     switch (m_c) {
     case 1:  /* MODE_SHIFT */
         ng->mc_dout = ng->mc_shift[0] & 1;
@@ -764,7 +770,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                                                coin-test creates and verifies a JEIDA
                                                card through this line; absent bits
                                                make the BIOS test fail with code 0x80. */
+        /* MAME upd1990a: TP (bit6) is the card's square-wave output line —
+         * low until the BIOS puts the card in a TP mode, then toggling.
+         * Games (mslug3) spin in the BIOS until a TP edge appears. */
         uint16_t hi = getenv("SYSNOCARD") ? 0xFF : 0x8F;
+        if (ng->mc_tp) hi |= 0x40;
         if (ng->buttons[0] & 0x100) hi &= ~0x01;
         if (ng->buttons[0] & 0x200) hi &= ~0x02;
         if (ng->buttons[1] & 0x100) hi &= ~0x04;
@@ -3610,6 +3620,7 @@ void ng_run_frame(neogeo *ng)
         (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
+    if (ng->mc_tp_en) ng->mc_tp ^= 1;   /* UPD4990A TP square wave (~30Hz approx) */
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
       if (srd) fprintf(stderr, "SRDBG f=%d sr=%04x v1=%d v2=%d pc=%08x\n",
