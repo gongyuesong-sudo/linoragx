@@ -141,7 +141,7 @@ struct neogeo {
     int      mc_testmode;
     int      mc_dout;          /* current DO bit (OE=1 -> direct) */
     int      mc_tp;
-    int      mc_tp_en;         /* TP square-wave timer enabled (REGISTER_HOLD/TP modes) */
+    int      mc_tp_half;       /* frames per TP half-period (MAME m_timer_tp period; 0=off) */
     uint8_t  adpcm_a[4];
     uint8_t  adpcm_b[4];
     uint8_t  ym_reg[2];          /* YM2610 A/B register latch (two-port protocol) */
@@ -500,11 +500,17 @@ static void mc_stb_rise(neogeo *ng)
                        ng->mc_shift[3], ng->mc_shift[4], ng->mc_shift[5], ng->mc_dout); }
     if (m_c == 0 || (m_c >= 4 && m_c < 15))
         ng->mc_testmode = 0;
-    /* MAME upd1990a: REGISTER_HOLD and all TP/INT modes run the TP square
-     * wave timer (64Hz typical); MODE_TEST drives TP low.  Approximate the
-     * square wave by a per-frame toggle (~30Hz) — the BIOS only detects edges. */
-    ng->mc_tp_en = (m_c == 0 || (m_c >= 3 && m_c < 15)) ? 1 : 0;
-    if (m_c == 15) ng->mc_tp = 0;
+    /* MAME m_timer_tp is armed only by REGISTER_HOLD/TP modes; SHIFT, TIME
+     * and TEST hold whatever period was last armed (mslug3 BIOS times its
+     * TEST window against the 1Hz TP edges armed by TP_1S_INT). */
+    switch (m_c) {
+    case 0: case 4: case 5: case 6: case 7: ng->mc_tp_half = 1;   break;  /* ~64Hz */
+    case 8:  ng->mc_tp_half = 30;   break;   /* TP_1S_INT  0.5s half */
+    case 9:  ng->mc_tp_half = 300;  break;   /* TP_10S_INT */
+    case 10: ng->mc_tp_half = 900;  break;   /* TP_30S_INT */
+    case 11: ng->mc_tp_half = 1800; break;   /* TP_60S_INT */
+    default: break;
+    }
     switch (m_c) {
     case 1:  /* MODE_SHIFT */
         ng->mc_dout = ng->mc_shift[0] & 1;
@@ -524,6 +530,9 @@ static void mc_stb_rise(neogeo *ng)
 
 static void mc_clk_rise(neogeo *ng)
 {
+    { static int ckd = -1;
+      if (ckd < 0) ckd = getenv("CLKDBG") ? 1 : 0;
+      if (ckd) fprintf(stderr, "CLK f=%d c=%d di=%d\n", ng->frame, ng->mc_c, ng->mc_di); }
     /* serial mode: always clock the 4-bit command register */
     int in = ng->mc_shift[6] & 1;
     ng->mc_shift[6] >>= 1;
@@ -540,6 +549,7 @@ static void mc_clk_rise(neogeo *ng)
 
 static void mc_rtc_init(neogeo *ng)
 {
+    ng->mc_tp_half = 1;   /* ~64Hz idle square wave until first STB arms a mode */
     time_t t = time(NULL);
     struct tm *lt = localtime(&t);
     ng->mc_time[0] = (uint8_t)(((lt->tm_sec/10)<<4) | (lt->tm_sec%10));
@@ -753,9 +763,18 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         /* UPD4990A: TP toggles with serial clock; idle = slow RTC square
            wave.  Frame-based: the BIOS validates the TP period against Timer
            C counts (calendar check) and only passes with ~30-frame halves. */
-        if ((ng->mc_shift[6] & 0xF) && ng->frame < 400) { lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0)); }
-        else if ((ng->frame / 30) & 1) lo |= 0x40;
-        lo |= 0x80;
+        if ((ng->mc_shift[6] & 0xF) && ng->frame < 400) {
+            lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
+            /* MAME neogeo.cpp AUDIO_COIN bit7 = upd4990a data_out_r: the BIOS
+               shifts the 48-bit time back out through this line after
+               TIME_READ/SHIFT; hardwiring 1 made mslug3's calendar readback
+               garbage -> endless self-test retry loop. */
+            lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
+        }
+        else {
+            if ((ng->frame / 30) & 1) lo |= 0x40;
+            lo |= 0x80;   /* idle: bit7 stays 1 (games/BIOS read it high) */
+        }
         /* reading AUDIO_COIN acks IRQ_SOUND (MAME audio_coin_r) */
         if (ng->irq_sound) { ng->irq_sound = 0; if (f_sndirq3()) m68k_set_virq(3, 0); else if (!ng->raster_pending) m68k_set_virq(2, 0); }
         return (ng->soundlatch2<<8) | lo;
@@ -1276,8 +1295,14 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
     if (a < 0xD00000) return;
     { uint32_t o = a & 0xFFFF;
       if (f_sramw() && ((o >= 0xFE && o <= 0x130) || o == 0x44 || o == 0x46 || o == 0x124))
-          fprintf(stderr, "SRAMW f=%d o=%04x d=%04x m=%04x pc=%08x\n", ng->frame, o, d, mem_mask,
-              m68k_get_reg(NULL, M68K_REG_PC));
+          fprintf(stderr, "SRAMW f=%d o=%04x d=%04x m=%04x pc=%08x unlocked=%d\n", ng->frame, o, d, mem_mask,
+              m68k_get_reg(NULL, M68K_REG_PC), ng->sram_unlocked);
+      /* MAME neogeo.cpp save_ram_w: writes land only while the system latch
+         (bit 6) has the save RAM unlocked.  asia-s3 BIOS leaves it locked when
+         it seeds the SRAM save directory; ungated writes left a non-zero entry
+         at 0xD00124 and the BIOS scan (tst.b loop) then halted on CALENDAR
+         ERROR (mslug3 family). */
+      if (!ng->sram_unlocked) return;
       if (mem_mask & 0xFF00) ng->sram[o] = d>>8;
       if (mem_mask & 0x00FF) ng->sram[o+1] = d&0xFF; }
 }
@@ -3620,32 +3645,19 @@ void ng_run_frame(neogeo *ng)
         (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
-    if (ng->mc_tp_en) ng->mc_tp ^= 1;   /* UPD4990A TP square wave (~30Hz approx) */
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
       if (srd) fprintf(stderr, "SRDBG f=%d sr=%04x v1=%d v2=%d pc=%08x\n",
           ng->frame, (unsigned)m68k_get_reg(NULL, M68K_REG_SR),
           m68k_get_virq(1), m68k_get_virq(2),
           (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
-    /* UPD4990A TP toggle period follows the armed mode (MAME m_timer_tp):
-       TP_1S/10S/30S/60S_INT = 0.5s/5s/15s/30s halves; TEST = 32Hz;
-       everything else ~64Hz (per-frame at 60fps). */
-    {
-        int tp_div = 1;
-        switch (ng->mc_c) {
-        case 8:  tp_div = 30;  break;   /* TP_1S_INT  */
-        case 9:  tp_div = 300; break;   /* TP_10S_INT */
-        case 10: tp_div = 900; break;   /* TP_30S_INT */
-        case 11: tp_div = 1800;break;   /* TP_60S_INT */
-        case 15: tp_div = 2;   break;   /* TEST: 32Hz */
-        default: tp_div = 1;   break;   /* ~64Hz */
-        }
-        if ((ng->frame % tp_div) == 0) ng->mc_tp ^= 1;
-    }
+    /* UPD4990A TP square wave: half-period armed by mc_stb_rise (mc_tp_half). */
+    if (ng->mc_tp_half && (ng->frame % ng->mc_tp_half) == 0) ng->mc_tp ^= 1;
     if (ng->mc_testmode) {
-        /* MAME test_tick @1024Hz (1990A): raw ++ with carry chain, DO=(year==0).
-           Approximate 1024Hz by ~17 ticks per 60fps frame. */
-        for (int k = 0; k < 17; k++) {
+        /* MAME test_tick @8192Hz (uPD4990A variant, clock 32768/div4): raw ++
+           with carry chain, DO=(year==0).  Approximate by 136 ticks per frame;
+           the BIOS times this rate against TP edges to validate the MCU. */
+        for (int k = 0; k < 136; k++) {
             int i;
             for (i = 0; i < 6; i++) { if (++ng->mc_time[i]) break; }
             (void)i;
