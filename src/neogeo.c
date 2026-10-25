@@ -633,6 +633,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             if (rf) fprintf(rf, "f=%d a=%06x v=%04x pc=%08x\n", ng->frame, a,
                 (unsigned)((ng->rom[a]<<8)|ng->rom[a+1]), m68k_get_reg(NULL,M68K_REG_PC));
         }
+        if (!ng->rom || a+2 > ng->rom_size) return 0xFFFF;
         return (ng->rom[a]<<8)|ng->rom[a+1];
     }
     if (a < 0x110000) {   /* SMEM: 64K shared RAM (68K view) */
@@ -763,12 +764,13 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         /* UPD4990A: TP toggles with serial clock; idle = slow RTC square
            wave.  Frame-based: the BIOS validates the TP period against Timer
            C counts (calendar check) and only passes with ~30-frame halves. */
-        if ((ng->mc_shift[6] & 0xF) && ng->frame < 400) {
+        if (ng->mc_shift[6] & 0xF) {
+            /* MAME: once any command latches, TP/DO stay driven by the chip
+               state for the whole session (get_data_out = m_data_out, OE tied
+               high).  The old frame<400 gate dropped mslug3's calendar reads
+               (they recur every ~180-frame self-test cycle) back to the idle
+               all-ones level -> endless retry. */
             lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
-            /* MAME neogeo.cpp AUDIO_COIN bit7 = upd4990a data_out_r: the BIOS
-               shifts the 48-bit time back out through this line after
-               TIME_READ/SHIFT; hardwiring 1 made mslug3's calendar readback
-               garbage -> endless self-test retry loop. */
             lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
         }
         else {
@@ -800,7 +802,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         if (ng->buttons[1] & 0x200) hi &= ~0x08;
         return (hi<<8) | 0xFF;
     }
-    if (a >= 0x380050 && a < 0x380052 && (ng->mc_shift[6] & 0xF) && ng->frame < 400)   /* UPD4990A out (BIOS phase): bit6 TP, bit7 DO */
+    if (a >= 0x380050 && a < 0x380052 && (ng->mc_shift[6] & 0xF))   /* UPD4990A out: bit6 TP, bit7 DO (state-driven, no frame gate) */
         return (uint16_t)(((ng->mc_tp ? 0x40 : 0) | (ng->mc_dout ? 0x80 : 0)) * 0x101);
     if (a < 0x3E0000) {                     /* video registers R (mirror 0x1FFF8) */
         switch ((a & 0x6)>>1) {
@@ -818,6 +820,20 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     }
     if (a < 0x400000) return 0xFFFF;
     if (a < 0x420000) return ng->cram[((a>>1)&0xFFF) | ng->cram_bank];
+    if (a >= 0x800000 && a < 0xC00000 &&
+        m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000) {
+                                            /* program ROM mirror (MAME mirror mask) for
+                                               CODE fetches: mslug3's SMA trampoline
+                                               `jsr $aaaaaaaa` lands here; without the
+                                               mirror it read memcard garbage, crashed
+                                               into the BIOS reset and looped forever.
+                                               BIOS self-test also probes 0x800000+ as
+                                               data (pc in BIOS) — keep the legacy
+                                               memcard/0xFFFF view for those. */
+        uint32_t o = ng->prg_bank_base + (a & 0xFFFFF);
+        if (!ng->rom || o + 2 > ng->rom_size) return 0xFFFF;
+        return (ng->rom[o]<<8)|ng->rom[o+1];
+    }
     if (a < 0xC00000)                       /* JEIDA memcard: 0xFF00|data when unlocked */
         return (!ng->mc_lock1 && ng->mc_unlock2 && ng->mc_regsel)
              ? (0xFF00 | ng->mc_data[(a >> 1) & 0x7FF]) : 0xFFFF;
@@ -1454,12 +1470,16 @@ static uint8_t *sw_build(const char *zip, const rg_ent *e, int n, uint32_t cap, 
                    prefix (pnyaa "267-m1.m1" vs swlist "m1.m1") — retry by
                    name suffix before giving up */
                 if (rom_load_zip_suffix(zip, e[i].fname, &file, &fsz) != 0) {
-                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] MISS %s\n", e[i].fname);
-                    file = 0; continue;
-                }
-                if (getenv("SWBUILD")) fprintf(stderr, "[swb] SUFFIX %s\n", e[i].fname);
-            }
-            if (getenv("SWBUILD")) fprintf(stderr, "[swb] LOAD %s off=%x size=%x fsz=%x byte=%d swap=%d\n",
+                    /* SMA chip dumps are colour-prefixed in MAME ("green.neo-sma",
+                       "white.neo-sma") but plain in many sets ("neo-sma") */
+                    const char *dot = strchr(e[i].fname, '.');
+                    if (!dot || rom_load_zip(zip, dot + 1, &file, &fsz) != 0) {
+                        if (getenv("SWBUILD")) fprintf(stderr, "[swb] MISS %s\n", e[i].fname);
+                        file = 0; continue;
+                    }
+                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] DOT %s\n", e[i].fname);
+                } else if (getenv("SWBUILD")) fprintf(stderr, "[swb] SUFFIX %s\n", e[i].fname);
+            } else if (getenv("SWBUILD")) fprintf(stderr, "[swb] LOAD %s off=%x size=%x fsz=%x byte=%d swap=%d\n",
                 e[i].fname, e[i].offset, e[i].size, fsz, e[i].byte, e[i].swap);
             pos = 0; fswap = e[i].swap; fbyte = e[i].byte; f32 = e[i].l32;
         }
@@ -1685,6 +1705,10 @@ static void sma_dec_mslug3(uint8_t *R)
     static const int bp[15]={2,11,0,14,6,4,13,8,9,3,10,7,5,12,1};
     uint8_t *P = R + 0x100000;
     for (uint32_t i = 0; i < 0x400000; i++) wrw(P, i, (uint16_t)bswp(rdw(P,i),16,dp));
+    /* MAME fills the SMA MCU's 0xC0000-byte memory with this permuted copy;
+       our 68K low window is served from it.  region[0xC0000,0x100000) holds
+       the SMA chip dump (neo-sma) loaded by sw_build — the game's jsr
+       $ecea8 executes code stored there inside the SMA chip. */
     for (uint32_t i = 0; i < 0x60000; i++)
         wrw(R, i, rdw(R, 0x2E8000 + bswp(i,19,fp)));
     static uint16_t buf[0x8000];
