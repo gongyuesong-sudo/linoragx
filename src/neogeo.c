@@ -2627,10 +2627,11 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
  * wordswap -> decrypt (bus-transcribed rules) -> wordswap == MAME result
  * (vec 0010f300, header "NE", region code non-zero). */
 /* --- bootleg boot_* cart static decrypt (MAME devices/bus/neogeo/prot_misc.cpp) --- */
+/* MAME bitswap<N>(x, p0..pN-1): result bit (n-1-i) = x bit p[i] */
 static uint32_t bs_bits(uint32_t x, const int *p, int n)
 {
     uint32_t r = 0;
-    for (int i = 0; i < n; i++) if ((x >> p[i]) & 1) r |= 1u << i;
+    for (int i = 0; i < n; i++) if ((x >> p[n-1-i]) & 1) r |= 1u << i;
     return r;
 }
 /* kof97oro: word XOR-swap over 0x500000 (2-byte groups keep BE order) */
