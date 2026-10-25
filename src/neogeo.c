@@ -2997,7 +2997,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "pvc_mslug5\"")  && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_mslug5);  ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_svc\"")     && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_svc);     ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_kf2k3h\"")  && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003h);ng->cart_prot = 8; }
-                            else if (sw_has(sw, swend, "pvc_kof2k\"")   && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003); ng->cart_prot = 8; }
+                            else if (sw_has(sw, swend, "pvc_kf2k3\"")   && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003); ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "boot_cthd2k3\"")) { cthd2003_decrypt(ng); cthd_patch(ng); ng->cart_prot = 9; }
                             else if (sw_has(sw, swend, "k2k2_matrim\"")) { matrim_dec68k(ng);  ng->cart_prot = 10; ng->fixed_bank_type = 2; }
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
@@ -3243,6 +3243,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     m68k_set_instr_hook_callback(linoragx_pc_hook);  /* must follow m68k_init (it clears callbacks) */
     if (getenv("EXCPROBE")) { linoragx_excprobe = 1; linoragx_exc_ng = ng; }
     mc_rtc_init(ng);
+    if (getenv("MCTIME")) fprintf(stderr, "MCTIME %02x %02x %02x %02x %02x %02x\n", ng->mc_time[0], ng->mc_time[1], ng->mc_time[2], ng->mc_time[3], ng->mc_time[4], ng->mc_time[5]);
     ng->screen_enabled = 1;
     ng->mc_lock1 = 1; ng->mc_unlock2 = 1; ng->mc_regsel = 1;
 
