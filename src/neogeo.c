@@ -94,6 +94,10 @@ struct neogeo {
     int ch5_bios_pend;         /* ch5 went 0->1 while 68K still in BIOS: candidate handoff */
     unsigned long ch5_on_frame;/* frame of that 0->1 (sustained >=3 frames = real handoff, pulse = transient) */
     uint16_t k3bl_overlay;         /* kof2k3bl bootleg overlay register */
+    uint8_t  k10_mode;             /* 1 = kof10th bootleg lo-rom overlay device */
+    uint32_t k10_special;          /* special bank offset (word index) */
+    uint16_t k10_cram[0x1000];     /* MAME m_cart_ram (protection window) */
+    uint16_t k10_cram2[0x10000];   /* MAME m_cart_ram2 (addon window) */
     uint8_t k3bl_px;               /* 1=pl_px_decrypt applied, 2=upl variant */
     uint16_t pvc_ram[0x1000];          /* PVC protection RAM @ $2FE000-$2FFFFF */
     uint16_t msl_cmd, msl_ctr;         /* mslugx PROGEOP protection (MAME prot_mslugx.cpp) */
@@ -568,6 +572,7 @@ static uint32_t pvc_bank_base(neogeo *ng);
 static void pvc_unpack_color(neogeo *ng);
 static void pvc_pack_color(neogeo *ng);
 
+static uint32_t bs_bits(uint32_t x, const int *p, int n);
 static uint16_t r16(neogeo *ng, uint32_t a)
 {
     a &= 0xFFFFFF;
@@ -823,7 +828,27 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         uint16_t w = ng->zoomy[(a - 0x3C8000) >> 1];
         return (w<<8)|w;
     }
-    if (a < 0x400000) return 0xFFFF;
+    if (a < 0x400000) {
+        if (ng->k10_mode) {                               /* kof10th bootleg device windows */
+            if (a >= 0x80 && a <= 0xDFFFF) {             /* lo-rom overlay: MAME rom16[offset+0x40]
+                with offset=(a-0x80)/2 cancels to a direct mirror: game a -> rom byte a */
+                uint32_t w = a >> 1;
+                if (w >= 0x8000) w += ng->k10_special;
+                if (!ng->rom || (w + 1) * 2 > ng->rom_size) return 0xFFFF;
+                return (ng->rom[w*2]<<8)|ng->rom[w*2+1];
+            }
+            if (a >= 0xE0000 && a <= 0xFFFFF)            /* addon_r: MAME indexes ram2 by byte offset */
+                return ng->k10_cram2[(a - 0xE0000) & 0xFFFF];
+            if (a >= 0x2FE000 && a <= 0x2FFFFF)          /* protection_r: cart_ram */
+                return ng->k10_cram[(a - 0x2FE000) & 0xFFF];
+        }
+        if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3pl bootleg prot window */
+            if (getenv("K3DBG"))
+                fprintf(stderr, "K3RD f=%d a=%06x ov=%04x pc=%08x\n", ng->frame, a, ng->k3bl_overlay, m68k_get_reg(NULL,M68K_REG_PC));
+            return ng->k3bl_overlay;
+        }
+        return 0xFFFF;
+    }
     if (a < 0x420000) return ng->cram[((a>>1)&0xFFF) | ng->cram_bank];
     if (a >= 0x800000 && a < 0xC00000 &&
         m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000) {
@@ -930,6 +955,32 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                 ng->frame, d, ng->prg_bank_base, m68k_get_reg(NULL, M68K_REG_PC));
             return;
         }
+    }
+    if (ng->k10_mode && a >= 0x200000 && a <= 0x2FFFFF) {   /* kof10th write_bankprot_kof10th
+        MAME write16s_delegate passes the WORD offset (a-0x200000)/2 */
+        uint32_t off = (a - 0x200000) >> 1;                 /* word offset into window */
+        if (off == 0x7FFF8) {                               /* standard bankswitch (a=2FFFF0) */
+            uint32_t b = 0x100000 + ((d & 7) << 20);
+            if (b >= 0x700000) b = 0x100000;
+            ng->prg_bank_base = b;
+        } else if (off == 0x7FFFE) {                        /* special bankswitch (a=2FFFFC) */
+            ng->k10_special = (d & 1) ? 0x400000 : 0x380000;
+        }
+        if (off < 0x20000) {
+            if (!ng->k10_cram[0xFFE]) ng->k10_cram2[off & 0xFFFF] = d;      /* RAM bank A */
+            else if (ng->fixed) {                                            /* live S-data rewrite */
+                static const int sb[8] = {7,6,0,4,3,2,1,5};
+                uint32_t o2 = (off & 0xFFF) * 2;
+                if (o2 + 1 < ng->fixed_size) {
+                    ng->fixed[o2]   = (uint8_t)bs_bits(d >> 8, sb, 8);
+                    ng->fixed[o2+1] = (uint8_t)bs_bits(d & 0xFF, sb, 8);
+                }
+            }
+        } else if (off >= 0x7F000) {
+            ng->k10_cram[off & 0xFFF] = d;
+        }
+        if (getenv("K10DBG")) fprintf(stderr, "K10W f=%d a=%06x d=%04x\n", ng->frame, a, d);
+        return;
     }
     if (ng->cart_prot == 9 && a >= 0x2FFFF0 && a <= 0x2FFFFF) {   /* CTHD2K3 write_bankprot */
         static const int cb[8] = { 1,0,1,0,1,0,3,2 };
@@ -2634,7 +2685,24 @@ static uint32_t bs_bits(uint32_t x, const int *p, int n)
     for (int i = 0; i < n; i++) if ((x >> p[n-1-i]) & 1) r |= 1u << i;
     return r;
 }
-/* kof97oro: word XOR-swap over 0x500000 (2-byte groups keep BE order) */
+/* kof10th bootleg: MAME neoboot_prot_device::kof10th_decrypt (prot_misc.cpp) */
+static void kof10th_dec(uint8_t *src, uint32_t size)
+{
+    if (size < 0x800000) return;
+    static const int p24[24] = {23,22,21,20,19,18,17,16,15,14,13,12,11,2,9,8,7,1,5,4,3,10,6,0};
+    uint8_t *dst = (uint8_t *)malloc(0x900000);
+    if (!dst) return;
+    memcpy(dst,          src + 0x700000, 0x100000);   /* last 1MB first (verified in uni-bios) */
+    memcpy(dst + 0x100000, src,          0x800000);
+    for (uint32_t i = 0; i < 0x900000; i++)
+        src[bs_bits(i, p24, 24)] = dst[i];
+    free(dst);
+    /* Altera protection chip patches over P ROM (BE words) */
+    src[0x0124]=0x00; src[0x0125]=0x0d; src[0x0126]=0xf7; src[0x0127]=0xa8;
+    src[0x8bf4]=0x4e; src[0x8bf5]=0xf9; src[0x8bf6]=0x00; src[0x8bf7]=0x0d;
+    src[0x8bf8]=0xf9; src[0x8bf9]=0x80;
+}
+
 static void kof97oro_px_dec(uint8_t *cpu, uint32_t size)
 {
     if (size < 0x500000) return;
@@ -3105,6 +3173,17 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "boot_kof97oro\"")) { kof97oro_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); bootleg_cx_dec(ng->spr, ng->spr_size); }
                             else if (sw_has(sw, swend, "boot_kf10thep\"")) { kf10thep_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); }
                             else if (sw_has(sw, swend, "boot_svcsplus\"")) { svcsplus_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 2); svcboot_cx_dec(ng->spr, ng->spr_size); svcsplus_px_hack(ng->rom); }
+                            if (sw_has(sw, swend, "kf10-p1.bin")) {
+                                /* kof10th bootleg: lo-rom overlay device (MAME NEOGEO_KOF10TH) */
+                                kof10th_dec(ng->rom, ng->rom_size);
+                                ng->k10_mode = 1; ng->k10_special = 0;
+                                memset(ng->k10_cram, 0, sizeof ng->k10_cram);
+                                memset(ng->k10_cram2, 0, sizeof ng->k10_cram2);
+                                if (ng->rom_size >= 0x100000)
+                                    for (int i = 0; i < 0x10000; i++)
+                                        ng->k10_cram2[i] = (uint16_t)((ng->rom[0xE0000 + i*2] << 8) | ng->rom[0xE0000 + i*2 + 1]);
+                                fprintf(stderr, "K10 kof10th device armed\n");
+                            }
                             if (sw_has(sw, swend, "cmc50_jockeygp\"") || sw_has(sw, swend, "rom_vliner\""))
                                 ng->cart_prot = 12;         /* cart RAM window @200000 */
                             if (sw_has(sw, swend, "boot_kf2k3pl\"") || sw_has(sw, swend, "boot_kf2k3upl\""))
