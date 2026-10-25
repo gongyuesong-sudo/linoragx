@@ -720,7 +720,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             }
             if (a >= 0x2FE446 && a <= 0x2FE447) return 0x9a37;   /* prot_9a37_r */
         }
-        if ((ng->cart_prot == 8 || ng->cart_prot == 13) && a >= 0x2FE000)  /* PVC / kof2k3bl prot RAM */
+        if (ng->cart_prot == 8 && a >= 0x2FE000)  /* PVC prot RAM (MAME installs this only for PVC carts) */
             return ng->pvc_ram[(a >> 1) & 0xFFF];
         uint32_t o = ng->prg_bank_base + (a - 0x200000);
         if (f_romrd() && o >= 0x100 && o <= 0x12F && ng->frame < 260) {
@@ -947,22 +947,10 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         if (off >= 0xff8) ng->prg_bank_base = pvc_bank_base(ng);
         return;
     }
-    if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {  /* kof2k3bl_prot kof2003_w */
-        uint32_t off = (a >> 1) & 0xFFF;
-        uint16_t *pr = &ng->pvc_ram[off];
-        if (mem_mask & 0xFF00) *pr = (uint16_t)((*pr & 0x00FF) | (d & 0xFF00));
-        if (mem_mask & 0x00FF) *pr = (uint16_t)((*pr & 0xFF00) | (d & 0x00FF));
-        if (off == 0xFF0/2 || off == 0xFF2/2) {
-            uint8_t *cr = (uint8_t *)ng->pvc_ram;
-            uint8_t prt = cr[0x1FF2 ^ 1];
-            ng->prg_bank_base = 0x100000 + ((uint32_t)(cr[0x1FF3 ^ 1] << 16) | (cr[0x1FF2 ^ 1] << 8) | cr[0x1FF1 ^ 1]);
-            cr[0x1FF0 ^ 1] = 0xa0;
-            cr[0x1FF1 ^ 1] &= 0xfe;
-            cr[0x1FF3 ^ 1] &= 0x7f;
-            ng->k3bl_overlay = (uint16_t)((prt & 0x00FF) | (ng->k3bl_overlay & 0xFF00));
-        }
-        return;
-    }
+    /* NOTE: MAME does NOT install kof2003_w for kf2k3bl bootleg carts (no
+       memory-map handler exists — see neogeo.cpp switch: no KF2K3PL case).
+       Writes to 0x2FE000+ land in plain work RAM. Intercepting them here
+       stole real RAM (game stack/vars) and crashed the game after ~8 frames. */
     if (a >= 0x2FFFF0 && a <= 0x2FFFFF) {   /* MAME write_banksel (PRO-C/LOROM) */
         int bank = (mem_mask & 0xFF00) && (mem_mask & 0x00FF) ? (d & 7)
                  : (mem_mask & 0xFF00) ? ((d >> 8) & 7) : (d & 7);
