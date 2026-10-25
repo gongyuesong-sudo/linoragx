@@ -746,7 +746,9 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                                                excludes TEST 0x300080-81):
                                                upper byte = edge(P1 buttons), lower = DSW */
         if ((a & 0x81) == 0x80) return 0xFFC0;                     /* TEST port + mirror */
-        { uint8_t hi = (uint8_t)~ng->buttons[0];                   /* P1 */
+        { static int km = -1;
+          if (km < 0) { const char *e = getenv("KEYMASK"); km = e ? (int)strtol(e, 0, 0) : 0; }
+          uint8_t hi = (uint8_t)~(ng->buttons[0] | km);             /* P1 (KEYMASK forces bits) */
           uint8_t lo = (uint8_t)~ng->buttons[1];                   /* P2 */
           return (hi<<8) | lo; }
     }
@@ -3342,6 +3344,19 @@ void ng_run_frame(neogeo *ng)
               lo = e ? atoi(e) : -1; hi = d ? atoi(d + 1) : -1; }
           if (lo >= 0 && ng->frame >= lo && ng->frame <= hi)
               fprintf(stderr, "T %d %08x\n", ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
+        { static int wd = -2;
+          if (wd == -2) { const char *e = getenv("WRAMDUMP"); wd = e ? atoi(e) : -1; }
+          if (wd >= 0 && ng->frame == (unsigned)wd) {
+              wd = -3;
+              fprintf(stderr, "WRAMDUMP f=%d 10ff00-110000:\n", ng->frame);
+              for (int o = 0xFF00; o < 0x10000; o += 16) {
+                  fprintf(stderr, "  %04x:", o);
+                  for (int q = 0; q < 16; q += 2)
+                      fprintf(stderr, " %04x", ng->workram[(o + q) >> 1]);
+                  fprintf(stderr, "\n");
+              }
+          }
+        }
         { static int pcstop_init = -1; static uint32_t pcstop_tgt;
           if (pcstop_init < 0) { const char *pe = getenv("PCSTOP"); pcstop_tgt = pe ? (uint32_t)strtoul(pe, 0, 16) : 0; pcstop_init = pe ? 1 : 0; }
           if (pcstop_init) { static int ps = 0;
