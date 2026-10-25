@@ -3117,6 +3117,13 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 free(ng->bios); ng->bios = NULL;
                                 load_bios_pref(ng, biosdir, "asia-s3.rom");
                             }
+                            if (!getenv("LINORAGX_BIOS") &&
+                                (sw_has(sw, swend, "\"b2b\"") || sw_has(sw, swend, "\"fightfev\""))) {
+                                /* b2b/fightfev call a self-test stub the stock s3 BIOS installs at
+                                   0x11012; uni-bios never installs it -> halt.  Stock s3 boots fine. */
+                                free(ng->bios); ng->bios = NULL;
+                                load_bios_pref(ng, biosdir, "asia-s3.rom");
+                            }
                             {   /* CMC42/50 graphics descramble per slot feature (MAME cart devices) */
                                 static const struct { const char *f; uint8_t chip, key, sf, m1, s1; } ctab[] = {
                                     {"sma_kof99\"",42,0x00,1,0},
