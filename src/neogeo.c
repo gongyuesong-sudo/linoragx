@@ -746,9 +746,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                                                excludes TEST 0x300080-81):
                                                upper byte = edge(P1 buttons), lower = DSW */
         if ((a & 0x81) == 0x80) return 0xFFC0;                     /* TEST port + mirror */
-        { static int km = -1;
-          if (km < 0) { const char *e = getenv("KEYMASK"); km = e ? (int)strtol(e, 0, 0) : 0; }
-          uint8_t hi = (uint8_t)~(ng->buttons[0] | km);             /* P1 (KEYMASK forces bits) */
+        { static int km = -1, kmt = 0;
+          if (km < 0) { const char *e = getenv("KEYMASK"); km = e ? (int)strtol(e, 0, 0) : 0;
+                        const char *t = getenv("KEYMASKT"); kmt = t ? atoi(t) : 0; }
+          int kma = (kmt && ((ng->frame / kmt) & 1)) ? 0 : km;   /* periodic make/break */
+          uint8_t hi = (uint8_t)~(ng->buttons[0] | kma);         /* P1 (KEYMASK forces bits) */
           uint8_t lo = (uint8_t)~ng->buttons[1];                   /* P2 */
           return (hi<<8) | lo; }
     }
@@ -3344,12 +3346,41 @@ void ng_run_frame(neogeo *ng)
               lo = e ? atoi(e) : -1; hi = d ? atoi(d + 1) : -1; }
           if (lo >= 0 && ng->frame >= lo && ng->frame <= hi)
               fprintf(stderr, "T %d %08x\n", ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
-        { static int wd = -2;
-          if (wd == -2) { const char *e = getenv("WRAMDUMP"); wd = e ? atoi(e) : -1; }
+        { static int vd = -2;
+          if (vd == -2) vd = getenv("VRAMDUMP") ? 280 : -1;
+          if (vd >= 0 && ng->frame >= (unsigned)vd) { vd = -1;
+              fprintf(stderr, "VRAMDUMP raw vram nonzero map:\n");
+              for (int t = 0; t < 0xC000; t += 0x800) {
+                  int nz = 0;
+                  for (int q = t; q < t + 0x800; q++) if (ng->vram[q]) nz++;
+                  fprintf(stderr, "  %04x: nz=%d\n", t, nz);
+              }
+              for (int t = 0x8000; t < 0x8080; t += 8)
+                  fprintf(stderr, "  %04x: %04x %04x %04x %04x %04x %04x %04x %04x\n", t,
+                      ng->vram[t],ng->vram[t+1],ng->vram[t+2],ng->vram[t+3],
+                      ng->vram[t+4],ng->vram[t+5],ng->vram[t+6],ng->vram[t+7]);
+              for (int t = 0x7000; t < 0x7FF0; t += 4) {
+                  int u = ng->vram[t+6] & 0x3FF;
+                  if (u >= 0x20 && u <= 0x79) fputc((u == 0x79) ? ' ' : (u + 32), stderr);
+                  else fputc('.', stderr);
+                  if ((t - 0x7000) / 4 % 40 == 39) fputc('\n', stderr);
+              }
+              fprintf(stderr, "\n");
+          }
+        }
+        { static int wd = -2; static int wds = 0xFF00, wde = 0x10000;
+          if (wd == -2) { const char *e = getenv("WRAMDUMP");
+              if (e) { wd = atoi(e);
+                  const char *c1 = strchr(e, ':');
+                  if (c1) { wds = (int)strtol(c1 + 1, 0, 16);
+                            const char *c2 = strchr(c1 + 1, ':');
+                            if (c2) wde = (int)strtol(c2 + 1, 0, 16); }
+                  else { wds = 0xFF00; wde = 0x10000; } }
+              else wd = -1; }
           if (wd >= 0 && ng->frame == (unsigned)wd) {
               wd = -3;
-              fprintf(stderr, "WRAMDUMP f=%d 10ff00-110000:\n", ng->frame);
-              for (int o = 0xFF00; o < 0x10000; o += 16) {
+              fprintf(stderr, "WRAMDUMP f=%d %05x-%05x:\n", ng->frame, wds, wde);
+              for (int o = wds; o < wde; o += 16) {
                   fprintf(stderr, "  %04x:", o);
                   for (int q = 0; q < 16; q += 2)
                       fprintf(stderr, " %04x", ng->workram[(o + q) >> 1]);
