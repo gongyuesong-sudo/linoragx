@@ -2626,6 +2626,103 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
  * to MAME's region byte layout.  Empirically verified on real kof2003 ROM:
  * wordswap -> decrypt (bus-transcribed rules) -> wordswap == MAME result
  * (vec 0010f300, header "NE", region code non-zero). */
+/* --- bootleg boot_* cart static decrypt (MAME devices/bus/neogeo/prot_misc.cpp) --- */
+static uint32_t bs_bits(uint32_t x, const int *p, int n)
+{
+    uint32_t r = 0;
+    for (int i = 0; i < n; i++) if ((x >> p[i]) & 1) r |= 1u << i;
+    return r;
+}
+/* kof97oro: word XOR-swap over 0x500000 (2-byte groups keep BE order) */
+static void kof97oro_px_dec(uint8_t *cpu, uint32_t size)
+{
+    if (size < 0x500000) return;
+    uint8_t *tmp = malloc(0x500000);
+    for (uint32_t i = 0; i < 0x500000/2; i++)
+        memcpy(tmp + i*2, cpu + (i ^ 0x7ffef)*2, 2);
+    memcpy(cpu, tmp, 0x500000);
+    free(tmp);
+}
+static void bootleg_sx_dec(uint8_t *fix, uint32_t size, int value)
+{
+    if (value == 1) {
+        uint8_t *buf = malloc(size);
+        memcpy(buf, fix, size);
+        for (uint32_t i = 0; i + 16 <= size; i += 16) {
+            memcpy(fix + i, buf + i + 8, 8);
+            memcpy(fix + i + 8, buf + i, 8);
+        }
+        free(buf);
+    } else if (value == 2) {
+        static const int p[8] = {7,6,0,4,3,2,1,5};
+        for (uint32_t i = 0; i < size; i++) fix[i] = (uint8_t)bs_bits(fix[i], p, 8);
+    }
+}
+static void bootleg_cx_dec(uint8_t *spr, uint32_t size)
+{
+    uint8_t *buf = malloc(size);
+    memcpy(buf, spr, size);
+    for (uint32_t i = 0; i + 0x40 <= size; i += 0x40)
+        memcpy(spr + i, buf + ((i/0x40) ^ 1)*0x40, 0x40);
+    free(buf);
+}
+/* kf10thep: 1MB block shuffle + banked-code copies + JSR/JMP fixups + shift tail down */
+static void kf10thep_px_dec(uint8_t *cpu, uint32_t size)
+{
+    if (size < 0x800000) return;
+    uint8_t *buf = malloc(0x100000);
+    static const uint32_t src[8] = {0x60000,0x100000,0xe0000,0x180000,0x20000,0x140000,0xc0000,0x1a0000};
+    for (int k = 0; k < 8; k++) memcpy(buf + k*0x20000, cpu + src[k], 0x20000);
+    memcpy(buf + 0x2e0, cpu + 0x402e0, 0x6a);
+    memcpy(buf + 0xf92bc, cpu + 0x492bc, 0xb9e);
+    memcpy(cpu, buf, 0x100000);
+    free(buf);
+    for (uint32_t i = 0xf92bc; i < 0xf9e58; i += 2) {   /* BE word view */
+        uint16_t w0 = (uint16_t)((cpu[i] << 8) | cpu[i+1]), w1 = (uint16_t)((cpu[i+2] << 8) | cpu[i+3]);
+        if ((w0 == 0x4eb9 || w0 == 0x4ef9) && w1 == 0) cpu[i+3] = 0x0f;  /* abs.l bank word -> 0x000f */
+    }
+    cpu[0x342] = 0x00; cpu[0x343] = 0x0f;
+    memmove(cpu + 0x100000, cpu + 0x200000, 0x600000);
+}
+/* svcsplus: 16-bit bitswap shuffle + 512KB section reorder */
+static void svcsplus_px_dec(uint8_t *cpu, uint32_t size)
+{
+    static const int sec[8] = {6,7,1,2,3,4,5,0};
+    static const int p[16] = {0x0f,0x00,0x08,0x09,0x0b,0x0a,0x0c,0x0d,
+                              0x04,0x03,0x01,0x07,0x06,0x02,0x05,0x0e};
+    if (size < 0x800000) return;
+    uint8_t *buf = malloc(size);
+    memcpy(buf, cpu, size);
+    for (uint32_t i = 0; i < size/2; i++) {
+        uint32_t ofst = bs_bits(i & 0x7fff, p, 16);
+        ofst += (i & 0x78000);
+        ofst += (uint32_t)sec[(i & 0xf80000) >> 19] << 19;
+        memcpy(cpu + i*2, buf + ofst*2, 2);
+    }
+    free(buf);
+}
+static void svcsplus_px_hack(uint8_t *cpu)
+{
+    static const uint32_t off[5] = {0x9e90,0x9e92,0xa10c,0xa10e,0xa110};
+    static const uint16_t val[5] = {0x000f,0xc9c0,0x4eb9,0x000e,0x9750};
+    for (int k = 0; k < 5; k++) { cpu[off[k]] = (uint8_t)(val[k] >> 8); cpu[off[k]+1] = (uint8_t)val[k]; }
+}
+/* svc bootleg sprite shuffle: 0x80 blocks + nibble bitswap table */
+static void svcboot_cx_dec(uint8_t *spr, uint32_t size)
+{
+    static const uint8_t idx_tbl[16] = {0,1,0,1,2,3,2,3,3,4,3,4,4,5,4,5};
+    static const uint8_t b4[6][4] = {{3,0,1,2},{2,3,0,1},{1,2,3,0},{0,1,2,3},{3,2,1,0},{3,0,2,1}};
+    uint8_t *buf = malloc(size);
+    memcpy(buf, spr, size);
+    for (uint32_t i = 0; i < size/0x80; i++) {
+        int idx = idx_tbl[(i & 0xf00) >> 8];
+        int p[8] = {7,6,5,4, b4[idx][3], b4[idx][2], b4[idx][1], b4[idx][0]};
+        uint32_t ofst = bs_bits(i & 0xff, p, 8) + (i & 0xfffff00);
+        memcpy(spr + i*0x80, buf + ofst*0x80, 0x80);
+    }
+    free(buf);
+}
+
 static void pvc_run(uint8_t *R, uint32_t sz, void (*dec)(uint8_t *))
 {
     wordswap(R, sz);
@@ -3004,6 +3101,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_sams5s\"")) { samsh5sp_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_kof2k2\"")) { matrim_dec68k(ng);  ng->fixed_bank_type = 2; }  /* MAME kof2002: same 8x0x80000 sec table as matrim */
+                            else if (sw_has(sw, swend, "boot_kof97oro\"")) { kof97oro_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); bootleg_cx_dec(ng->spr, ng->spr_size); }
+                            else if (sw_has(sw, swend, "boot_kf10thep\"")) { kf10thep_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); }
+                            else if (sw_has(sw, swend, "boot_svcsplus\"")) { svcsplus_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 2); svcboot_cx_dec(ng->spr, ng->spr_size); svcsplus_px_hack(ng->rom); }
                             if (sw_has(sw, swend, "cmc50_jockeygp\"") || sw_has(sw, swend, "rom_vliner\""))
                                 ng->cart_prot = 12;         /* cart RAM window @200000 */
                             if (sw_has(sw, swend, "boot_kf2k3pl\"") || sw_has(sw, swend, "boot_kf2k3upl\""))
