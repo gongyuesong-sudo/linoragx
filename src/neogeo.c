@@ -285,6 +285,7 @@ DBGFLAG("ZNTD",    f_zntd)
 DBGFLAG("CMCTR",   f_cmctr)
 DBGFLAG("SWDBG",   f_swdbg)
 DBGFLAG("DUMPFIX", f_dumpfix)
+DBGFLAG("DUMPPRG", f_dumpprg)
 DBGFLAG("FD98W", f_fd98w)
 DBGFLAG("LINORAGX_TRACE_VLOAD", f_vload)
 DBGFLAG("VWDIST", f_vwdist)
@@ -3031,7 +3032,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"k2k2_sams5s\"",50,0x0d,1,1},
                                     {"k2k2_kof2k2\"",50,0xec,1,1},
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
-                                    {"boot_kf2k3pl\"",50,0x9d,1,0},{"boot_kf2k3upl\"",50,0x9d,1,0},
+                                    {"boot_kf2k3pl\"",50,0x9d,0,0},{"boot_kf2k3upl\"",50,0x9d,0,0},
                                 };
                                 for (unsigned ci = 0; ci < sizeof ctab / sizeof ctab[0]; ci++) {
                                     if (!sw_has(sw, swend, ctab[ci].f)) continue;
@@ -3064,12 +3065,19 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     for (int base = 0; base < 0x700000/2; base += 0x100000/2) {
                                         memcpy(tmp, &r16[base], 0x100000);
                                         for (int j = 0; j < 0x100000/2; j++) {
-                                            /* MAME bitswap<24>(j,23,22,21,20,19,0,1,...,17):
-                                               result bits 23..19 = src 23..19; bits 18..1 = src 0..17; bit0 = 0 */
-                                            r16[base+j] = tmp[((j & 0xF80000) | ((j & 0x7FFFF) << 1))];
+                                            /* MAME bitswap<24>(j,23,22,21,20,19,0,1,...,18):
+                                               result bit i = j bit p[23-i] => bits 23..19 kept,
+                                               bits 18..1 = reverse(j bits 0..17), bit0 = j bit18 */
+                                            uint32_t v = j & 0x3FFFF;
+                                            v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+                                            v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+                                            v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+                                            v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+                                            v = ((v >> 16) | (v << 16)) >> 14;   /* 18-bit reverse */
+                                            r16[base+j] = tmp[(j & 0xF80000) | (v << 1) | ((j >> 18) & 1)];
                                         }
                                     }
-                                    r16[0xf38ac/2] = 0x4e75;   /* Altera patch: rte */
+                                    r16[0xf38ac/2] = 0x754e;   /* Altera patch: rte (BE 0x4e75 in LE u16 view) */
                                 } else if (ng->rom_size >= 0x800000) {
                                     uint8_t *src = ng->rom;
                                     memmove(src + 0x100000, src, 0x600000);
@@ -3081,8 +3089,29 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                         memcpy(&rom[i*2], &b2[ofst*2], 2);
                                     }
                                 }
-                                ng->k3bl_overlay = r16[0x58196/2];
+                                ng->k3bl_overlay = (uint16_t)((ng->rom[0x58196] << 8) | ng->rom[0x58197]);  /* BE word */
                                 fprintf(stderr, "K3BL px=%d overlay=%04x\n", ng->k3bl_px, ng->k3bl_overlay);
+                                /* MAME neoboot sx_decrypt on SFIX: pl=variant 1 (swap 8-byte
+                                   halves per 16), upl=variant 2 (bitswap<8>(x,7,6,0,4,3,2,1,5)
+                                   = swap bit0/bit5) */
+                                if (ng->fixed && ng->fixed_size) {
+                                    if (ng->k3bl_px == 1) {
+                                        uint8_t *fx = ng->fixed;
+                                        for (uint32_t i = 0; i + 16 <= ng->fixed_size; i += 0x10) {
+                                            uint8_t t[8];
+                                            memcpy(t, fx+i, 8); memcpy(fx+i, fx+i+8, 8); memcpy(fx+i+8, t, 8);
+                                        }
+                                    } else {
+                                        for (uint32_t i = 0; i < ng->fixed_size; i++) {
+                                            uint8_t x = ng->fixed[i];
+                                            ng->fixed[i] = (uint8_t)((x & ~0x21) | ((x & 1) << 5) | ((x >> 5) & 1));
+                                        }
+                                    }
+                                }
+                                if (f_dumpprg()) {
+                                    FILE *fp = fopen("/tmp/k3bl_prg.bin", "wb");
+                                    if (fp) { fwrite(ng->rom, 1, ng->rom_size < 0x800000 ? ng->rom_size : 0x800000, fp); fclose(fp); }
+                                }
                             }
                             if (ng->cart_prot >= 2) {
                                 ng->prg_bank_base = 0x100000;
