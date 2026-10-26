@@ -94,6 +94,7 @@ struct neogeo {
     int ch5_bios_pend;         /* ch5 went 0->1 while 68K still in BIOS: candidate handoff */
     unsigned long ch5_on_frame;/* frame of that 0->1 (sustained >=3 frames = real handoff, pulse = transient) */
     uint16_t k3bl_overlay;         /* kof2k3bl bootleg overlay register */
+    uint16_t k3bl_ram[0x1000];     /* kof2k3bl cartridge RAM window @2FE000-2FFFFF (MAME m_cartridge_ram) */
     uint8_t  k10_mode;             /* 1 = kof10th bootleg lo-rom overlay device */
     uint32_t k10_special;          /* special bank offset (word index) */
     uint16_t k10_cram[0x1000];     /* MAME m_cart_ram (protection window) */
@@ -844,10 +845,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             if (a >= 0x2FE000 && a <= 0x2FFFFF)          /* protection_r: cart_ram */
                 return ng->k10_cram[(a - 0x2FE000) & 0xFFF];
         }
-        if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3pl bootleg prot window */
+        if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3pl bootleg prot window: protection_r = cart_ram[word] */
+            uint32_t wo = (a - 0x2FE000) >> 1;
             if (getenv("K3DBG"))
-                fprintf(stderr, "K3RD f=%d a=%06x ov=%04x pc=%08x\n", ng->frame, a, ng->k3bl_overlay, m68k_get_reg(NULL,M68K_REG_PC));
-            return ng->k3bl_overlay;
+                fprintf(stderr, "K3RD f=%d a=%06x v=%04x pc=%08x\n", ng->frame, a, ng->k3bl_ram[wo & 0xFFF], m68k_get_reg(NULL,M68K_REG_PC));
+            return ng->k3bl_ram[wo & 0xFFF];
         }
         return 0xFFFF;
     }
@@ -989,6 +991,24 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         ng->prg_bank_base = (uint32_t)(cb[d & 7] + 1) * 0x100000;
         if (f_bankdbg()) fprintf(stderr, "CTHDBANK f=%d d=%04x -> base=%08x pc=%08x\n",
             ng->frame, d, ng->prg_bank_base, m68k_get_reg(NULL, M68K_REG_PC));
+        return;
+    }
+    if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3pl write_bankprot_kf2k3bl + kof2003p_w */
+        uint32_t wo = (a - 0x2FE000) >> 1;
+        ng->k3bl_ram[wo & 0xFFF] = (uint16_t)((ng->k3bl_ram[wo & 0xFFF] & ~mem_mask) | (d & mem_mask));
+        if (wo == (0x1ff0/2) || wo == (0x1ff2/2)) {
+            uint8_t *cr = (uint8_t *)ng->k3bl_ram;          /* LE byte view == MAME BYTE_XOR_LE on x86 */
+            uint8_t prt = cr[0x1ff2];
+            uint32_t bb = 0x100000 + (((uint32_t)cr[0x1ff3] << 16) | ((uint32_t)cr[0x1ff2] << 8) | cr[0x1ff0]);
+            cr[0x1ff0] &= 0xfe;
+            cr[0x1ff3] &= 0x7f;
+            ng->k3bl_overlay = (uint16_t)((prt & 0x00ff) | (ng->k3bl_overlay & 0xff00));
+            ng->prg_bank_base = bb;
+            if (f_bankdbg()) fprintf(stderr, "K3BANK f=%d wo=%x -> base=%08x pc=%08x\n",
+                ng->frame, wo, bb, m68k_get_reg(NULL,M68K_REG_PC));
+        }
+        if (getenv("K3DBG")) fprintf(stderr, "K3WR f=%d a=%06x d=%04x m=%04x pc=%08x\n",
+            ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
         return;
     }
     if (ng->cart_prot == 12 && a >= 0x200000 && a <= 0x201FFF) { /* JOCKEYGP cart RAM */
@@ -3348,6 +3368,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     }
                                 }
                                 ng->k3bl_overlay = (uint16_t)((ng->rom[0x58196] << 8) | ng->rom[0x58197]);  /* BE word */
+                                memset(ng->k3bl_ram, 0, sizeof ng->k3bl_ram);   /* MAME device_reset: cart_ram zeroed */
                                 fprintf(stderr, "K3BL px=%d overlay=%04x\n", ng->k3bl_px, ng->k3bl_overlay);
                                 /* MAME neoboot sx_decrypt on SFIX: pl=variant 1 (swap 8-byte
                                    halves per 16), upl=variant 2 (bitswap<8>(x,7,6,0,4,3,2,1,5)
