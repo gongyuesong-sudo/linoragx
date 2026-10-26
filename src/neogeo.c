@@ -618,6 +618,21 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         if (!v || a+2 > sz) return 0xFFFF;
         return (v[a]<<8)|v[a+1];
     }
+    if (ng->k10_mode && a >= 0x80) {                     /* kof10th bootleg device windows —
+        MUST precede the generic lo-rom/workram mirrors (they would swallow 0x80-0xFFFFF). */
+        if (a <= 0xDFFFF) {                              /* lo-rom overlay: MAME read_lorom_kof10th
+            read16sm offset behaves as WORD offset here: w=(a-0x80)/2+0x40 == a/2 (direct
+            mirror); for a>=0x10000 add special bank (word units). */
+            uint32_t w = a >> 1;
+            if (w >= 0x8000) w += ng->k10_special;
+            if (!ng->rom || (w + 1) * 2 > ng->rom_size) return 0xFFFF;
+            return (ng->rom[w*2]<<8)|ng->rom[w*2+1];
+        }
+        if (a >= 0xE0000 && a <= 0xFFFFF)                /* addon_r: ram2 window, WORD offsets */
+            return ng->k10_cram2[((a - 0xE0000) >> 1) & 0xFFFF];
+        if (a >= 0x2FE000 && a <= 0x2FFFFF)              /* protection_r: cart_ram[word] */
+            return ng->k10_cram[((a - 0x2FE000) >> 1) & 0xFFF];
+    }
     if (ng->cart_prot == 1 && a >= 0x100 && a <= 0x103) {   /* kof98 protection port */
         int off = (a >> 1) & 1;
         if (ng->kof98_state == 1) return off ? 0x00fd : 0x00c2;
@@ -885,21 +900,6 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return (w<<8)|w;
     }
     if (a < 0x400000) {
-        if (ng->k10_mode) {                               /* kof10th bootleg device windows */
-            if (a >= 0x80 && a <= 0xDFFFF) {             /* lo-rom overlay: MAME read_lorom_kof10th
-                read16sm offset behaves as WORD offset here: w=(a-0x80)/2+0x40 == a/2 (direct
-                mirror); for a>=0x10000 add special bank (word units). Verified: this interp
-                yields valid 68K code at the addresses the game executes (0x122->4ef9 etc). */
-                uint32_t w = a >> 1;
-                if (w >= 0x8000) w += ng->k10_special;
-                if (!ng->rom || (w + 1) * 2 > ng->rom_size) return 0xFFFF;
-                return (ng->rom[w*2]<<8)|ng->rom[w*2+1];
-            }
-            if (a >= 0xE0000 && a <= 0xFFFFF)            /* addon_r: MAME indexes ram2 by byte offset */
-                return ng->k10_cram2[(a - 0xE0000) & 0x1FFFF];
-            if (a >= 0x2FE000 && a <= 0x2FFFFF)          /* protection_r: cart_ram */
-                return ng->k10_cram[(a - 0x2FE000) & 0xFFF];
-        }
         if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3pl bootleg prot window: protection_r = cart_ram[word] */
             uint32_t wo = (a - 0x2FE000) >> 1;
             if (getenv("K3DBG"))
@@ -1019,22 +1019,23 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
     if (ng->k10_mode && a >= 0x200000 && a <= 0x2FFFFF) {   /* kof10th write_bankprot_kof10th
         MAME write16s_delegate passes the WORD offset (a-0x200000)/2 */
         uint32_t off = (a - 0x200000) >> 1;                 /* word offset into window */
-        if (off == 0x7FF78) {                               /* standard bankswitch (a=2FFFF0): 0xffff0/2 */
+        if (off == 0x7FFF8) {                             /* standard bankswitch (a=2FFFF0): 0xffff0/2 */
             uint32_t b = 0x100000 + ((d & 7) << 20);
             if (b >= 0x700000) b = 0x100000;
             ng->prg_bank_base = b;
-        } else if (off == 0x7FF7C) {                        /* special bankswitch (a=2FFFF8): 0xffff8/2 */
-            ng->k10_special = (d & 1) ? 0x400000 : 0x380000;
+        } else if (off == 0x7FFFC) {                      /* special bankswitch (a=2FFFF8): 0xffff8/2,
+            MAME only switches when the stored cart_ram[0xffc] value actually changes
+            (m_special_bank is in WORD units: MAME 0x700000/2, 0x800000/2) */
+            if (ng->k10_cram[0xFFC] != d)
+                ng->k10_special = (d & 1) ? 0x400000 : 0x380000;
         }
         if (off < 0x20000) {
             if (!ng->k10_cram[0xFFE]) ng->k10_cram2[off & 0xFFFF] = d;      /* RAM bank A */
-            else if (ng->fixed) {                                            /* live S-data rewrite */
+            else if (ng->fixed) {                                            /* live S-data rewrite:
+                MAME m_fixed[offset] = bitswap<8>(data,7,6,0,4,3,2,1,5) — ONE byte per word offset */
                 static const int sb[8] = {7,6,0,4,3,2,1,5};
-                uint32_t o2 = (off & 0xFFF) * 2;
-                if (o2 + 1 < ng->fixed_size) {
-                    ng->fixed[o2]   = (uint8_t)bs_bits(d >> 8, sb, 8);
-                    ng->fixed[o2+1] = (uint8_t)bs_bits(d & 0xFF, sb, 8);
-                }
+                if (off < (uint32_t)ng->fixed_size)
+                    ng->fixed[off] = (uint8_t)bs_bits(d & 0xFF, sb, 8);
             }
         } else if (off >= 0x7F000) {
             ng->k10_cram[off & 0xFFF] = d;
@@ -1326,11 +1327,21 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                                         some docs) is actually a VLOAD mirror write. */
         case 0:
             { static int q=0, tot=0; tot++; if (q<8 && (tot%997)==0) fprintf(stderr, "VOFFS tot=%d last d=%04x pc=%08x\n", tot, d, m68k_get_reg(NULL,M68K_REG_PC)); q++; }
+            {   /* K10V: trace VLOAD offset-register writes in the game phase */
+                static int kv = -2;
+                if (kv == -2) kv = getenv("K10V") ? 1 : 0;
+                if (kv && ng->frame > 300 && ng->k10_mode && (d & 0xF800) == 0x8000) {
+                    static int kc = 0;
+                    if (kc++ < 5000)
+                        fprintf(stderr, "K10V f=%lu off=%04x pc=%08x\n", ng->frame, d, m68k_get_reg(NULL,M68K_REG_PC));
+                }
+            }
             { static int vt = -2; static long nvt = 0;
               if (vt == -2) vt = getenv("VLOADT") ? 1 : 0;
               if (vt && ng->frame > 230 && (d & 0xFFFF) == 0x7FFF && nvt++ < 12)
                   fprintf(stderr, "VLWR-off f=%d d=%04x -> rb=%04x pc=%08x\n", ng->frame, d, ng->vram[d & 0xFFFF], m68k_get_reg(NULL,M68K_REG_PC)); }
-            ng->vram_offset = d & 0xFFFF;   /* MAME: full 16-bit word offset into 0x10000 words */
+            ng->vram_offset = (d & 0x8000) ? (d & 0x87FF) : (d & 0xFFFF);  /* MAME set_videoram_offset:
+                sprite region masks to 0x87FF (videoram is 0x8800 words; A15 selects sprite RAM) */
             ng->vram_readbuf = ng->vram[ng->vram_offset];   /* read happens right away */
             break;
         case 1:
@@ -1361,7 +1372,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                 if (done++ == 5000) { for (int q=0;q<64;q++) if (hist[q]) fprintf(stderr, "VWDIST %04x-%04x: %lu\n", q<<10, (q<<10)|0x3FF, hist[q]); done=-1; } }
             ng->vram[ng->vram_offset] = d;
             if (f_vload()) ng->vload_count++;
-            ng->vram_offset = (ng->vram_offset + ng->vram_modulo) & 0xFFFF;
+            ng->vram_offset = (ng->vram_offset & 0x8000)
+                | ((ng->vram_offset + ng->vram_modulo) & 0x7FFF);  /* MAME: A15 preserved, wraps in 0x8000-0x87FF */
             ng->vram_readbuf = ng->vram[ng->vram_offset];   /* prefetch */
             break;
         case 2: ng->vram_modulo = d; break;
@@ -1394,7 +1406,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         return;
     }
     if (a < 0x420000) {                     /* CRAM */
-        uint32_t o = ((a>>1)&0xFFF) | ng->cram_bank;   /* MAME: offset + palette bank */
+        uint32_t o = ((a>>1)&0xFFF) | ng->cram_bank;   /* MAME: offset + palette bank
+            (direct window 0x400000-0x401FFF mirrored — mask wraps like MAME's mirror(0x3fe000)) */
         /* MAME renders each scanline with the bank set during vblank (games
            write bank0 palette, render, then flip to bank1 at frame end for
            the NEXT frame's palette prep).  Full-frame render must snapshot
@@ -1407,9 +1420,10 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         }
         static int crtr2 = -2;
         if (crtr2 == -2) crtr2 = getenv("CRAMTRACE") ? 1 : 0;
-        if (crtr2 && ng->frame < 2000 && (m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000 || getenv("CRAMT2")))
+        if (crtr2 && (ng->frame < 2000 || getenv("CRAMT2")) && (m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000 || getenv("CRAMT2"))) {
             fprintf(stderr, "CRAMT f=%d a=%06x o=%04x d=%04x m=%04x pc=%08x\n",
                 ng->frame, a, o, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
+        }
         if (ng->dbg_z80==4 && ng->cramw<4000 && m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000) { ng->cramw++;
             fprintf(stderr, "CRAMW a=%06x o=%04x d=%04x m=%04x pc=%08x\n", a, o, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
         if (mem_mask & 0xFF00) ng->cram[o] = (ng->cram[o]&0x00FF)|(d&0xFF00);
@@ -1425,6 +1439,15 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                                                writeonly16 -> vram bytes, word index = (a&0x1FFFF)>>1) */
         uint32_t o = (a & 0x1FFFF) >> 1;
         if (o < 0x10000) {
+            {   /* K10V: direct-window sprite-region writes */
+                static int kv2 = -2;
+                if (kv2 == -2) kv2 = getenv("K10V") ? 1 : 0;
+                if (kv2 && ng->frame > 300 && ng->k10_mode && o >= 0x8000 && o < 0x8800) {
+                    static int kc2 = 0;
+                    if (kc2++ < 20)
+                        fprintf(stderr, "K10VD f=%lu off=%04x val=%04x pc=%08x\n", ng->frame, o, d, m68k_get_reg(NULL,M68K_REG_PC));
+                }
+            }
             {   /* VWRN=<n>: also trace the direct-window write path */
                 extern int ng_vwrn_get(void);
                 int vwrn = ng_vwrn_get();
@@ -3426,9 +3449,12 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 ng->k10_mode = 1; ng->k10_special = 0;
                                 memset(ng->k10_cram, 0, sizeof ng->k10_cram);
                                 memset(ng->k10_cram2, 0, sizeof ng->k10_cram2);
-                                if (ng->rom_size >= 0x100000)
-                                    for (int i = 0; i < 0x10000; i++)
-                                        ng->k10_cram2[i] = (uint16_t)((ng->rom[0xE0000 + i*2] << 8) | ng->rom[0xE0000 + i*2 + 1]);
+                                /* ram2 boots ZERO like MAME's ram_device: the game's
+                                   self-decrypt writes the real code in.  Preloading from
+                                   rom[0xE0000] left garbage past the written region and the
+                                   ram2 VBlank handler (jmp $c00438) never set the vblank
+                                   flag $10A785 -> main loop deadlocked at $9012 -> palette
+                                   fade frozen mid-scene (blue screen). */
                                 fprintf(stderr, "K10 kof10th device armed\n");
                             }
                             if (sw_has(sw, swend, "cmc50_jockeygp\"") || sw_has(sw, swend, "rom_vliner\""))
@@ -3870,7 +3896,36 @@ void ng_run_frame(neogeo *ng)
             if (pp && (ng->frame % atoi(pp)) == 0 && pf_last != (int)ng->frame) {
               pf_last = ng->frame;
               fprintf(stderr, "PCF f=%d pc=%08x zpc=%04x\n", ng->frame, (unsigned)m68k_get_reg(NULL,M68K_REG_PC), ng->z?(unsigned)z80w_pc(ng->z):0xffff);
-              if (ng->z && getenv("PCFZS")) { extern void z80w_statdump(void*); z80w_statdump(ng->z); } } }
+              if (ng->z && getenv("PCFZS")) { extern void z80w_statdump(void*); z80w_statdump(ng->z); }
+              if (getenv("K10DUMP") && ng->k10_mode) {   /* dump ram2+cart_ram for MAME diff */
+                FILE *f = fopen("/tmp/k10_cramdump.bin","wb");
+                if (f) { fwrite(ng->cram,2,0x2000,f); fclose(f); }
+                f = fopen("/tmp/k10_spram.bin","wb");
+                if (f) { fwrite(ng->vram+0x8000,2,0x4000,f); fclose(f); }
+                f = fopen("/tmp/k10_ram2.bin","wb");
+                if (f) { fwrite(ng->k10_cram2,2,0x10000,f); fclose(f); }
+                f = fopen("/tmp/k10_cram.bin","wb");
+                if (f) { fwrite(ng->k10_cram,2,0x1000,f); fclose(f); }
+                f = fopen("/tmp/k10_rom_e0.bin","wb");   /* decrypted rom 0xE0000 view */
+                if (f && ng->rom_size >= 0x100000) { fwrite(ng->rom+0xE0000,1,0x100,f); fclose(f); }
+                f = fopen("/tmp/k10_rom_full.bin","wb"); /* full decrypted ROM for pattern search */
+                if (f) { fwrite(ng->rom,1,ng->rom_size,f); fclose(f); }
+                f = fopen("/tmp/k10_spr.bin","wb");      /* raw spr region for MAME region diff */
+                if (f && ng->spr) { fwrite(ng->spr,1,ng->spr_size<0x1100000?ng->spr_size:0x1100000,f); fclose(f); }
+                f = fopen("/tmp/k10_fixed.bin","wb");    /* live fixed region (S-data rewrite target) */
+                if (f && ng->fixed) { fwrite(ng->fixed,1,ng->fixed_size,f); fclose(f); }
+                f = fopen("/tmp/k10_vram.bin","wb");     /* raw videoram for MAME region diff */
+                if (f) { fwrite(ng->vram,1,0x11000,f); fclose(f); }
+                f = fopen("/tmp/k10_cram.bin","wb");     /* live CRAM for MAME diff */
+                if (f) { fwrite(ng->cram,1,0x4000,f); fclose(f); }
+                fprintf(stderr,"K10VEC rom[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                    ng->rom[0],ng->rom[1],ng->rom[2],ng->rom[3],ng->rom[4],ng->rom[5],ng->rom[6],ng->rom[7],
+                    ng->rom[8],ng->rom[9],ng->rom[10],ng->rom[11],ng->rom[12],ng->rom[13],ng->rom[14],ng->rom[15]);
+                fprintf(stderr,"K10DUMP f=%d special=%08x prg=%08x romsz=%x cram2[0..7]=%04x %04x %04x %04x %04x %04x %04x %04x\n",
+                    ng->frame, ng->k10_special, ng->prg_bank_base, (unsigned)ng->rom_size,
+                    ng->k10_cram2[0],ng->k10_cram2[1],ng->k10_cram2[2],ng->k10_cram2[3],
+                    ng->k10_cram2[4],ng->k10_cram2[5],ng->k10_cram2[6],ng->k10_cram2[7]);
+              } } }
     { static int fp_last = -1; static int fenv = -1;
       if (fenv == -1) fenv = getenv("FDDBG") ? 1 : 0;
       if (fenv && ng->z && ng->frame % 500 == 0 && fp_last != ng->frame) {
