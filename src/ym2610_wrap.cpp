@@ -168,9 +168,17 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        never reached the SSG engine (FM+SSG stream identically zero). */
     if (chipno == 0) {
         if (reg >= 0x1d) { y->chip.write(0, reg); y->chip.write(1, val); }
-        /* reg < 0x1D: OPM timer/noise — host-owned timers below.  Forwarding
-           these to ymfm's lower port aliased them as SSG volume / ADPCM-B
-           START writes (BIOS OPM timer loads polluted both). */
+        else if (reg <= 0x0d) {
+            /* ymfm's lower port maps 00-0D to the SSG engine.  Bank A low
+               registers are the SSG tone/volume/enable file; forward them so
+               the SSG is reachable (BIOS sound test, SSG-using titles).  The
+               0E-1C gap is left dropped: those alias ADPCM-B START and the
+               OPM timer loads the host timer model owns. */
+            y->chip.write(0, reg); y->chip.write(1, val);
+        }
+        /* reg 0E-1C: OPM timer/noise — host-owned timers below.  Forwarding
+           these to ymfm's lower port aliased them as ADPCM-B START writes
+           (BIOS OPM timer loads polluted them). */
     } else if (reg <= 0x2f) {
         /* ADPCM-A register file (dump/total/test 00-02, levels 08-0D,
            start 10-1D, end 20-2D) — game m1 drivers write it here. */
