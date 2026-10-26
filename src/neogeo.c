@@ -2724,6 +2724,45 @@ static void kof97oro_px_dec(uint8_t *cpu, uint32_t size)
     memcpy(cpu, tmp, 0x500000);
     free(tmp);
 }
+/* kog (King of Gladiators bootleg) program decrypt: 8x0x20000 section
+   reorder + structural block fixups + generic abs.l/jsr fixups.  The
+   kogplus variant shares this permutation (vector table validates after
+   it); the kog-specific hardcoded 0x93xxx patch table is omitted since
+   kogplus's code differs there. */
+static void kog_px_dec(uint8_t *cpu, uint32_t size)
+{
+    if (size < 0x600000) return;
+    static const int sec[8] = {0x3,0x8,0x7,0xc,0x1,0xa,0x6,0xd};
+    uint8_t *dst = malloc(0x600000);
+    for (int i = 0; i < 8; i++) memcpy(dst + i*0x20000, cpu + sec[i]*0x20000, 0x20000);
+    memcpy(dst + 0x0007a6, cpu + 0x0407a6, 6);
+    memcpy(dst + 0x0007c6, cpu + 0x0407c6, 6);
+    memcpy(dst + 0x0007e6, cpu + 0x0407e6, 6);
+    memcpy(dst + 0x090000, cpu + 0x040000, 0x4000);
+    memcpy(dst + 0x100000, cpu + 0x200000, 0x400000);
+    memcpy(cpu, dst, 0x600000);
+    free(dst);
+    for (uint32_t i = 0x90000; i < 0x94000; i += 2) {
+        uint16_t w  = (uint16_t)((cpu[i] << 8) | cpu[i+1]);
+        uint16_t w1 = (uint16_t)((cpu[i+2] << 8) | cpu[i+3]);
+        if (((w & 0xffbf) == 0x4eb9 || w == 0x43f9) && w1 == 0) { cpu[i+2] = 0x00; cpu[i+3] = 0x09; }
+        if (w == 0x4eb8) { cpu[i] = 0x61; cpu[i+1] = 0x00; }
+    }
+    cpu[0x007a8] = 0; cpu[0x007a9] = 0x09;
+    cpu[0x007c8] = 0; cpu[0x007c9] = 0x09;
+    cpu[0x007e8] = 0; cpu[0x007e9] = 0x09;
+    {
+        static const uint32_t po[] = {0x93408,0x9340c,0x924ac,0x9251c,0x93966,0x93974,0x93982,0x93990,
+            0x9399e,0x939ac,0x939ba,0x939c8,0x939d4,0x939e0,0x939ec,0x939f8,0x93a04,0x93a10,0x93a1c,
+            0x93a28,0x93a34,0x93a40,0x93a4c,0x93a58,0x93a66,0x93a72};
+        static const uint16_t pv[] = {0xf168,0xfb7a,0x0009,0x0009,0xffda,0xffcc,0xffbe,0xffb0,
+            0xffa2,0xff94,0xff86,0xff78,0xfa5c,0xfa50,0xfa44,0xfa38,0xfa2c,0xfa20,0xfa14,
+            0xfa08,0xf9fc,0xf9f0,0xfd14,0xfd08,0xf9ca,0xf9be};
+        for (unsigned k = 0; k < sizeof(po)/sizeof(po[0]); k++) {
+            cpu[po[k]] = (uint8_t)(pv[k] >> 8); cpu[po[k]+1] = (uint8_t)pv[k];
+        }
+    }
+}
 static void bootleg_sx_dec(uint8_t *fix, uint32_t size, int value)
 {
     if (value == 1) {
@@ -3204,6 +3243,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "boot_kof97oro\"")) { kof97oro_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); bootleg_cx_dec(ng->spr, ng->spr_size); }
                             else if (sw_has(sw, swend, "boot_kf10thep\"")) { kf10thep_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); }
                             else if (sw_has(sw, swend, "boot_svcsplus\"")) { svcsplus_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 2); svcboot_cx_dec(ng->spr, ng->spr_size); svcsplus_px_hack(ng->rom); }
+                            else if (sw_has(sw, swend, "boot_kogplus\"")) { kog_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); bootleg_cx_dec(ng->spr, ng->spr_size); }
                             if (sw_has(sw, swend, "kf10-p1.bin")) {
                                 /* kof10th bootleg: lo-rom overlay device (MAME NEOGEO_KOF10TH) */
                                 kof10th_dec(ng->rom, ng->rom_size);
