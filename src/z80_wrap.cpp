@@ -26,6 +26,14 @@ static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
     static long brd = 0; z80w *w0 = (z80w*)h->pUserArea;
     if (off < 0xFED0 || (brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x\n", off, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
+  if (getenv("ZTR") && off < 0xF800) { static long zt = 0;
+    if (zt++ < 4000) fprintf(stderr, "ZTR rd=%04x pc=%04x\n", off, w->cpu->get_state().PC); }
+  if (getenv("ZRAM") && off >= 0xFF00) { static long zr = 0;
+    if (zr++ < 30) fprintf(stderr, "ZRAM rd=%04x pc=%04x\n", off, w->cpu->get_state().PC); }
+  if (getenv("ZCRASH")) { static uint16_t ring[4096]; static int rp = 0; static int fired = 0;
+    ring[rp++ & 4095] = w->cpu->get_state().PC;
+    if (!fired && off == 0xFFFD) { fired = 1; fprintf(stderr, "ZCRASH ring (oldest->newest):\n");
+      for (int qi = 0; qi < 4096; qi++) fprintf(stderr, "  %04x\n", ring[(rp + qi) & 4095]); } }
   /* THE FIX: the core's Push/Pop walk m_rgbStack as a POINTER into
      m_rgbMemory and read back via the internal array (mz80GetMemory's
      sentinel fallthrough). Routing 0xF800-0xFFFF to the callback RAM
@@ -40,7 +48,11 @@ static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
     static long bwr = 0; z80w *w0 = (z80w*)h->pUserArea;
     if (off < 0xFEC0 || (off >= 0xFE4A && off < 0xFE80) || (off >= 0xFC30 && off < 0xFC60) || (bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x\n", off, v, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
-  if (off >= 0xF800) { w->cpu->ram_array()[off] = v; return; }
+  if (off >= 0xF800) { w->cpu->ram_array()[off] = v;
+    if (getenv("FDWR") && (off == 0xFD67 || off == 0xFD66)) { static long fw = 0;
+      if (fw++ < 40) fprintf(stderr, "FDWR a=%04x v=%02x zpc=%04x\n", off, v, w->cpu->get_state().PC);
+      if (fw == 40) fprintf(stderr, "FDWR ...silenced\n"); }
+    return; }
   w->wr(off + h->lowAddr, v, w->ctx); }
 static UINT16 tr_in(UINT16 p, z80PortRead *h)
 { z80w *w = (z80w*)h->pUserArea; return w->in(p, w->ctx); }
@@ -94,6 +106,12 @@ void z80w_set_step_hook(void *v, void (*h)(unsigned pc)) { ((z80w*)v)->cpu->set_
 void z80w_irq(void *v, uint8_t vector) { ((z80w*)v)->cpu->mz80int(vector); }
 void z80w_nmi(void *v) { ((z80w*)v)->cpu->mz80nmi(); }
 uint16_t z80w_pc(void *v) { return ((z80w*)v)->cpu->GetPC(); }
+void z80w_statdump(void *v) {
+  z80w *w = (z80w*)v; cpu_z80::State s = w->cpu->get_state();
+  fprintf(stderr, "ZSTAT pc=%04x sp=%04x af=%04x bc=%04x de=%04x hl=%04x halt=%d iff1=%d iff2=%d im=%d i=%02x ram[fffc..ffff]=%02x %02x %02x %02x\n",
+          s.PC, s.SP, s.AF, s.BC, s.DE, s.HL, s.FHalt, s.IFF1, s.IFF2, s.NIM, s.I,
+          w->ram[0xfffc], w->ram[0xfffd], w->ram[0xfffe], w->ram[0xffff]);
+}
 unsigned long z80w_bc(void *v) { cpu_z80::State st = ((z80w*)v)->cpu->get_state(); return st.BC; }
 uint16_t z80w_sp(void *v) { cpu_z80::State s = ((z80w*)v)->cpu->get_state(); return s.SP; }
 

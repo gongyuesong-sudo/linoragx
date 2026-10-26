@@ -84,6 +84,12 @@ struct neogeo {
     int      mc_lock1, mc_unlock2, mc_regsel;
     int      sram_unlocked;            /* systemlatch ch6: SRAM CE */
     int      cart_prot;                /* 1=kof98 2=kof99 3=garou 4=mslug3 5=kof2000 6=PVC (SMA/PVC PRG decrypted) */
+    int      cpu601;                   /* 1 = run 68010 core (ms5pcb PCB uses SETcc) */
+    int      latch1_hold;              /* 68K-instr countdown: latch1 read-back protection window */
+    int      latch1_defer;             /* Z80 consumed latch1 inside hold -> clear on drain */
+    long     tp_cnt;                   /* 68K-instr countdown driving TP square wave (cpu601) */
+    int      tp_rise;                  /* pending TP rising edge: raised on next AUDIO_COIN read */
+    long     clk_cnt;                  /* 68K cycles since last UPD4990A time-register tick */
     int      kof98_state;
     uint16_t kof98_trig;
     uint16_t kof98_default[2];
@@ -448,8 +454,15 @@ static uint16_t z_in(uint32_t p, void *c)
     }
     switch (port) {
     case 0x00: { uint8_t v = ng->soundlatch1;      /* generic_latch: read returns data,
-                 clear_w drops data_pending (NMI line edge), data itself is kept */
+                 clear_w drops data_pending (NMI line edge), data itself is kept.
+                 HOLD WINDOW: right after the 68K writes a command, MAME's time-slice
+                 guarantees the 68K can read the latch back (BIOS sound-test edge at
+                 $C10EC0, game boot poll at $10E4) before the Z80 ever runs.  Here the
+                 Z80 runs between those two 68K instrs and would steal the value, so
+                 defer the clear until the hold window drains. */
                  if (ng->dbg_z80==3) fprintf(stderr, "P0R %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame);
+                 if (ng->latch1_hold > 0) ng->latch1_defer = 1;
+                 else ng->soundlatch1 = 0;
                  ng->z80_nmi_pend = 0; ng->z80_nmi_asserted = 0; ng->p0_cnt++; return v; }
     case 0x04: { uint8_t v = ym_read(ng->ym, 0);
                  { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
@@ -517,6 +530,14 @@ static void mc_stb_rise(neogeo *ng)
     case 11: ng->mc_tp_half = 1800; break;   /* TP_60S_INT */
     default: break;
     }
+    /* The sp-4x BIOS calendar test ($C10EB8) arms TP_1S_INT via STB and then
+       busy-waits for a 0->1 edge on TP (AUDIO_COIN bit6) — MAME gt: armed
+       f=111, test done f~125, i.e. the edge must arrive within ~14 frames.
+       MAME's tp_tick is armed with adjust(zero) so the command itself flips
+       TP.  Two-stage here: force TP low at STB (the test's pre-loop sample
+       sees 0), then the main loop raises TP on the next read sample — the
+       rising edge lands 1-2 frames after the command, inside the window. */
+    if (ng->mc_tp_half) { ng->mc_tp = 0; ng->tp_cnt = 0; }  /* STB forces TP low; the BIOS wait-loop arms the rising edge (see pc_hook) */
     switch (m_c) {
     case 1:  /* MODE_SHIFT */
         ng->mc_dout = ng->mc_shift[0] & 1;
@@ -587,6 +608,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         ng->hit_a = c1; ng->hit_b = c2; ng->hit_c = c3;
     }
     if (a < 0x80) {                         /* vectors (mirror of bank base) */
+        if (getenv("VECPROBE") && a < 8) fprintf(stderr, "VECRD a=%02x v=%p sz=%x -> %04x\n", a, (void*)(ng->vector_bank?ng->rom:ng->bios), ng->vector_bank?ng->rom_size:0x20000, (ng->vector_bank?ng->rom:ng->bios)?((ng->vector_bank?ng->rom:ng->bios)[a]<<8|(ng->vector_bank?ng->rom:ng->bios)[a+1]):0xFFFF);
         if (ng->dbg_z80==4 && (a==0x64||a==0x68)) fprintf(stderr, "VFETCH%02x vbank=%d pc=%08x\n", a, ng->vector_bank, m68k_get_reg(NULL,M68K_REG_PC));
         /* MAME banked_vectors_r: cart vectors = maincpu region[0..0x3FF]
            (region order == our rom[] load order, ROM_CONTINUE swaps halves);
@@ -736,10 +758,10 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                     m68k_get_reg(NULL,M68K_REG_PC));
             }
         }
-        if (f_bankdbg() && a == 0x200000 && ng->frame > 4400 && ng->frame < 4700)
-            fprintf(stderr, "BANKR f=%d o=%08x v=%04x pc=%08x\n", ng->frame, o,
+        if (f_bankdbg() && a <= 0x200066 && ng->frame > 140 && ng->frame < 160)
+            fprintf(stderr, "BANKR f=%d a=%06x o=%08x v=%04x pc=%08x\n", ng->frame, a, o,
                 (ng->rom && o + 2 <= ng->rom_size) ? ((ng->rom[o]<<8)|ng->rom[o+1]) : 0xFFFF,
-                m68k_get_reg(NULL, M68K_REG_PC));
+                m68k_get_reg(NULL,M68K_REG_PC));
         if (!ng->rom || o + 2 > ng->rom_size) return 0xFFFF;
         return (ng->rom[o]<<8)|ng->rom[o+1];
     }
@@ -764,8 +786,9 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         { static int ac = -2;
           if (ac == -2) ac = getenv("ACRD") ? 1 : 0;
           if (ac) { static long nac = 0;
-            if ((nac++ % 200) == 0) fprintf(stderr, "ACRD f=%llu pc=%08x sl2=%02x\n",
-                (unsigned long long)ng->frame, m68k_get_reg(NULL,M68K_REG_PC), ng->soundlatch2); } }
+            if ((nac++ % 200) == 0) fprintf(stderr, "ACRD f=%llu pc=%08x sl2=%02x tp=%d mc_c=%d sh6=%x\n",
+                (unsigned long long)ng->frame, m68k_get_reg(NULL,M68K_REG_PC), ng->soundlatch2,
+                ng->mc_tp, ng->mc_c, ng->mc_shift[6]); } }
         if (getenv("COINDBG") && (ng->buttons[0] & 0x400))
             { static int cd = 0; if (cd++ < 20) fprintf(stderr, "[coindbg] f=%d coin-active read a=%06x\n", ng->frame, a); }
         if (ng->dbg_vw == 3 && ng->frame > 7900) { fprintf(stderr, "COINRD f=%d a=%06x pc=%08x sl2=%02x\n", ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC), ng->soundlatch2); if (++ng->sl1_trace > 40) ng->dbg_vw=0; }
@@ -775,12 +798,34 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         /* UPD4990A: TP toggles with serial clock; idle = slow RTC square
            wave.  Frame-based: the BIOS validates the TP period against Timer
            C counts (calendar check) and only passes with ~30-frame halves. */
-        if (ng->mc_shift[6] & 0xF) {
+        if (ng->cpu601) {
+            /* ms5pcb (cpu601): TP/DO are live chip pins, always driven (MAME
+               upd1990a get_data_out/tp_r are level outputs, not gated by the
+               command register).  The BIOS calendar loop ($C10EBE) runs long
+               after the command nibble drained from shift[6] and after STB
+               re-reads reset mc_c to 0 — any gate here freezes TP and the
+               test retries forever.  Frame-modulo path below is skipped for
+               cpu601, so this branch must be the unconditional pin driver. */
+            if (ng->tp_rise) { }  /* (rise handled per-frame below, not on read) */
+            lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
+            lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
+        }
+        else if (ng->mc_shift[6] & 0xF) {
             /* MAME: once any command latches, TP/DO stay driven by the chip
                state for the whole session (get_data_out = m_data_out, OE tied
                high).  The old frame<400 gate dropped mslug3's calendar reads
                (they recur every ~180-frame self-test cycle) back to the idle
                all-ones level -> endless retry. */
+            lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
+            lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
+        }
+        else if (ng->cpu601 && ng->mc_c) {
+            /* sp-4x PCB BIOS calendar test ($C12024) bit-bangs the serial port
+               and samples DO from AUDIO_COIN bit7 ($320001) — NOT from $380050.
+               After the READ command's STB, the command nibble drains to 0 but
+               the chip still drives TP/DO (MAME: pins are live whenever
+               !m_test_mode).  The idle all-ones fallback made every time
+               register read back $FF -> calendar retry forever. */
             lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
             lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
         }
@@ -817,7 +862,17 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return (uint16_t)(((ng->mc_tp ? 0x40 : 0) | (ng->mc_dout ? 0x80 : 0)) * 0x101);
     if (a < 0x3E0000) {                     /* video registers R (mirror 0x1FFF8) */
         switch ((a & 0x6)>>1) {
-        case 0: case 1: return ng->vram_readbuf;
+        case 0: case 1:
+            { static int v7f = -2;
+              if (v7f == -2) v7f = getenv("VFB55") ? 1 : 0;
+              if (v7f && ng->vram_offset == 0x7FFF && ng->frame > 200) {
+                  fprintf(stderr, "VFB55 f=%d off=%06x vram7f=%04x pc=%08x\n", ng->frame, a, ng->vram_readbuf, m68k_get_reg(NULL,M68K_REG_PC));
+                  if (--v7f == 0) { } }
+              { static int vv = -2; static long nv = 0;
+                if (vv == -2) vv = getenv("VLOADT") ? 1 : 0;
+                if (vv && a == 0x3C0002 && ng->frame > 230 && nv++ < 12)
+                    fprintf(stderr, "VLRD f=%d rb=%04x off=%04x pc=%08x\n", ng->frame, ng->vram_readbuf, ng->vram_offset, m68k_get_reg(NULL,M68K_REG_PC)); } }
+            return ng->vram_readbuf;
         case 2: return ng->vram_modulo;
         default: {
             int vc = ng->scanline + 0x100;
@@ -873,7 +928,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
              ? (0xFF00 | ng->mc_data[(a >> 1) & 0x7FF]) : 0xFFFF;
     if (a < 0xD00000) {
         uint32_t o = a & 0x1FFFF;
-        if (!ng->bios || o+2 > ng->bios_size) return 0xFFFF;
+        if (!ng->bios) return 0xFFFF;
+        if (o+2 > ng->bios_size) o &= (ng->bios_size - 1);   /* MAME mirror(0x0e0000): BIOS window mirrors the 128K image */
         if (ng->dbg_z80==4 && o >= 0x1F800 && o < 0x1F80C)
             fprintf(stderr, "TMPLRD a=%06x o=%05x -> %02x%02x pc=%08x\n", a, o, ng->bios[o], ng->bios[o+1], m68k_get_reg(NULL,M68K_REG_PC));
         return (ng->bios[o]<<8)|ng->bios[o+1];
@@ -1021,7 +1077,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         ng->pvc_ram[off] = (uint16_t)((ng->pvc_ram[off] & ~mem_mask) | (d & mem_mask));
         if (off == 0xff0) pvc_unpack_color(ng);
         else if (off >= 0xff4 && off <= 0xff5) pvc_pack_color(ng);
-        if (off >= 0xff8) ng->prg_bank_base = pvc_bank_base(ng);
+        if (off >= 0xff8) { ng->prg_bank_base = pvc_bank_base(ng);
+            if (f_bankdbg()) fprintf(stderr, "BANKPVC f=%d off=%03x -> base=%08x vec4=%08x pc=%08x\n",
+                ng->frame, off, ng->prg_bank_base,
+                (ng->rom && ng->prg_bank_base+4 < (uint32_t)ng->rom_size) ? ((unsigned)(ng->rom[ng->prg_bank_base+4]<<24|ng->rom[ng->prg_bank_base+5]<<16|ng->rom[ng->prg_bank_base+6]<<8|ng->rom[ng->prg_bank_base+7])) : 0xFFFFFFFFu,
+                m68k_get_reg(NULL, M68K_REG_PC)); }
         return;
     }
     /* NOTE: MAME does NOT install kof2003_w for kf2k3bl bootleg carts (no
@@ -1110,13 +1170,16 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
     if (a < 0x340000) {                     /* audio command: MAME map is
         0x320000.w mirror 0x01fffe — EVEN addresses only, low byte only.
         Odd writes (e.g. BIOS coin $300001) are watchdog/no-op, NOT latches:
-        latching them storms the Z80 NMI handler and overflows its stack. */
+        latching them storms the Z80 NMI handler and overflows its stack.
+        Lower bound 0x320000 matters: ms5pcb game writes to 0x25FFF0 (read-bank
+        window, no-op in MAME) were absorbed as soundlatch1 + fake NMI, which
+        bumped the Z80 command counter fd67 and corrupted its dispatch. */
         if (a & 1) {
             /* watchdog feed: MAME map(0x300001,0x300001).mirror(0x01fffe) */
             ng->wd_last = ng->mc_cycles; ng->wd_armed = 1;
             if (f_wdtr()) fprintf(stderr, "WDFEED f=%d a=%06x pc=%08x\n", ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC));
         }
-        if ((a & 1) == 0 && (mem_mask & 0xFF00)) {
+        if (a >= 0x320000 && (a & 1) == 0 && (mem_mask & 0xFF00)) {
             /* even-address byte lane = the command byte (Musashi: even byte
                write presents data<<8 with mask 0xFF00; word write d>>8;
                odd-byte writes (mask 0x00FF: watchdog $300001 etc.) must NOT
@@ -1128,6 +1191,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                     ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
             uint8_t v = (uint8_t)(d >> 8);
             ng->soundlatch1 = v;
+            ng->latch1_hold = 16;   /* hold window: let the 68K read its own command back
+                                       (MAME slice timing) before the Z80 may clear it */
             /* MAME generic_latch_8: data always overwritten, but data_pending
                (and hence the NMI line) only rises when idle. */
             if (!ng->z80_nmi_pend) ng->z80_nmi_pend = 1;
@@ -1261,6 +1326,10 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                                         some docs) is actually a VLOAD mirror write. */
         case 0:
             { static int q=0, tot=0; tot++; if (q<8 && (tot%997)==0) fprintf(stderr, "VOFFS tot=%d last d=%04x pc=%08x\n", tot, d, m68k_get_reg(NULL,M68K_REG_PC)); q++; }
+            { static int vt = -2; static long nvt = 0;
+              if (vt == -2) vt = getenv("VLOADT") ? 1 : 0;
+              if (vt && ng->frame > 230 && (d & 0xFFFF) == 0x7FFF && nvt++ < 12)
+                  fprintf(stderr, "VLWR-off f=%d d=%04x -> rb=%04x pc=%08x\n", ng->frame, d, ng->vram[d & 0xFFFF], m68k_get_reg(NULL,M68K_REG_PC)); }
             ng->vram_offset = d & 0xFFFF;   /* MAME: full 16-bit word offset into 0x10000 words */
             ng->vram_readbuf = ng->vram[ng->vram_offset];   /* read happens right away */
             break;
@@ -1500,8 +1569,8 @@ static int sw_area(const char *swxml, const char *area, rg_ent *ents, int maxn, 
         if (sw_attr(p, tagend, "loadflag", tmp, sizeof tmp)) {
             e->cont = strstr(tmp, "continue") ? 1 : 0;
             e->swap = strstr(tmp, "word_swap") ? 1 : 0;
-            e->byte = strstr(tmp, "load16_byte") ? 1 : 0;
-            e->l32  = strstr(tmp, "load32_word") ? 1 : 0;
+            e->byte = strstr(tmp,"load16_byte") ? 1 : 0;
+            e->l32 = strstr(tmp,"load32_word") ? 1 : 0;
         }
         if (!e->fname[0] && sw_attr(p, tagend, "value", tmp, sizeof tmp)) {
             e->fill = 1; e->fval = (uint8_t)strtoul(tmp, NULL, 0);
@@ -1921,6 +1990,17 @@ static void pvc_scr(uint8_t *R, uint32_t a, uint32_t b, const int *sp)
 }
 static void pvc_rawxor(uint8_t *R)   /* MAME: rom[0x800000+i] ^= rom[0x100002|i] */
 { for (uint32_t i = 0; i < 0x100000; i++) R[0x800000+i] ^= R[0x100002|i]; }
+/* BYTE_XOR_LE variants (MAME ROM_CODE applies BYTE_XOR_LE to scr indices and
+ * the xor table is indexed i^1).  Verified byte-exact vs MAME ms5pcb region. */
+static void pvc_xor_le(uint8_t *R, uint32_t a, uint32_t b, const uint8_t *x)
+{ for (uint32_t i = a; i < b; i++) R[i] ^= x[(i ^ 1) % 0x20]; }
+static void pvc_scr_le(uint8_t *R, uint32_t a, uint32_t b, const int *sp)
+{
+    for (uint32_t i = a; i < b; i += 4) {
+        uint32_t v = bswp(R[(i+1)^1] | (R[(i+2)^1] << 8), 16, sp);
+        R[(i+1)^1] = (uint8_t)v; R[(i+2)^1] = (uint8_t)(v >> 8);
+    }
+}
 
 static void pvc_dec_mslug5(uint8_t *R)
 {
@@ -1930,7 +2010,7 @@ static void pvc_dec_mslug5(uint8_t *R)
     static const int m1[8]={7,6,5,4,1,0,3,2};
     static const int m2[8]={5,4,7,6,1,0,3,2};
     uint8_t *B = prot_buf();
-    pvc_xor(R,0,0x100000,x1); pvc_xor(R,0x100000,0x800000,x2); pvc_scr(R,0x100000,0x800000,sp);
+    pvc_xor_le(R,0,0x100000,x1); pvc_xor_le(R,0x100000,0x800000,x2); pvc_scr_le(R,0x100000,0x800000,sp);
     memcpy(B,R,0x800000);
     for (int i = 0; i < 16; i++) {
         uint32_t o = (i & 0xf0) + bswp(i & 0x0f, 8, m1);
@@ -2648,9 +2728,8 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
     }
     if (s1data) {
         /* svcpcb family full chain (MAME init_mslug5pcb/init_svcpcb).
-         * Our spr buffer is bus-order; MAME chain works in region byte
-         * space — wordswap in, decrypt, wordswap back (same trick as pvc_run). */
-        wordswap(ng->spr, sz);
+         * Our spr buffer already matches MAME's region layout (load32_word
+         * interleave), so the chain runs in place — no wordswap sandwich. */
         svcpcb_gfx_do(ng->spr, sz);
         mame_cmc50_gfx_decrypt(ng->spr, sz, key);
         uint32_t fsz = ng->fixed_size ? ng->fixed_size : 0x20000;
@@ -2658,13 +2737,17 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
         if (fsz >= sz) fsz = 0x20000;
         if (!ng->fixed) { ng->fixed = calloc(fsz, 1); ng->fixed_size = fsz; }
         uint8_t *fxm = calloc(1, fsz);
-        if (!fxm) { wordswap(ng->spr, sz); return; }
+        if (!fxm) return;
         cmc_sfix_decrypt(ng->spr, sz, fxm, fsz);
         for (uint32_t i = 0; i < fsz; i++) fxm[i] = svc_s1_bitswap(fxm[i] ^ 0xd2);
-        wordswap(ng->spr, sz);
-        wordswap(fxm, fsz);
+        /* MAME's fixed region is ROM_FILL(0); our swlist loaded sfix.sfix raw
+           data there (MAME keeps it in a separate 'fixedbios' region). Clear
+           before merging the decrypted tiles so raw bytes don't OR-pollute. */
+        memset(ng->fixed, 0, ng->fixed_size);
         for (uint32_t i = 0; i < fsz && i < ng->fixed_size; i++) ng->fixed[i] |= fxm[i];
         free(fxm);
+        if (getenv("SPRSAVE2")) { FILE *fp = fopen(getenv("SPRSAVE2"), "wb"); if (fp) { fwrite(ng->spr, 1, sz, fp); fclose(fp); } }
+        if (getenv("FIXDUMP2")) { FILE *fp = fopen(getenv("FIXDUMP2"), "wb"); if (fp) { fwrite(ng->fixed, 1, ng->fixed_size, fp); fclose(fp); } }
         if (getenv("CMCDBG")) {
             for (uint32_t b0 = 0; b0 < sz; b0 += 0x800000) {
                 uint32_t nz = 0;
@@ -3059,8 +3142,81 @@ unsigned int m68k_get_pc_snapshot(void)
     return m68k_get_reg(0, M68K_REG_PC);
 }
 unsigned short dbg_r16(struct neogeo *ng, unsigned a) { return r16(ng, a); }
+static unsigned g_jr[512]; static int g_ji; static int g_jr_on;
+void linoragx_ringdump(unsigned n)
+{
+    fprintf(stderr, "RINGDUMP:");
+    for (int ri = 1; ri <= 512; ri++) fprintf(stderr, " %06x", g_jr[(g_ji + ri) & 511]);
+    fprintf(stderr, "\n");
+}
 void linoragx_pc_hook(unsigned int pc)
 {
+    { static int jd = -2; if (jd == -2) jd = getenv("JMPDBG") ? 1 : 0;
+      if (jd) { g_jr_on = 1; } }
+    if (g_jr_on) {
+        g_jr[g_ji = (g_ji + 511) & 511] = pc;
+        if (pc == 0x00640064) { fprintf(stderr, "RING:"); for (int ri = 1; ri <= 64; ri++) fprintf(stderr, " %06x", g_jr[(g_ji + ri) & 63]); fprintf(stderr, "\n"); }
+        { static int halt1 = 0; static unsigned hprev = 0;
+          if (pc == 0x00c15f00 && !halt1 && hprev != 0x00c15f06) { halt1 = 1;
+            fprintf(stderr, "RINGHALT prev=%06x:", hprev); for (int ri = 1; ri <= 512; ri++) fprintf(stderr, " %06x", g_jr[(g_ji + ri) & 511]); fprintf(stderr, "\n"); }
+          if (pc != 0x00c15f00 && pc != 0x00c15f06) hprev = pc; }
+    }
+    /* NOTE: the sp-4x BIOS calendar service ($C10EB8) is entered via jsr from
+       $C10D04/$C10D1A and exits with rts at $C10ED2.  On ms5pcb the rts pulls
+       $00640064 (stack-clean pattern) instead of the return address: the
+       supervisor stack loses exactly 2 bytes per VBlank interrupt while the
+       BIOS busy-waits in that loop (68010 M-bit master-stack mode is active —
+       the BIOS sets SR=$2000 at $C10D16 before the second jsr).  Pinning down
+       the 2-byte leak in the Musashi 68010 interrupt/rte path is the next
+       step for ms5pcb; the frame push/pop themselves measure symmetric. */
+    /* The sp-4x BIOS calendar test ($C10EB8) busy-waits for a 0->1 edge on TP
+       (AUDIO_COIN bit6); the edge must occur WHILE the loop runs (its edge
+       detector is (prev^cur)&cur&$40 — an edge before the loop is missed and
+       the test retries forever, MAME gt: armed f=111, done f~125).  Arm a
+       2-frame countdown when the loop is entered (cpu601-gated); the rising
+       edge then lands inside the test window.  STB forces TP low so the
+       loop's first samples read 0. */
+    /* TP free-runs from STB with the mode half-period (MAME restarts its TP
+       timer on every command).  The BIOS calendar test arms at $C10D04/$C10D1A
+       and expects each rising edge ~30 frames after the STB that started the
+       1-second interrupt; an immediate in-loop edge made the whole test finish
+       in ~33 frames and the BIOS rejected the elapsed count (< $39). */
+    if (g_ng->cpu601 && pc == 0x00640064 && getenv("JMPDBG")) {
+        static long jc; if (++jc <= 3) {
+            unsigned a0 = m68k_get_reg(NULL, M68K_REG_A0), a1 = m68k_get_reg(NULL, M68K_REG_A1);
+            unsigned a2 = m68k_get_reg(NULL, M68K_REG_A2), a5 = m68k_get_reg(NULL, M68K_REG_A5);
+            unsigned usp = m68k_get_reg(NULL, M68K_REG_SP), pcusr = m68k_get_reg(NULL, M68K_REG_PC);
+            extern unsigned short dbg_r16(struct neogeo *, unsigned);
+            fprintf(stderr, "JMPDBG f=%d a0=%06x a1=%06x a2=%06x a5=%06x usp=%06x ret=%08x\n",
+                g_ng->frame, a0, a1, a2, a5, usp,
+                (unsigned)(dbg_r16(g_ng, usp+2) << 16 | dbg_r16(g_ng, usp+4)));
+            fprintf(stderr, "JMPDBG stk:");
+            for (int si = 0; si < 0x20; si += 2) fprintf(stderr, " %04x", dbg_r16(g_ng, usp + si));
+            fprintf(stderr, "\nJMPDBG a5w:");
+            for (int si = 0x960; si < 0x9a0; si += 2) fprintf(stderr, " %04x", dbg_r16(g_ng, a5 + si));
+            fprintf(stderr, "\n"); } }
+    if (g_ng->cpu601 && pc == 0x00c16092 && getenv("ERRDBG")) {
+        static long ec2; static unsigned ld6 = 0xFFFFFFFF;
+        unsigned d6 = m68k_get_reg(NULL, M68K_REG_D6);
+        if (d6 != ld6 && ++ec2 % 1 == 0) {
+            fprintf(stderr, "ERRDBG f=%d d6=%u pc_ret=%08x\n", g_ng->frame, d6 & 0xFF,
+                (unsigned)(m68k_get_reg(NULL, M68K_REG_A6) & 0xFFFFFF));
+            ld6 = d6; } }
+    if (g_ng->cpu601 && pc == 0x00c10ed0 && getenv("EDGDBG")) {
+        static long ec; static unsigned last_d0 = 0xFFFFFFFF;
+        if (++ec % 500 == 0) {
+            unsigned d0 = m68k_get_reg(NULL, M68K_REG_D0), d2 = m68k_get_reg(NULL, M68K_REG_D2);
+            fprintf(stderr, "EDG f=%d d0=%02x d2=%02x d0chg=%d tp=%d\n", g_ng->frame, d0, d2, d0 != last_d0, g_ng->mc_tp);
+            last_d0 = d0; } }
+    if (g_ng && g_ng->latch1_hold > 0 && --g_ng->latch1_hold == 0 && g_ng->latch1_defer) {
+        g_ng->latch1_defer = 0; g_ng->soundlatch1 = 0; }   /* deferred Z80 clear fires */
+    { static int cef = -2;
+      if (cef == -2) cef = getenv("CEFDBG") ? 1 : 0;
+      if (cef && g_ng && (pc == 0x00001226u || pc == 0x000011a4u || pc == 0x000010d2u || pc == 0x000010ccu)) {
+          static long n = 0;
+          if (n++ < 60) fprintf(stderr, "CEF f=%d pc=%06x 7cef=%02x 7cee=%02x d0=%08x\n",
+              g_ng->frame, pc, g_ng->smem[0xFCEF], g_ng->smem[0xFCEE],
+              m68k_get_reg(NULL, M68K_REG_D0)); } }
     if (g_pcflow_lo < 0) return;
     int f = g_pcflow_ng ? g_pcflow_ng->frame : -1;
     if (f >= g_pcflow_lo && f <= g_pcflow_hi)
@@ -3311,6 +3467,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"k2k2_kof2k2\"",50,0xec,1,1},
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
                                     {"boot_kf2k3pl\"",50,0x9d,0,0},{"boot_kf2k3upl\"",50,0x9d,0,0},
+                                    {"pcb_ms5\"",50,0x19,1,1,1},
                                 };
                                 for (unsigned ci = 0; ci < sizeof ctab / sizeof ctab[0]; ci++) {
                                     if (!sw_has(sw, swend, ctab[ci].f)) continue;
@@ -3318,6 +3475,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                         if (ng->snd) free(ng->snd);
                                         ng->snd = calloc(0x90000, 1); ng->snd_size = 0x90000;
                                         if (ng->snd) cmc50_m1_decrypt(ng->acrypt, ng->acrypt_size, ng->snd);
+                                        { const char *ds = getenv("DUMPSND"); if (ds && ng->snd) { FILE *f = fopen(ds, "wb"); if (f) { fwrite(ng->snd, 1, 0x80000, f); fclose(f); } } }
                                         if (f_cmctr()) fprintf(stderr, "M1DEC sw=%s acsz=%x snd[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x\n", ctab[ci].f, ng->acrypt_size, ng->snd[0],ng->snd[1],ng->snd[2],ng->snd[3],ng->snd[4],ng->snd[5],ng->snd[6],ng->snd[7]);
                                     }
                                     if (!getenv("LINORAGX_NOCMC"))
@@ -3335,6 +3493,47 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             /* MAME samsh5sp cart: pcm2 swap(ym,6) */
                             if (sw_has(sw, swend, "k2k2_sams5s\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
                                 pcm2_swap(ng->adpcm, 6);
+                            /* MAME neopcb ms5pcb: mslug5_decrypt_68k + pcm2 swap(2); gfx chain via ctab s1=1 */
+                            if (sw_has(sw, swend, "pcb_ms5\"")) {
+                                /* MAME ROM_LOAD32_WORD_SWAP = GROUPWORD|REVERSE|SKIP(2):
+                                   p1r word k -> rom word 2k, p2r word k -> rom word 2k+1.
+                                   The generic swlist loader copies sequentially at offset,
+                                   so p2r would overwrite p1r; rebuild the interleave here. */
+                                uint8_t *f1 = 0, *f2 = 0; uint32_t s1 = 0, s2 = 0;
+                                if (rom_load_zip(gamezip, "268-p1r.p1", &f1, &s1) == 0 &&
+                                    rom_load_zip(gamezip, "268-p2r.p2", &f2, &s2) == 0 &&
+                                    s1 >= 0x400000 && s2 >= 0x400000 && ng->rom_size >= 0x800000) {
+                                    for (uint32_t k = 0; k < 0x200000; k++) {
+                                        ng->rom[4*k+0] = f1[2*k+1]; ng->rom[4*k+1] = f1[2*k];
+                                        ng->rom[4*k+2] = f2[2*k+1]; ng->rom[4*k+3] = f2[2*k];
+                                    }
+                                    free(f1); free(f2);
+                                }
+                                { const char *dp = getenv("DUMPPRE"); if (dp && ng->rom) { FILE *f = fopen(dp, "wb"); if (f) { fwrite(ng->rom, 1, ng->rom_size, f); fclose(f); } } }
+                                /* MAME mslug5_decrypt_68k works on the raw region bytes (load32_word_swap
+                                   interleave already applied); pvc_run's wordswap would corrupt it. */
+                                if (ng->rom && ng->rom_size >= 0x800000) pvc_dec_mslug5(ng->rom);
+                                fprintf(stderr, "[pcbms5] dec rom[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x\n",
+                                    ng->rom[0],ng->rom[1],ng->rom[2],ng->rom[3],ng->rom[4],ng->rom[5],ng->rom[6],ng->rom[7]);
+                                if (ng->adpcm && ng->adpcm_size >= 0x100000) pcm2_swap(ng->adpcm, 2);
+                                ng->cart_prot = 8; ng->fixed_bank_type = 2;   /* FIX_BANKTYPE_KOF2000 */
+                                ng->cpu601 = getenv("CPU600") ? 0 : 1;   /* ms5pcb game code uses 68010-only SETcc (sne.b at $10D0);
+                                                     real Neo Geo PCB is a 68010 — MAME neogeo.cpp MC68010 */
+                                /* MAME neopcb: audio_main entry1 (cart m1) is the INITIAL
+                                   entry — the Z80 boots the cart m1 from power-on, sm1 is
+                                   never visible (MVS carts are always present). */
+                                ng->m1_view = 1; ng->m1_booted = 1; ng->cart_audio = 1;
+                                /* MAME install_banked_bios: bios bank entry 1 = mainbios + 0x20000
+                                   (sp-4x.sp1 holds asia@0 / japan@0x20000; PCB HARDDIP3 = japan) */
+                                uint8_t *mb = 0; uint32_t msz = 0;
+                                if (rom_load_zip(gamezip, "sp-4x.sp1", &mb, &msz) == 0 && msz >= 0x80000) {
+                                    wordswap(mb, 0x80000);   /* MAME ROM_LOAD16_WORD_SWAP view */
+                                    uint8_t *nb = malloc(0x20000);
+                                    if (nb) { memcpy(nb, mb + (getenv("BIOSA") ? 0 : 0x20000), 0x20000); free(ng->bios); ng->bios = nb; ng->bios_size = 0x20000; }
+                                    free(mb);
+                                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] BIOS sp-4x.sp1 entry1\n");
+                                }
+                            }
                             if (ng->k3bl_px && ng->rom && ng->rom_size >= 0x700000) {
                                 /* kof2k3bl bootleg static PX decrypt (MAME prot_kof2k3bl.cpp) */
                                 uint16_t *r16 = (uint16_t*)ng->rom;
@@ -3393,7 +3592,14 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 }
                             }
                             if (ng->cart_prot >= 2) {
-                                ng->prg_bank_base = 0x100000;
+                                /* MAME neopcb: m_bank_base = 0 at init, but the BIOS
+                                   boots the game via rts to the longword at
+                                   bank_window+0x64 (game VBlank vector).  The ms5pcb
+                                   game vector table (VBlank=0x64020C -> rts target
+                                   0x640064, reset=0xC00402 CMC service) lives at
+                                   region[0x640000]; region[0x100000] is all-FF dead
+                                   space.  AES carts keep 0x100000. */
+                                ng->prg_bank_base = (!strncmp(ng->gamename, "ms5pcb", 6)) ? 0x640000 : 0x100000;
                                 ng->sma_rng = 0x2345;
                                 fprintf(stderr, "PROT %s type=%d vec=%08x reg120=%04x/%04x hdr100=%04x\n", ng->gamename, ng->cart_prot,
                                     ((unsigned)rdw(ng->rom,0)<<16)|rdw(ng->rom,1), rdw(ng->rom,0x90), rdw(ng->rom,0x91), rdw(ng->rom,0x80));
@@ -3546,7 +3752,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     { extern void z80w_set_step_hook(void*, void (*)(unsigned));
       extern void linoragx_z80_step(unsigned);
       z80w_set_step_hook(ng->z, linoragx_z80_step); }
-    m68k_set_cpu_type(M68K_CPU_TYPE_68000);
+    m68k_set_cpu_type(ng->cpu601 ? M68K_CPU_TYPE_68010 : M68K_CPU_TYPE_68000);
     m68k_init();
     m68k_set_instr_hook_callback(linoragx_pc_hook);  /* must follow m68k_init (it clears callbacks) */
     if (getenv("EXCPROBE")) { linoragx_excprobe = 1; linoragx_exc_ng = ng; }
@@ -3628,6 +3834,31 @@ void ng_run_frame(neogeo *ng)
     while (left > 0) {
         int chunk = left > chunk_max ? chunk_max : (int)left;
         m68k_execute(chunk);
+        /* ms5pcb BIOS sound-test ($C10EB8) busy-waits on the UPD4990A TP pin
+           (AUDIO_COIN bit6 = upd1990a tp_r) in a tight loop; a frame-granular
+           TP wave is invisible to it.  Drive TP from 68K cycles (chunk=16
+           granularity) so edges land mid-frame on schedule.  cpu601-gated:
+           AES BIOSes passed with the frame model. */
+        if (ng->cpu601 && ng->mc_tp_half) {
+            ng->tp_cnt += chunk;
+            if (ng->tp_cnt >= (long)ng->mc_tp_half * CYCLES_PER_FRAME) { ng->mc_tp ^= 1; ng->tp_cnt = 0;
+                if (getenv("TPDBG")) fprintf(stderr, "TPFLIP f=%d tp=%d half=%d\n", ng->frame, ng->mc_tp, ng->mc_tp_half); }
+        }
+        /* UPD4990A clock: the time registers must tick 1 BCD-second per second
+           or the PCB BIOS calendar test (TP-edge vs seconds cross-check) fails
+           and retries forever.  cpu601-gated; AES BIOSes passed without it. */
+        if (ng->cpu601 && !ng->mc_testmode) {
+            ng->clk_cnt += chunk;
+            if (ng->clk_cnt >= CYCLES_PER_FRAME) { ng->clk_cnt = 0;
+                static const uint8_t bcd_max[6] = {9,9,9,3,9,9};
+                for (int i = 0; i < 6; i++) {
+                    uint8_t lo = ng->mc_time[i] & 0x0F, hi = ng->mc_time[i] >> 4;
+                    if (lo < bcd_max[i] || (i == 4 && lo < 9) || (i == 5 && lo < 9)) {
+                        if (lo >= 9) { lo = 0; hi = (hi + 1) & 0x0F; } else lo++;
+                        ng->mc_time[i] = (hi << 4) | lo; break; }
+                    ng->mc_time[i] = 0;
+                } }
+        }
         { static int lo = -2, hi = -2;
           if (lo == -2) { const char *e = getenv("PCTRACE"); const char *d = e ? strchr(e, '-') : 0;
               lo = e ? atoi(e) : -1; hi = d ? atoi(d + 1) : -1; }
@@ -3635,6 +3866,22 @@ void ng_run_frame(neogeo *ng)
               fprintf(stderr, "T %d %08x\n", ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
         { static int regat = -2; static unsigned long regn;
           if (regat == -2) { const char *e = getenv("REGAT"); regat = e ? (int)strtol(e, 0, 16) : -1; }
+          { const char *pp = getenv("PCF"); static int pf_last = -1;
+            if (pp && (ng->frame % atoi(pp)) == 0 && pf_last != (int)ng->frame) {
+              pf_last = ng->frame;
+              fprintf(stderr, "PCF f=%d pc=%08x zpc=%04x\n", ng->frame, (unsigned)m68k_get_reg(NULL,M68K_REG_PC), ng->z?(unsigned)z80w_pc(ng->z):0xffff);
+              if (ng->z && getenv("PCFZS")) { extern void z80w_statdump(void*); z80w_statdump(ng->z); } } }
+    { static int fp_last = -1; static int fenv = -1;
+      if (fenv == -1) fenv = getenv("FDDBG") ? 1 : 0;
+      if (fenv && ng->z && ng->frame % 500 == 0 && fp_last != ng->frame) {
+          fp_last = ng->frame;
+          extern uint8_t z80w_peek(void*, uint32_t);
+          fprintf(stderr, "FD f=%d q=%02x/%02x ca=%02x cb=%02x cc=%02x cd=%02x db=%02x d7=%02x fdba=%02x fd18=%02x fd19=%02x\n",
+              ng->frame, z80w_peek(ng->z,0xfd66), z80w_peek(ng->z,0xfd67),
+              z80w_peek(ng->z,0xfdca), z80w_peek(ng->z,0xfdcb), z80w_peek(ng->z,0xfdcc),
+              z80w_peek(ng->z,0xfdcd), z80w_peek(ng->z,0xfddb), z80w_peek(ng->z,0xfd67+0x70),
+              z80w_peek(ng->z,0xfdba), z80w_peek(ng->z,0xfd18), z80w_peek(ng->z,0xfd19));
+          fprintf(stderr, "ZV:"); for (int qi=0x60; qi<0x80; qi++) fprintf(stderr, " %02x", z80w_peek(ng->z, qi)); fprintf(stderr, "\n"); } }
           if (regat >= 0 && (int)m68k_get_reg(NULL, M68K_REG_PC) == regat && regn < 6) {
               regn++;
               fprintf(stderr, "REGAT f=%d pc=%08x sp=%08x sr=%04x d0=%08x d1=%08x d2=%08x d3=%08x d4=%08x d5=%08x d6=%08x d7=%08x a0=%08x a1=%08x a2=%08x a3=%08x a4=%08x a5=%08x a6=%08x\n",
@@ -3879,6 +4126,7 @@ void ng_run_frame(neogeo *ng)
            (samsho2 m1 track sequencer is timer-driven and deadlocks without it). */
         { int p = ym_irq_pending(ng->ym);
           extern int z80w_iff1(void*);
+          if (p) { static int pfire = 0; if (pfire++ < 10) fprintf(stderr, "YMP f=%d p=1 iff1=%d zpc=%04x\n", ng->frame, z80w_iff1(ng->z), z80w_pc(ng->z)); }
           if (ng->dbg_z80 == 7) { static long ipc = 0; extern long g_tflagA_sets; if ((ipc++ % 3000) == 0) fprintf(stderr, "YMIRQ f=%d p=%d iff1=%d zpc=%04x tsets=%ld\n", ng->frame, p, z80w_iff1(ng->z), z80w_pc(ng->z), g_tflagA_sets); }
           if (p) z80w_irq(ng->z, 0xff);   /* level semantics: re-assert every chunk */
           ng->ym_irq_prev = p; }
@@ -4036,14 +4284,16 @@ void ng_run_frame(neogeo *ng)
         (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
+    if (ng->tp_rise && --ng->tp_rise == 0) { ng->mc_tp = 1; ng->tp_cnt = 0; }  /* armed TP rising edge, 2 frames after STB */
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
       if (srd) fprintf(stderr, "SRDBG f=%d sr=%04x v1=%d v2=%d pc=%08x\n",
           ng->frame, (unsigned)m68k_get_reg(NULL, M68K_REG_SR),
           m68k_get_virq(1), m68k_get_virq(2),
           (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
-    /* UPD4990A TP square wave: half-period armed by mc_stb_rise (mc_tp_half). */
-    if (ng->mc_tp_half && (ng->frame % ng->mc_tp_half) == 0) ng->mc_tp ^= 1;
+    /* UPD4990A TP square wave: half-period armed by mc_stb_rise (mc_tp_half).
+       cpu601 images drive TP from the instruction countdown in pc_hook. */
+    if (ng->mc_tp_half && !ng->cpu601 && (ng->frame % ng->mc_tp_half) == 0) ng->mc_tp ^= 1;
     if (ng->mc_testmode) {
         /* MAME test_tick @8192Hz (uPD4990A variant, clock 32768/div4): raw ++
            with carry chain, DO=(year==0).  Approximate by 136 ticks per frame;

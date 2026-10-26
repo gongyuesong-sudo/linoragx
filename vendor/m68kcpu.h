@@ -1630,8 +1630,13 @@ static inline void m68ki_stack_frame_3word(uint pc, uint sr)
  */
 static inline void m68ki_stack_frame_0000(uint pc, uint sr, uint vector)
 {
-	/* Stack a 3-word frame if we are 68000 */
-	if(CPU_TYPE == CPU_TYPE_000)
+	/* NOTE: must use CPU_TYPE_IS_000() (the same predicate rte uses) rather
+	   than `CPU_TYPE == CPU_TYPE_000`: with USE_M68010 disabled that macro
+	   folds to constant 1, so rte always pops a 68000 3-word frame. Pushing
+	   a format word here while rte pops 3 words leaked 2 bytes per interrupt
+	   (ms5pcb BIOS calendar service is jsr-entered / rte-exited and reuses
+	   the live interrupt frame). */
+	if(CPU_TYPE_IS_000(CPU_TYPE))
 	{
 		m68ki_stack_frame_3word(pc, sr);
 		return;

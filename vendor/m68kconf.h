@@ -220,7 +220,12 @@
 extern void your_instruction_hook_function(unsigned pc);
 #define M68K_INSTRUCTION_CALLBACK(pc) your_instruction_hook_function(pc)
 #else
-#define M68K_INSTRUCTION_HOOK       M68K_OPT_ON
+/* linoragx: instruction hook is always on — it drives the UPD4990A TP
+ * sub-frame countdown and the soundlatch1 read-back hold window (see
+ * linoragx_pc_hook in src/neogeo.c).  Fast path is two decrements. */
+#define M68K_INSTRUCTION_HOOK       M68K_OPT_SPECIFY_HANDLER
+extern void linoragx_pc_hook(unsigned int pc);
+#define M68K_INSTRUCTION_CALLBACK(pc) linoragx_pc_hook(pc)
 #endif
 #endif
 
