@@ -3547,8 +3547,8 @@ void ng_run_frame(neogeo *ng)
           if (regat == -2) { const char *e = getenv("REGAT"); regat = e ? (int)strtol(e, 0, 16) : -1; }
           if (regat >= 0 && (int)m68k_get_reg(NULL, M68K_REG_PC) == regat && regn < 6) {
               regn++;
-              fprintf(stderr, "REGAT f=%d pc=%08x sp=%08x d0=%08x d1=%08x d2=%08x d3=%08x d4=%08x d5=%08x d6=%08x d7=%08x a0=%08x a1=%08x a2=%08x a3=%08x a4=%08x a5=%08x a6=%08x\n",
-                  ng->frame, (unsigned)m68k_get_reg(NULL,M68K_REG_PC), (unsigned)m68k_get_reg(NULL,M68K_REG_SP),
+              fprintf(stderr, "REGAT f=%d pc=%08x sp=%08x sr=%04x d0=%08x d1=%08x d2=%08x d3=%08x d4=%08x d5=%08x d6=%08x d7=%08x a0=%08x a1=%08x a2=%08x a3=%08x a4=%08x a5=%08x a6=%08x\n",
+                  ng->frame, (unsigned)m68k_get_reg(NULL,M68K_REG_PC), (unsigned)m68k_get_reg(NULL,M68K_REG_SP), (unsigned)m68k_get_reg(NULL,M68K_REG_SR),
                   (unsigned)m68k_get_reg(NULL,M68K_REG_D0),(unsigned)m68k_get_reg(NULL,M68K_REG_D1),(unsigned)m68k_get_reg(NULL,M68K_REG_D2),(unsigned)m68k_get_reg(NULL,M68K_REG_D3),
                   (unsigned)m68k_get_reg(NULL,M68K_REG_D4),(unsigned)m68k_get_reg(NULL,M68K_REG_D5),(unsigned)m68k_get_reg(NULL,M68K_REG_D6),(unsigned)m68k_get_reg(NULL,M68K_REG_D7),
                   (unsigned)m68k_get_reg(NULL,M68K_REG_A0),(unsigned)m68k_get_reg(NULL,M68K_REG_A1),(unsigned)m68k_get_reg(NULL,M68K_REG_A2),(unsigned)m68k_get_reg(NULL,M68K_REG_A3),
