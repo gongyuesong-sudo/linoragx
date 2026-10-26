@@ -1491,6 +1491,11 @@ static int sw_area(const char *swxml, const char *area, rg_ent *ents, int maxn, 
     return *outn ? 0 : -1;
 }
 
+/* merged-set parent zip: clones frequently ship without ROMs shared with the
+   parent (fswords lacks samsho3's 087-* graphics). Set from the swlist
+   cloneof attribute before sw_build; consulted only when a ROM misses. */
+static const char *g_parent_zip = 0;
+
 static uint8_t *sw_build(const char *zip, const rg_ent *e, int n, uint32_t cap, uint32_t areasz, uint32_t *outsize)
 {
     uint32_t max = areasz;
@@ -1526,11 +1531,16 @@ static uint8_t *sw_build(const char *zip, const rg_ent *e, int n, uint32_t cap, 
                     /* SMA chip dumps are colour-prefixed in MAME ("green.neo-sma",
                        "white.neo-sma") but plain in many sets ("neo-sma") */
                     const char *dot = strchr(e[i].fname, '.');
-                    if (!dot || rom_load_zip(zip, dot + 1, &file, &fsz) != 0) {
+                    if (dot && rom_load_zip(zip, dot + 1, &file, &fsz) == 0) {
+                        if (getenv("SWBUILD")) fprintf(stderr, "[swb] DOT %s\n", e[i].fname);
+                    } else if (g_parent_zip && rom_load_zip(g_parent_zip, e[i].fname, &file, &fsz) == 0) {
+                        /* merged-set fallback: pull the shared ROM from the
+                           cloneof parent zip (fswords -> samsho3.zip) */
+                        if (getenv("SWBUILD")) fprintf(stderr, "[swb] PARENT %s\n", e[i].fname);
+                    } else {
                         if (getenv("SWBUILD")) fprintf(stderr, "[swb] MISS %s\n", e[i].fname);
                         file = 0; continue;
                     }
-                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] DOT %s\n", e[i].fname);
                     }
                 } else if (getenv("SWBUILD")) fprintf(stderr, "[swb] SUFFIX %s\n", e[i].fname);
             } else if (getenv("SWBUILD")) fprintf(stderr, "[swb] LOAD %s off=%x size=%x fsz=%x byte=%d swap=%d\n",
@@ -3134,6 +3144,25 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                     const char *sw = sw_find(xml, ng->gamename);
                     if (sw) {
                         rg_ent ents[96]; int ne; uint32_t asz;
+                        /* merged-set: resolve cloneof parent zip for ROM fallback */
+                        g_parent_zip = 0;
+                        {
+                            const char *gt = strchr(sw, '>');
+                            const char *co = 0;
+                            if (gt) for (const char *q = sw; q + 9 <= gt; q++)
+                                if (!memcmp(q, "cloneof=\"", 9)) { co = q + 9; break; }
+                            if (co) {
+                                char pname[128]; int k = 0;
+                                while (k < 127 && co[k] && co[k] != '"') pname[k] = co[k], k++;
+                                pname[k] = 0;
+                                static char pzip[1200];
+                                char *sl = strrchr(gamezip, '/');
+                                if (sl) snprintf(pzip, sizeof pzip, "%.*s/%s.zip", (int)(sl - gamezip), gamezip, pname);
+                                else    snprintf(pzip, sizeof pzip, "%s.zip", pname);
+                                g_parent_zip = pzip;
+                                if (getenv("SWBUILD")) fprintf(stderr, "[swb] parent=%s\n", pzip);
+                            }
+                        }
                         int sno = getenv("SWNO") ? atoi(getenv("SWNO")) : 0;
                         int asz_spr = 0;
                         if (!(sno & 1) && !ng->rom && sw_area(sw, "maincpu", ents, 96, &ne, &asz) == 0)
