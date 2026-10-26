@@ -831,11 +831,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     if (a < 0x400000) {
         if (ng->k10_mode) {                               /* kof10th bootleg device windows */
             if (a >= 0x80 && a <= 0xDFFFF) {             /* lo-rom overlay: MAME read_lorom_kof10th
-                read16sm byte offset off=a-0x80; if off+0x40>=0x8000 add special bank (word units);
-                return rom16[off+0x40] (rom is a WORD array) */
-                uint32_t off = a - 0x80;
-                if (off + 0x40 >= 0x8000) off += ng->k10_special;
-                uint32_t w = off + 0x40;
+                read16sm offset behaves as WORD offset here: w=(a-0x80)/2+0x40 == a/2 (direct
+                mirror); for a>=0x10000 add special bank (word units). Verified: this interp
+                yields valid 68K code at the addresses the game executes (0x122->4ef9 etc). */
+                uint32_t w = a >> 1;
+                if (w >= 0x8000) w += ng->k10_special;
                 if (!ng->rom || (w + 1) * 2 > ng->rom_size) return 0xFFFF;
                 return (ng->rom[w*2]<<8)|ng->rom[w*2+1];
             }
