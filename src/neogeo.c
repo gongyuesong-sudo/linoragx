@@ -45,6 +45,8 @@ static void parallel_for(pf_fn fn, void *arg, uint32_t lo, uint32_t hi, int nthr
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define BIT(x,b) (((x)>>(b))&1)
 #define CYCLES_PER_FRAME  202752  /* MAME: HTOTAL 384 px * VTOTAL 264 * 2 (68k=12MHz, pixel=6MHz) */
@@ -80,6 +82,8 @@ struct neogeo {
     uint8_t  smem[0x10000];   /* 64K shared RAM: 68K 0x100000-0x10FFFF <-> Z80 0xC000-0xF7FF */
     uint8_t  smem_dirty[0x2000]; /* 64K bits: byte written -> RAM, else legacy bank-ROM view */
     uint8_t  sram[0x10000];
+    char     nvram_path[700];   /* <biosdir>/nvram/<game>.nv (SRAM persistence) */
+    int      sram_dirty;        /* sram written since last flush */
     uint8_t  mc_data[0x800];
     int      mc_lock1, mc_unlock2, mc_regsel;
     int      sram_unlocked;            /* systemlatch ch6: SRAM CE */
@@ -1540,7 +1544,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
          ERROR (mslug3 family). */
       if (!ng->sram_unlocked) return;
       if (mem_mask & 0xFF00) ng->sram[o] = d>>8;
-      if (mem_mask & 0x00FF) ng->sram[o+1] = d&0xFF; }
+      if (mem_mask & 0x00FF) ng->sram[o+1] = d&0xFF;
+      ng->sram_dirty = 1; }
 }
 
 unsigned int m68k_read_memory_8(unsigned int a)
@@ -3874,14 +3879,49 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     ng->mc_lock1 = 1; ng->mc_unlock2 = 1; ng->mc_regsel = 1;
 
     ng->zbank[0]=0x1E; ng->zbank[1]=0x0E; ng->zbank[2]=0x06; ng->zbank[3]=0x02;
+    /* SRAM persistence: load <biosdir>/nvram/<game>.nv (linoragx format);
+     * fall back to MAME's nvram/<game>/saveram so existing MAME saves carry over. */
+    if (ng->gamename[0] && strcmp(ng->gamename, "neo-geo bios")) {
+        const char *bd = (biosdir && biosdir[0]) ? biosdir : ".";
+        char dir[640]; snprintf(dir, sizeof dir, "%s/nvram", bd);
+        mkdir(dir, 0777);   /* EEXIST is fine */
+        char base[64], *p;
+        snprintf(base, sizeof base, "%s", ng->gamename);
+        if ((p = strstr(base, ".zip"))) *p = 0;
+        snprintf(ng->nvram_path, sizeof ng->nvram_path, "%s/%s.nv", dir, base);
+        FILE *f = fopen(ng->nvram_path, "rb");
+        if (!f) {   /* MAME saveram compat (64K raw) */
+            char mm[760]; snprintf(mm, sizeof mm, "%s/%s/saveram", dir, base);
+            f = fopen(mm, "rb");
+            if (f) snprintf(ng->nvram_path, sizeof ng->nvram_path, "%s/%s.nv", dir, base);
+        }
+        if (f) {
+            size_t got = fread(ng->sram, 1, sizeof ng->sram, f);
+            fclose(f);
+            if (getenv("SRAMDUMP")) fprintf(stderr, "[nvram] loaded %s (%zu bytes)\n", ng->nvram_path, got);
+        }
+    }
     m68k_pulse_reset();
     z80w_reset(ng->z);
         return ng;
 }
 
+/* Write SRAM back to <biosdir>/nvram/<game>.nv when dirty (MAME saveram role). */
+void ng_flush_sram(neogeo *ng)
+{
+    if (!ng || !ng->sram_dirty || !ng->nvram_path[0]) return;
+    FILE *f = fopen(ng->nvram_path, "wb");
+    if (!f) return;
+    fwrite(ng->sram, 1, sizeof ng->sram, f);
+    fclose(f);
+    ng->sram_dirty = 0;
+    if (getenv("SRAMDUMP")) fprintf(stderr, "[nvram] flushed %s\n", ng->nvram_path);
+}
+
 void ng_destroy(neogeo *ng)
 {
     if (!ng) return;
+    ng_flush_sram(ng);
     free(ng->rom); free(ng->fixed); free(ng->snd); free(ng->adpcm); free(ng->spr); free(ng->sprite8);
     free(ng->bios); free(ng->sm1); free(ng->sfix);
     if (ng->z) z80w_destroy(ng->z);

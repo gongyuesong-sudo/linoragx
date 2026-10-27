@@ -281,6 +281,7 @@ int main(int argc, char **argv)
             ng_set_buttons(ng, 1 - lplayer, remote);
         }
         ng_run_frame(ng);
+        if ((n % 300) == 0) ng_flush_sram(ng);   /* periodic saveram checkpoint (~5s) */
         if (!vk) ng_render(ng, fb);   /* window mode already drew per line in ng_run_frame */
         {   /* LINDUMPF=N: at frame N dump vram+cram+zoomy to /tmp/lindump.bin and fb to /tmp/lindump.bmp */
             static int lindf = -2;

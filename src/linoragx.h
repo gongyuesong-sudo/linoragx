@@ -24,6 +24,8 @@ const char *ng_game_name(neogeo *ng);
 
 /* save state (NRXSTATE07 compatible magic) */
 int ng_save_state(neogeo *ng, const char *path);
+/* write SRAM to <biosdir>/nvram/<game>.nv when dirty (call periodically + at exit) */
+void ng_flush_sram(neogeo *ng);
 int ng_load_state(neogeo *ng, const char *path);
 
 /* rom helpers */
