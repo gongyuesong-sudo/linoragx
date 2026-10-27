@@ -4505,6 +4505,7 @@ void ng_run_frame(neogeo *ng)
         (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
     ng->frame++;
+    { extern int g_ym_frame; g_ym_frame = (int)ng->frame; }  /* YMBDBG timeline fix: was never assigned, all YM writes printed f=0 */
     if (ng->tp_rise && --ng->tp_rise == 0) { ng->mc_tp = 1; ng->tp_cnt = 0; }  /* armed TP rising edge, 2 frames after STB */
     { static int srd = -1;
       if (srd < 0) srd = getenv("SRDBG") ? 1 : 0;
