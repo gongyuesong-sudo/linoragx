@@ -4593,10 +4593,10 @@ void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }
 const char *ng_game_name(neogeo *ng) { return ng->gamename; }
 
-/* ---- save state (NRXSTATE07 magic) ---- */
+/* ---- save state (NRXSTATE10 magic) ---- */
 #pragma pack(push,1)
 struct hdr {
-    char magic[11];             /* NRXSTATE09\0 */
+    char magic[11];             /* NRXSTATE10\0 */
     uint64_t frame; uint8_t fc;
     uint32_t sr, ssp, usp, vbr, pc;
     uint32_t d[8], a[8];
@@ -4604,6 +4604,29 @@ struct hdr {
     uint8_t zbank[4]; uint8_t vecbank;
     uint16_t voff, vmod, vrb, dcnt, ictl;
     uint32_t crambank;          /* NRXSTATE09: systemlatch ch7 palette bank */
+    /* NRXSTATE10: bank window + latches + protection state.
+     * NRXSTATE09 omitted these: a cold-boot --state resume kept the boot-time
+     * bank window, so the restored PC decoded garbage and the 68K ran off the
+     * rails (TRAP#3 vector -> cart 0x192 -> re-trap -> RTE into data). */
+    uint32_t prgbase;           /* prg_bank_base (0x200000 bank window) */
+    uint32_t cramrender;        /* cram_bank_render (frame parity latch) */
+    int32_t  irqline, vblena, rasterpend, rasterarm, vblline;
+    int32_t  screnen, sramwen, cramwen;
+    uint8_t  sl1, sl2, nmi_en, nmi_pend, nmi_asserted;
+    int32_t  m1handoff, m1view, m1booted, cartaudio;
+    int32_t  irqsnd, ymirqprev, latch1hold, latch1defer;
+    uint8_t  autospeed, autoded, autocr;
+    int32_t  sramunlock;
+    uint64_t wdlast; int32_t wdarm;
+    int32_t  kof98state; uint16_t kof98trig; uint16_t kof98def[2]; uint16_t smarng;
+    uint16_t k3loverlay; uint32_t k10special;
+    uint32_t mslcmd, mslctr, mslsma, mslbusy;
+    int32_t  mclock1, mcunlock2, mcregsel;
+    uint8_t  mcshift[7], mctime[6]; int32_t mcc, mctest, mcdout, mctp, mctph;
+    uint32_t buttons0, buttons1;
+    uint8_t  adpcma_[4], adpcmb_[4], ymregl[2];
+    int32_t  ch5pend; uint64_t ch5frame;
+    int32_t  fixbanktype;
 };
 #pragma pack(pop)
 
@@ -4612,8 +4635,33 @@ int ng_save_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
     struct hdr h; memset(&h, 0, sizeof h);
-    memcpy(h.magic, "NRXSTATE09", 11);
+    memcpy(h.magic, "NRXSTATE10", 11);
     h.crambank = ng->cram_bank | ((ng->screen_shadow & 1) << 1);  /* bit1 = shadow (NRXSTATE09-compatible) */
+    h.prgbase = ng->prg_bank_base;
+    h.cramrender = ng->cram_bank_render;
+    h.irqline = ng->irq_line; h.vblena = ng->vblank_enable;
+    h.rasterpend = ng->raster_pending; h.rasterarm = ng->raster_armed; h.vblline = ng->vbl_line;
+    h.screnen = ng->screen_enabled; h.sramwen = ng->sramw; h.cramwen = ng->cramw;
+    h.sl1 = ng->soundlatch1; h.sl2 = ng->soundlatch2;
+    h.nmi_en = ng->z80_nmi_en; h.nmi_pend = ng->z80_nmi_pend; h.nmi_asserted = ng->z80_nmi_asserted;
+    h.m1handoff = ng->m1_handoff; h.m1view = ng->m1_view; h.m1booted = ng->m1_booted; h.cartaudio = ng->cart_audio;
+    h.irqsnd = ng->irq_sound; h.ymirqprev = ng->ym_irq_prev;
+    h.latch1hold = ng->latch1_hold; h.latch1defer = ng->latch1_defer;
+    h.autospeed = ng->auto_speed; h.autoded = ng->auto_disabled; h.autocr = ng->auto_counter;
+    h.sramunlock = ng->sram_unlocked;
+    h.wdlast = ng->wd_last; h.wdarm = ng->wd_armed;
+    h.kof98state = ng->kof98_state; h.kof98trig = ng->kof98_trig;
+    h.kof98def[0] = ng->kof98_default[0]; h.kof98def[1] = ng->kof98_default[1];
+    h.smarng = ng->sma_rng;
+    h.k3loverlay = ng->k3bl_overlay; h.k10special = ng->k10_special;
+    h.mslcmd = ng->msl_cmd; h.mslctr = ng->msl_ctr; h.mslsma = ng->msl_smacmd; h.mslbusy = (uint32_t)ng->msl_busy_until;
+    h.mclock1 = ng->mc_lock1; h.mcunlock2 = ng->mc_unlock2; h.mcregsel = ng->mc_regsel;
+    memcpy(h.mcshift, ng->mc_shift, 7); memcpy(h.mctime, ng->mc_time, 6);
+    h.mcc = ng->mc_c; h.mctest = ng->mc_testmode; h.mcdout = ng->mc_dout; h.mctp = ng->mc_tp; h.mctph = ng->mc_tp_half;
+    h.buttons0 = ng->buttons[0]; h.buttons1 = ng->buttons[1];
+    memcpy(h.adpcma_, ng->adpcm_a, 4); memcpy(h.adpcmb_, ng->adpcm_b, 4); memcpy(h.ymregl, ng->ym_reg, 2);
+    h.ch5pend = ng->ch5_bios_pend; h.ch5frame = ng->ch5_on_frame;
+    h.fixbanktype = ng->fixed_bank_type;
     h.frame = ng->frame; h.fc = ng->fc;
     h.sr = m68k_get_reg(NULL, M68K_REG_SR);
     h.ssp = m68k_get_reg(NULL, M68K_REG_A7);
@@ -4633,6 +4681,14 @@ int ng_save_state(neogeo *ng, const char *path)
     fwrite(ng->workram, sizeof ng->workram, 1, f);
     fwrite(ng->sndram, sizeof ng->sndram, 1, f);
     fwrite(ng->sram, sizeof ng->sram, 1, f);
+    /* NRXSTATE10: shared-RAM view + protection device RAM */
+    fwrite(ng->smem, sizeof ng->smem, 1, f);
+    fwrite(ng->smem_dirty, sizeof ng->smem_dirty, 1, f);
+    fwrite(ng->jgram, sizeof ng->jgram, 1, f);
+    fwrite(ng->k3bl_ram, sizeof ng->k3bl_ram, 1, f);
+    fwrite(ng->k10_cram, sizeof ng->k10_cram, 1, f);
+    fwrite(ng->k10_cram2, sizeof ng->k10_cram2, 1, f);
+    fwrite(ng->pvc_ram, sizeof ng->pvc_ram, 1, f);
     fclose(f);
     return 0;
 }
@@ -4642,7 +4698,7 @@ int ng_load_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     struct hdr h;
-    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE09", 11)) { fclose(f); return -2; }
+    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE10", 11)) { fclose(f); return -2; }
     ng->frame = h.frame; ng->fc = h.fc;
     ng->vector_bank = h.vecbank;
     m68k_set_reg(M68K_REG_SR, h.sr);
@@ -4658,11 +4714,46 @@ int ng_load_state(neogeo *ng, const char *path)
     ng->display_counter = h.dcnt; ng->irq_enable = h.ictl;
     ng->cram_bank = h.crambank & 0x1000;
     ng->screen_shadow = (h.crambank >> 1) & 1;
+    /* NRXSTATE10 restore: bank window + latches + protection state */
+    ng->prg_bank_base = h.prgbase;
+    ng->cram_bank_render = h.cramrender;
+    ng->irq_line = h.irqline; ng->vblank_enable = h.vblena;
+    ng->raster_pending = h.rasterpend; ng->raster_armed = h.rasterarm; ng->vbl_line = h.vblline;
+    ng->screen_enabled = h.screnen; ng->sramw = h.sramwen; ng->cramw = h.cramwen;
+    ng->soundlatch1 = h.sl1; ng->soundlatch2 = h.sl2;
+    ng->z80_nmi_en = h.nmi_en; ng->z80_nmi_pend = h.nmi_pend; ng->z80_nmi_asserted = h.nmi_asserted;
+    ng->m1_handoff = h.m1handoff; ng->m1_view = h.m1view; ng->m1_booted = h.m1booted; ng->cart_audio = h.cartaudio;
+    ng->irq_sound = h.irqsnd; ng->ym_irq_prev = h.ymirqprev;
+    ng->latch1_hold = h.latch1hold; ng->latch1_defer = h.latch1defer;
+    ng->auto_speed = h.autospeed; ng->auto_disabled = h.autoded; ng->auto_counter = h.autocr;
+    ng->sram_unlocked = h.sramunlock;
+    ng->wd_last = h.wdlast; ng->wd_armed = h.wdarm;
+    ng->kof98_state = h.kof98state; ng->kof98_trig = h.kof98trig;
+    ng->kof98_default[0] = h.kof98def[0]; ng->kof98_default[1] = h.kof98def[1];
+    ng->sma_rng = h.smarng;
+    ng->k3bl_overlay = h.k3loverlay; ng->k10_special = h.k10special;
+    ng->msl_cmd = h.mslcmd; ng->msl_ctr = h.mslctr; ng->msl_smacmd = h.mslsma; ng->msl_busy_until = h.mslbusy;
+    ng->mc_lock1 = h.mclock1; ng->mc_unlock2 = h.mcunlock2; ng->mc_regsel = h.mcregsel;
+    memcpy(ng->mc_shift, h.mcshift, 7); memcpy(ng->mc_time, h.mctime, 6);
+    ng->mc_c = h.mcc; ng->mc_testmode = h.mctest; ng->mc_dout = h.mcdout; ng->mc_tp = h.mctp; ng->mc_tp_half = h.mctph;
+    ng->buttons[0] = h.buttons0; ng->buttons[1] = h.buttons1;
+    memcpy(ng->adpcm_a, h.adpcma_, 4); memcpy(ng->adpcm_b, h.adpcmb_, 4); memcpy(ng->ym_reg, h.ymregl, 2);
+    ng->ch5_bios_pend = h.ch5pend; ng->ch5_on_frame = h.ch5frame;
+    ng->fixed_bank_type = h.fixbanktype;
+    /* re-assert the 68K IRQ line the core was holding at save time */
+    m68k_set_irq(ng->irq_line);
     if (fread(ng->vram, sizeof ng->vram, 1, f) != 1 ||
         fread(ng->cram, sizeof ng->cram, 1, f) != 1 ||
         fread(ng->workram, sizeof ng->workram, 1, f) != 1 ||
         fread(ng->sndram, sizeof ng->sndram, 1, f) != 1 ||
-        fread(ng->sram, sizeof ng->sram, 1, f) != 1) { fclose(f); return -3; }
+        fread(ng->sram, sizeof ng->sram, 1, f) != 1 ||
+        fread(ng->smem, sizeof ng->smem, 1, f) != 1 ||
+        fread(ng->smem_dirty, sizeof ng->smem_dirty, 1, f) != 1 ||
+        fread(ng->jgram, sizeof ng->jgram, 1, f) != 1 ||
+        fread(ng->k3bl_ram, sizeof ng->k3bl_ram, 1, f) != 1 ||
+        fread(ng->k10_cram, sizeof ng->k10_cram, 1, f) != 1 ||
+        fread(ng->k10_cram2, sizeof ng->k10_cram2, 1, f) != 1 ||
+        fread(ng->pvc_ram, sizeof ng->pvc_ram, 1, f) != 1) { fclose(f); return -3; }
     fclose(f);
     return 0;
 }
