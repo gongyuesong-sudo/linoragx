@@ -3467,6 +3467,19 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_sams5s\"")) { samsh5sp_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_kof2k2\"")) { matrim_dec68k(ng);  ng->fixed_bank_type = 2; }  /* MAME kof2002: same 8x0x80000 sec table as matrim */
+                            else if (sw_has(sw, swend, "sfix_from_cx\"")) {
+                                /* decrypted bootleg (kof2000ps2): fixed graphics live as the
+                                   tail of the already-decrypted Cx — same extraction MAME's
+                                   SMA applies to the encrypted set (verified 96.9% byte match) */
+                                uint32_t sz2 = ng->spr_size & ~3u, fsz2 = 0x80000;
+                                if (ng->spr && sz2 >= fsz2) {
+                                    free(ng->fixed);
+                                    ng->fixed = calloc(1, fsz2);
+                                    ng->fixed_size = fsz2;
+                                    if (ng->fixed) cmc_sfix_decrypt(ng->spr, sz2, ng->fixed, fsz2);
+                                }
+                                ng->fixed_bank_type = 2;   /* FIX_BANKTYPE_KOF2000 */
+                            }
                             else if (sw_has(sw, swend, "boot_kof97oro\"")) { kof97oro_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); bootleg_cx_dec(ng->spr, ng->spr_size); }
                             else if (sw_has(sw, swend, "boot_kf10thep\"")) { kf10thep_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 1); }
                             else if (sw_has(sw, swend, "boot_svcsplus\"")) { svcsplus_px_dec(ng->rom, ng->rom_size); bootleg_sx_dec(ng->fixed, ng->fixed_size, 2); svcboot_cx_dec(ng->spr, ng->spr_size); svcsplus_px_hack(ng->rom); }
