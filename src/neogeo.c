@@ -918,6 +918,7 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return 0xFFFF;
     }
     if (a < 0x420000) return ng->cram[((a>>1)&0xFFF) | ng->cram_bank];
+    if (a >= 0x900000 && a < 0x940000) return ng->vram[((a & 0x1FFFF) >> 1) & 0xFFFF];   /* MAME videoram share R/W */
     if (a >= 0x800000 && a < 0xC00000 &&
         m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000) {
                                             /* program ROM mirror (MAME mirror mask) for
@@ -1479,6 +1480,14 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         uint32_t o = (a & 0x1FFFF)>>1;
         if (mem_mask & 0xFF00) ng->cram[o] = (ng->cram[o]&0x00FF)|(d&0xFF00);
         if (mem_mask & 0x00FF) ng->cram[o] = (ng->cram[o]&0xFF00)|(d&0x00FF);
+        return;
+    }
+    if (a >= 0x900000 && a < 0x940000) {   /* MAME videoram share R/W window (BIOS VRAM test uses it) */
+        uint32_t o = (a & 0x1FFFF) >> 1;
+        if (o < 0x10000) {
+            if (mem_mask & 0xFF00) ng->vram[o] = (ng->vram[o]&0x00FF)|(d&0xFF00);
+            if (mem_mask & 0x00FF) ng->vram[o] = (ng->vram[o]&0xFF00)|(d&0x00FF);
+        }
         return;
     }
     if (a < 0xD00000) return;
