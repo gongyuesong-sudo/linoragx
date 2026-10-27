@@ -765,6 +765,15 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         }
         if (ng->cart_prot == 8 && a >= 0x2FE000)  /* PVC prot RAM (MAME installs this only for PVC carts) */
             return ng->pvc_ram[(a >> 1) & 0xFFF];
+        if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3bl/pl/upl protection_r:
+            MAME installs this read handler OVER the bank window — cart_ram[word] must win,
+            otherwise the game's self-test readback (copy ROM d0610 -> window -> cmp) reads
+            the bank ROM mirror instead and retries forever (kf2k3upl black screen). */
+            uint32_t wo = (a - 0x2FE000) >> 1;
+            if (getenv("K3DBG"))
+                fprintf(stderr, "K3RD f=%d a=%06x v=%04x pc=%08x\n", ng->frame, a, ng->k3bl_ram[wo & 0xFFF], m68k_get_reg(NULL,M68K_REG_PC));
+            return ng->k3bl_ram[wo & 0xFFF];
+        }
         uint32_t o = ng->prg_bank_base + (a - 0x200000);
         if (f_romrd() && o >= 0x100 && o <= 0x12F && ng->frame < 260) {
             static int rm = 0;
@@ -1435,6 +1444,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             ng->mc_data[(a >> 1) & 0x7FF] = d & 0xFF;
         return;
     }
+    if (ng->cart_prot == 13 && a <= 0xCFFFFF)
+        return;   /* kf2k3bl/pl/upl: MAME maps 0xC00000-0xCFFFFF to the BIOS ROM
+                     (read-only mirror).  The upl game copies code to 0xC00000 and
+                     then jsr $c004c8 (BIOS service); if the VRAM direct window
+                     swallowed those writes the BIOS image got overwritten and the
+                     game jumped into its own copy -> crash (black screen). */
     if (a < 0xC40000) {                     /* VRAM direct window (MAME: map(0xC00000,0xC3FFFF)
                                                writeonly16 -> vram bytes, word index = (a&0x1FFFF)>>1) */
         uint32_t o = (a & 0x1FFFF) >> 1;
@@ -1468,6 +1483,9 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
     }
     if (a < 0xD00000) return;
     { uint32_t o = a & 0xFFFF;
+      if (getenv("SRAMD") && ng->frame >= 0)
+          fprintf(stderr, "SRAMD f=%d o=%04x d=%04x m=%04x unl=%d pc=%08x\n", ng->frame, o, d, mem_mask,
+              ng->sram_unlocked, m68k_get_reg(NULL, M68K_REG_PC));
       if (f_sramw() && ((o >= 0xFE && o <= 0x130) || o == 0x44 || o == 0x46 || o == 0x124))
           fprintf(stderr, "SRAMW f=%d o=%04x d=%04x m=%04x pc=%08x unlocked=%d\n", ng->frame, o, d, mem_mask,
               m68k_get_reg(NULL, M68K_REG_PC), ng->sram_unlocked);
@@ -3588,7 +3606,13 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     uint8_t *rom = src + 0xfe000;
                                     uint8_t *b2 = src + 0xd0610;
                                     for (int i = 0; i < 0x2000/2; i++) {
-                                        int ofst = (i & 0xff00) + ((((i&0xff)&0x80)?0x80:0)|(((i&0xff)&0x40)?0x40:0)|(((i&0xff)&0x01)?0x20:0)|(((i&0xff)&0x10)?0x10:0)|(((i&0xff)&0x08)?0x08:0)|(((i&0xff)&0x04)?0x04:0)|(((i&0xff)&0x02)?0x02:0)|(((i&0xff)&0x20)?0x01:0));
+                                        /* MAME bitswap<8>(x,7,6,0,4,3,2,1,5): result bit i = x bit p[i]
+                                           r0=x7 r1=x6 r2=x0 r3=x4 r4=x3 r5=x2 r6=x1 r7=x5 */
+                                        uint32_t x = i & 0xff;
+                                        uint32_t s = ((x>>7)&1) | (((x>>6)&1)<<1) | (((x)&1)<<2)
+                                                   | (((x>>4)&1)<<3) | (((x>>3)&1)<<4) | (((x>>2)&1)<<5)
+                                                   | (((x>>1)&1)<<6) | (((x>>5)&1)<<7);
+                                        int ofst = (i & 0xff00) + s;
                                         memcpy(&rom[i*2], &b2[ofst*2], 2);
                                     }
                                 }
@@ -3983,6 +4007,25 @@ void ng_run_frame(neogeo *ng)
                   fprintf(stderr, "  %04x:", o);
                   for (int q = 0; q < 16; q += 2)
                       fprintf(stderr, " %04x", ng->workram[(o + q) >> 1]);
+                  fprintf(stderr, "\n");
+              }
+          }
+        }
+        { static int sd = -2; static int sds = 0x5d8, sde = 0x700;
+          if (sd == -2) { const char *e = getenv("SRAMDUMP");
+              if (e) { sd = atoi(e);
+                  const char *c1 = strchr(e, ':');
+                  if (c1) { sds = (int)strtol(c1 + 1, 0, 16);
+                            const char *c2 = strchr(c1 + 1, ':');
+                            if (c2) sde = (int)strtol(c2 + 1, 0, 16); } }
+              else sd = -1; }
+          if (sd >= 0 && ng->frame == (unsigned)sd) {
+              sd = -3;
+              fprintf(stderr, "SRAMDUMP f=%d %05x-%05x:\n", ng->frame, sds, sde);
+              for (int o = sds; o < sde; o += 16) {
+                  fprintf(stderr, "  %05x:", o);
+                  for (int q = 0; q < 16; q += 2)
+                      fprintf(stderr, " %02x%02x", ng->sram[o + q], ng->sram[o + q + 1]);
                   fprintf(stderr, "\n");
               }
           }
