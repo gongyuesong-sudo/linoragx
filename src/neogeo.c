@@ -1067,8 +1067,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         if (wo == (0x1ff0/2) || wo == (0x1ff2/2)) {
             uint8_t *cr = (uint8_t *)ng->k3bl_ram;          /* LE byte view == MAME BYTE_XOR_LE on x86 */
             uint8_t prt = cr[0x1ff2];
-            uint32_t bb = 0x100000 + (((uint32_t)cr[0x1ff3] << 16) | ((uint32_t)cr[0x1ff2] << 8) | cr[0x1ff0]);
-            cr[0x1ff0] &= 0xfe;
+            /* MAME: kf2k3pl -> kof2003p_w (bank lo byte from 0x1ff0, clear 0x1ff0&=0xfe);
+               kf2k3upl/kf2k3bl -> kof2003_w (bank lo byte from 0x1ff1, clear 0x1ff1&=0xfe) */
+            int lo = (ng->k3bl_px == 2) ? 0x1ff1 : 0x1ff0;
+            uint32_t bb = 0x100000 + (((uint32_t)cr[0x1ff3] << 16) | ((uint32_t)cr[0x1ff2] << 8) | cr[lo]);
+            cr[lo] &= 0xfe;
             cr[0x1ff3] &= 0x7f;
             ng->k3bl_overlay = (uint16_t)((prt & 0x00ff) | (ng->k3bl_overlay & 0xff00));
             ng->prg_bank_base = bb;
