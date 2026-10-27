@@ -544,6 +544,7 @@ static void mc_stb_rise(neogeo *ng)
         break;
     case 2:  /* MODE_TIME_SET: load shift reg into RTC */
         for (int i = 0; i < 6; i++) ng->mc_time[i] = ng->mc_shift[i];
+        ng->mc_dout = ng->mc_shift[0] & 1;   /* MAME: DO updates at STB, not only at CLK */
         break;
     case 3:  /* MODE_TIME_READ: load RTC into shift reg */
         for (int i = 0; i < 6; i++) ng->mc_shift[i] = ng->mc_time[i];
@@ -834,12 +835,12 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
             lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
         }
-        else if (ng->mc_shift[6] & 0xF) {
-            /* MAME: once any command latches, TP/DO stay driven by the chip
-               state for the whole session (get_data_out = m_data_out, OE tied
-               high).  The old frame<400 gate dropped mslug3's calendar reads
-               (they recur every ~180-frame self-test cycle) back to the idle
-               all-ones level -> endless retry. */
+        else if (ng->mc_c || (ng->mc_shift[6] & 0xF)) {
+            /* MAME: once STB has latched any mode, TP/DO stay driven by the
+               chip state for the whole session (get_data_out = m_data_out, OE
+               tied high) — the command nibble draining out of shift[6] via
+               CLK must NOT drop the pin back to idle ones (kf2k3upl BIOS reads
+               DO after 28 CLKs -> all-ones -> SRAM dir gets ff15/ff0f). */
             lo = (uint8_t)((lo & ~0x40) | (ng->mc_tp ? 0x40 : 0));
             lo = (uint8_t)((lo & ~0x80) | (ng->mc_dout ? 0x80 : 0));
         }
