@@ -781,7 +781,11 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                 fprintf(stderr, "K3RD f=%d a=%06x v=%04x pc=%08x\n", ng->frame, a, ng->k3bl_ram[wo & 0xFFF], m68k_get_reg(NULL,M68K_REG_PC));
             return ng->k3bl_ram[wo & 0xFFF];
         }
-        uint32_t o = ng->prg_bank_base + (a - 0x200000);
+        /* pulstar (plain neobase, no banksel): MAME maps 0x200000-0x2FFFFF straight to
+           the program region (p2 upper half), NOT a bank window — its BIOS bank syscall
+           (jmp $aaaaaaaa -> ILLEGAL) copies the patch from $200000 and must see p2+1MB */
+        uint32_t o = (!strncmp(ng->gamename, "pulstar", 7)) ? a
+                         : ng->prg_bank_base + (a - 0x200000);
         if (f_romrd() && o >= 0x100 && o <= 0x12F && ng->frame < 260) {
             static int rm = 0;
             if (rm < 24) { rm++;
@@ -933,6 +937,10 @@ static uint16_t r16(neogeo *ng, uint32_t a)
                                                `jsr $aaaaaaaa` lands here; without the
                                                mirror it read memcard garbage, crashed
                                                into the BIOS reset and looped forever.
+                                               Only for protected carts (SMA etc): plain
+                                               carts must read memcard 0xFFFF there so
+                                               `jmp $aaaaaaaa` raises ILLEGAL and the
+                                               BIOS exception bank-syscall runs (pulstar).
                                                BIOS self-test also probes 0x800000+ as
                                                data (pc in BIOS) — keep the legacy
                                                memcard/0xFFFF view for those. */
