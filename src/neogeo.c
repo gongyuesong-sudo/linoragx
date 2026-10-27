@@ -599,6 +599,12 @@ static uint32_t bs_bits(uint32_t x, const int *p, int n);
 static uint16_t r16(neogeo *ng, uint32_t a)
 {
     a &= 0xFFFFFF;
+    if (ng->cart_prot == 13 && ng->k3bl_px == 2 && a >= 0x58196 && a <= 0x58197) {
+        /* MAME NEOGEO_KOF2K3UP: addon_r window at 0x58196-0x58197 returns m_overlay
+           (read16sm: each byte gets overlay's low byte) */
+        uint16_t o = ng->k3bl_overlay & 0xFF;
+        return (o << 8) | o;
+    }
     if (ng->dbg_z80 == 5) {
         static unsigned long c1 = 0, c2 = 0, c3 = 0;
         if (a == 0x1012E0) c1++;
