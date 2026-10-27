@@ -3353,6 +3353,15 @@ void linoragx_pc_hook(unsigned int pc)
 static int g_z80flow_lo = -1, g_z80flow_hi = -1;
 void linoragx_z80_step(unsigned int pc)
 {
+    /* Instruction-level YM2610 timer IRQ delivery. The YM IRQ is a LEVEL
+       signal: real hardware takes it at the next Z80 instruction boundary,
+       before any status-polling heartbeat can ACK it. Chunk-granularity
+       delivery (frame loop) let heartbeats clear tflag before the INT was
+       raised; the tpend compensation then kept the line stuck high whenever
+       its window exceeded the timer period (fatfury2: Timer B period 20480
+       clocks < window 30000 -> IRQ asserted ~52x/frame, m1 main thread
+       starved in the task-chain trampoline, command ring never consumed). */
+    if (g_ng && ym_irq_pending(g_ng->ym)) z80w_irq(g_ng->z, 0xff);
     { static int zps = -2;
       if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
       if (zps) zpcstat_hook(pc); }

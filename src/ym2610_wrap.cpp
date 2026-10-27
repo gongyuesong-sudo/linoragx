@@ -301,11 +301,12 @@ uint8_t ym_read(ym2610 *y, int chipno)
        make the driver punch each segment short (logo sound played too fast). */
     if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)) { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
     y->tflag[c] = 0;
-    /* NOTE: do NOT clear tpend here — mslug-family m1 heartbeats poll bank-A
-       status ~10x/frame purely for the busy bit; clearing on read would let
-       the heartbeat swallow every timer IRQ before the Z80 INT is raised.
-       The latch expires with the ~1-frame window instead; re-delivered IRQs
-       are harmless (handlers re-check the status bits). */
+    /* Status read ACKs the timer IRQ: clear the tpend latch together with
+       tflag. With instruction-level delivery (linoragx_z80_step) the INT is
+       raised at the next Z80 instruction after tflag sets, so a heartbeat
+       poll can no longer swallow it — leaving tpend alive past the ACK just
+       re-storms the line (handler re-entered with no flag to service). */
+    y->tpend[c] = 0;
     return st;
 }
 
