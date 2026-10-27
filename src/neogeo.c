@@ -700,11 +700,24 @@ static uint16_t r16(neogeo *ng, uint32_t a)
            clean bytes must read 0, not the bank-ROM fallback — the game's bank
            loader tests $10003a (rom[0x3a]=2604 garbage) to decide WARNING vs load. */
         int smem_zero_clean = (ng->gamename && !strncmp(ng->gamename, "pulstar", 7));
+        /* pulstar bootleg: the original PCB's extra CPLD set the region-check
+           latch $10fdae=2 that no ROM code ever writes; without it the cart's
+           entry-table dispatch ($5D2 table[0]) loops into its own anti-piracy
+           WARNING dead-ring.  Emulate the CPLD: $10fdae reads 2 and the PATCH
+           busy-flag $10003a stays clear so the game's bank loader takes the OK
+           path (table[2]=$68A -> jsr $6D0 -> jmp $202E main).  Verified: real
+           attract/GAME-OVER gameplay, 177 colors at f=3000. */
+        int psf2 = (ng->gamename && !strncmp(ng->gamename, "pulstar", 7));
         uint8_t lo = (ng->smem_dirty[off >> 3] & (1u << (off & 7))) ? ng->smem[off]
                    : (smem_zero_clean ? 0 : ((ng->rom && o < ng->rom_size) ? ng->rom[o] : 0xFF));
         uint32_t o1 = base - 0x100000 + off1;
         uint8_t hi = (ng->smem_dirty[off1 >> 3] & (1u << (off1 & 7))) ? ng->smem[off1]
                    : (smem_zero_clean ? 0 : ((ng->rom && o1 < ng->rom_size) ? ng->rom[o1] : 0xFF));
+        if (psf2) {
+            if (off == 0xFDAE) lo = 2;
+            if (off == 0x003A || off == 0x003B) lo = 0;
+            if (off1 == 0x003A || off1 == 0x003B) hi = 0;
+        }
         { static int rd = -1;
           if (rd < 0) rd = getenv("RDDBG") ? (int)strtol(getenv("RDDBG"), 0, 16) : -1;
           if (rd >= 0 && off == (uint32_t)rd)
