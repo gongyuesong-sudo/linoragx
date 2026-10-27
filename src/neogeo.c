@@ -3458,7 +3458,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "sma_mslug3\"")  && sz >= 0x900000) { sma_dec_mslug3(ng->rom);  ng->cart_prot = 5; }
                             else if (sw_has(sw, swend, "sma_kof2k\"")   && sz >= 0x900000) { sma_dec_kof2000(ng->rom); ng->cart_prot = 7; }
                             else if (sw_has(sw, swend, "rom_mslugx\"")  && sz >= 0x500000) { ng->cart_prot = 14; }
-                            else if (sw_has(sw, swend, "pvc_mslug5\"")  && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_mslug5);  ng->cart_prot = 8; }
+                            else if (sw_has(sw, swend, "pvc_mslug5\"")  && sz >= 0x800000) { pvc_dec_mslug5(ng->rom);  ng->cart_prot = 8;   /* sw_build interleave already IS the MAME raw view; pvc_run wordswap would corrupt */ }
                             else if (sw_has(sw, swend, "pvc_svc\"")     && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_svc);     ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_kf2k3h\"")  && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003h);ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_kf2k3\"")   && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003); ng->cart_prot = 8; }
