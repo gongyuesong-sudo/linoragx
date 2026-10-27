@@ -3618,6 +3618,11 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 }
                                 ng->k3bl_overlay = (uint16_t)((ng->rom[0x58196] << 8) | ng->rom[0x58197]);  /* BE word */
                                 memset(ng->k3bl_ram, 0, sizeof ng->k3bl_ram);   /* MAME device_reset: cart_ram zeroed */
+                                /* MAME sma bank device boots with the window at
+                                   program+0x200000 (verified against MAME bank dump);
+                                   linoragx left it at 0 so the BIOS read the vector
+                                   table as the game header -> SRAM dir divergence. */
+                                ng->prg_bank_base = 0x200000;
                                 fprintf(stderr, "K3BL px=%d overlay=%04x\n", ng->k3bl_px, ng->k3bl_overlay);
                                 /* MAME neoboot sx_decrypt on SFIX: pl=variant 1 (swap 8-byte
                                    halves per 16), upl=variant 2 (bitswap<8>(x,7,6,0,4,3,2,1,5)
