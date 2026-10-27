@@ -4355,7 +4355,11 @@ void ng_run_frame(neogeo *ng)
         if (zrd && ng->frame == zrd) {
             extern uint8_t z80w_peek(void*, uint32_t);
             fprintf(stderr, "ZRD f=%d zpc=%04x\n", ng->frame, z80w_pc(ng->z));
-            fprintf(stderr, "ZRD fe10:");
+            fprintf(stderr, "ZRD z00:");
+            for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, q));
+            fprintf(stderr, "\nZRD f800:");
+            for (int q = 0; q < 0x20; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xf800 + q));
+            fprintf(stderr, "\nZRD fe10:");
             for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfe10 + q));
             fprintf(stderr, "\nZRD feb0:");
             for (int q = 0; q < 0x20; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, 0xfeb0 + q));

@@ -59,6 +59,12 @@ struct ym2610 {
     unsigned long clk;             /* YM tick clock (for busy auto-clear) */
     unsigned long busy_at[2];      /* tick at which D7 busy self-clears (~25us) */
     int tcnt[2], tload[2], ten[2], tflag[2], tfrac;
+    int tpend[2];   /* clk of last timer overflow: keeps the IRQ latched so a
+                       driver that status-polls faster than our chunk-granular
+                       pending check cannot swallow the pulse (mslug m1 heartbeat
+                       polls bank-A status ~10x/frame and cleared tflag before
+                       the Z80 INT was ever raised). Cleared by the status read
+                       (ack) or once the window (~1 frame) expires. */
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
 
     const uint8_t *rom = nullptr;            /* cart audio ROM (ADPCM-A samples) */
@@ -239,6 +245,7 @@ void ym_advance(ym2610 *y, int zcycles)
             if (--y->tcnt[c] <= 0) {
                 y->tflag[c] |= 1;
                 extern long g_tflagA_sets; g_tflagA_sets++;
+                y->tpend[c] = y->clk ? (int)y->clk : 1;
                 y->tcnt[c] = y->tload[c] ? y->tload[c] : 256;
                 if (c == 0) y->intf.fire_timer(0);
             }
@@ -251,6 +258,7 @@ void ym_advance(ym2610 *y, int zcycles)
             y->tfracb[c] -= 80;
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
+                y->tpend[c] = y->clk ? (int)y->clk : 1;
                 y->tcntb[c] = y->tloadb[c] ? y->tloadb[c] : 1024;
                 if (c == 0) y->intf.fire_timer(1);
             }
@@ -262,11 +270,19 @@ int ym_irq_pending(ym2610 *y)
 {
     /* YM2610 reg 0x27: IRQA/IRQB enable bits are ACTIVE LOW (0 = enable).
      * Timer A -> IRQA (bit6 of 0x27), Timer B -> IRQB (bit7). Getting this
-     * inverted starves the sm1 music sequencer: it is timer-IRQ driven. */
-    if ((y->tflag[0] & 1) && !(y->irqen[0] & 0x40)) return 1;
-    if ((y->tflag[1] & 1) && !(y->irqen[1] & 0x40)) return 1;
-    if ((y->tflag[0] & 2) && !(y->irqen[0] & 0x80)) return 1;
-    if ((y->tflag[1] & 2) && !(y->irqen[1] & 0x80)) return 1;
+     * inverted starves the sm1 music sequencer: it is timer-IRQ driven.
+     * tpend[] latches the pulse for ~1 frame so a fast status-polling driver
+     * cannot clear tflag before the chunk-granular check ever raises INT. */
+    const int window = 30000;    /* ~3.75 YM ms: long enough to bridge one
+                                    chunk gap, short enough not to storm */
+    int l0 = (y->tflag[0] & 1) || (y->tpend[0] && (int)y->clk - y->tpend[0] < window);
+    int l0b = (y->tflag[0] & 2) || (y->tpend[0] && (int)y->clk - y->tpend[0] < window);
+    int l1 = (y->tflag[1] & 1) || (y->tpend[1] && (int)y->clk - y->tpend[1] < window);
+    int l1b = (y->tflag[1] & 2) || (y->tpend[1] && (int)y->clk - y->tpend[1] < window);
+    if (l0 && !(y->irqen[0] & 0x40)) return 1;
+    if (l1 && !(y->irqen[1] & 0x40)) return 1;
+    if (l0b && !(y->irqen[0] & 0x80)) return 1;
+    if (l1b && !(y->irqen[1] & 0x80)) return 1;
     return 0;
 }
 
@@ -275,13 +291,21 @@ uint8_t ym_read(ym2610 *y, int chipno)
     int c = chipno ? 1 : 0;
     uint8_t st = (uint8_t)(y->tflag[c] & 3);
     if (y->busy[c] && y->clk >= y->busy_at[c]) y->busy[c] = 0;  /* D7 self-clears with time */
-    if (y->busy[c]) { st |= 0x80; y->busy[c] = 0; }
+    if (y->busy[c]) st |= 0x80;   /* NOT read-cleared: BUSY is a hardware timing
+                                     window, not a flag. mslug-family m1 heartbeats
+                                     poll status constantly; consuming D7 on read
+                                     starved the rst-8 BUSY wait in the IRQ handler. */
     /* YM2610 status D6 = ADPCM-B sample-finished flag (EOS), matching ymfm's
        own ym2608 read_status (live_eos). The BGM pump polls for D6=1 to know
        the current segment ended; a PLAYING-semantics bit would be inverted and
        make the driver punch each segment short (logo sound played too fast). */
     if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)) { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
     y->tflag[c] = 0;
+    /* NOTE: do NOT clear tpend here — mslug-family m1 heartbeats poll bank-A
+       status ~10x/frame purely for the busy bit; clearing on read would let
+       the heartbeat swallow every timer IRQ before the Z80 INT is raised.
+       The latch expires with the ~1-frame window instead; re-delivered IRQs
+       are harmless (handlers re-check the status bits). */
     return st;
 }
 

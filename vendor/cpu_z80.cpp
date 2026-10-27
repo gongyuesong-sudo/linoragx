@@ -4086,6 +4086,11 @@ void cpu_z80::HandleED() {
 	case 0x78: // in_a_c
 		cCycles += 12;
 		m_regA = In(m_regC);
+		/* Real Z80: IN updates S,Z,P from the value read. mslug-family m1
+		   IRQ handler does `in a,(c); jp nz,self` on the YM2610 status port —
+		   without flags it spins forever and the timer handler never returns. */
+		m_regF = (m_regF & C_FLAG) | ZSPTable[m_regA];
+		m_regF &= ~(H_FLAG | N_FLAG);
 		break;
 
 	case 0x79: // out_c_a
