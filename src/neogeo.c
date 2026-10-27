@@ -696,11 +696,15 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         uint32_t base = ng->prg_bank_base ? ng->prg_bank_base : 0x100000;
         uint32_t o = base - 0x100000 + off;
         uint32_t off1 = (off + 1) & 0xFFFF;   /* wrap: off=0xFFFF must not index dirty OOB */
+        /* pulstar (plain bootleg cart): SMEM is pure RAM (MAME ram_device=0);
+           clean bytes must read 0, not the bank-ROM fallback — the game's bank
+           loader tests $10003a (rom[0x3a]=2604 garbage) to decide WARNING vs load. */
+        int smem_zero_clean = (ng->gamename && !strncmp(ng->gamename, "pulstar", 7));
         uint8_t lo = (ng->smem_dirty[off >> 3] & (1u << (off & 7))) ? ng->smem[off]
-                   : ((ng->rom && o < ng->rom_size) ? ng->rom[o] : 0xFF);
+                   : (smem_zero_clean ? 0 : ((ng->rom && o < ng->rom_size) ? ng->rom[o] : 0xFF));
         uint32_t o1 = base - 0x100000 + off1;
         uint8_t hi = (ng->smem_dirty[off1 >> 3] & (1u << (off1 & 7))) ? ng->smem[off1]
-                   : ((ng->rom && o1 < ng->rom_size) ? ng->rom[o1] : 0xFF);
+                   : (smem_zero_clean ? 0 : ((ng->rom && o1 < ng->rom_size) ? ng->rom[o1] : 0xFF));
         { static int rd = -1;
           if (rd < 0) rd = getenv("RDDBG") ? (int)strtol(getenv("RDDBG"), 0, 16) : -1;
           if (rd >= 0 && off == (uint32_t)rd)
