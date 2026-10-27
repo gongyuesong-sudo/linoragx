@@ -3976,6 +3976,14 @@ void ng_run_frame(neogeo *ng)
               lo = e ? atoi(e) : -1; hi = d ? atoi(d + 1) : -1; }
           if (lo >= 0 && ng->frame >= lo && ng->frame <= hi)
               fprintf(stderr, "T %d %08x\n", ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
+        { static int pch[4]; static long hcnt[4]; static int hinit = -2;
+          if (hinit == -2) { const char *e = getenv("PCHIT"); hinit = 0;
+              if (e) { char buf[64]; strncpy(buf, e, 63); buf[63] = 0;
+                  char *tok = strtok(buf, ","); int k = 0;
+                  while (tok && k < 4) { pch[k++] = (int)strtol(tok, 0, 16); tok = strtok(0, ","); } } }
+          if (hinit == 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              for (int k = 0; k < 4 && pch[k]; k++) if (pc == (unsigned)pch[k] && hcnt[k]++ < 5)
+                  fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld\n", ng->frame, pc, hcnt[k]); } }
         { static int regat = -2; static unsigned long regn;
           if (regat == -2) { const char *e = getenv("REGAT"); regat = e ? (int)strtol(e, 0, 16) : -1; }
           { const char *pp = getenv("PCF"); static int pf_last = -1;
