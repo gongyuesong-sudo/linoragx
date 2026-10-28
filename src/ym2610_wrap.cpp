@@ -186,15 +186,13 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     if (ymdbg) fprintf(stderr, "YM%c f=%d %02x=%02x\n", 'A'+chipno, g_ym_frame, reg, val);
     if (chipno == 2) return;                 /* legacy YM2151 mirror: bank A IS the OPM FM, ymfm handles it */
     int c = chipno ? 1 : 0;
-    /* MAME ym2610 bank semantics (ymopn.cpp): bank A (0x2A0000/1) is the pure
-       OPM FM register file; bank B (0x2A0002/3) is SSG(00-0F)/ADPCM-B(10-1B)/
-       EOS(1C)/ADPCM-A(20-3F)/test+IRQ-mask(80+).  ymfm's lower port mixes
-       SSG+ADPCM-B+FM in one address space, so route explicitly: FM regs only
-       reach ymfm via the lower port at >=0x1D; bank B SSG/ADPCM-B also use the
-       lower port (their 00-1C aliases), ADPCM-A the upper port (0x100+ alias).
-       Previous direct bank->port mapping sent bank A 00-1C to SSG/ADPCM-B and
-       bank B 00-1C to ADPCM-A: the BIOS SSG test beeps (00/01 tone writes)
-       never reached the SSG engine (FM+SSG stream identically zero). */
+    /* ymfm ym2610 is a unified 9-bit address space (vendor ymfm_opn.cpp
+       write_data/write_data_hi): lower port = SSG(00-0D)/ADPCM-B(10-1B)/
+       EOS(1C)/FM(1D+); upper port = ADPCM-A(00-2F)/FM(30-FF).  The Neo Geo
+       wires bank A to the lower pair and bank B to the upper pair, so bank B
+       forwards verbatim to the upper port.  Bank A keeps only FM (>=0x1D):
+       its 00-1C writes are YM2151-legacy test/timer regs the sm1 BIOS pings
+       every frame and must NOT reach SSG/ADPCM-B (DC rail). */
     if (chipno == 0) {
         if (reg >= 0x1d) { y->chip.write(0, reg); y->sh_lreg = reg; y->chip.write(1, val); y->sh_lo[reg] = val; }
         /* Bank A is the YM2151 OPM register file: 00-1C are test/timer/IO
@@ -202,33 +200,19 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            writes 00 there every frame).  ymfm's ym2610 has NO OPM side, so
            an earlier fix forwarded 00-0D to the SSG "for BIOS beeps"; that
            instead set SSG volumes 08/09/0A to 00 = FULL SCALE with tone
-           periods 0 = a full-length DC rail (zcmed<5 on ~49 cards).  The
-           real SSG lives on bank B (alias 40-4D) and needs none of this. */
-    } else if (reg <= 0x2f) {
-        /* ADPCM-A register file (dump/total/test 00-02, levels 08-0D,
-           start 10-1D, end 20-2D) — game m1 drivers write it here. */
+           periods 0 = a full-length DC rail (zcmed<5 on ~49 cards).  Bank A
+           00-1C stays dropped: ymfm has no OPM and these are OPM-only regs. */
+    } else {
+        /* ymfm ym2610 upper port (write_data_hi): 0x100-0x12F -> ADPCM-A,
+           0x130-0x1FF -> FM.  Golden trace (MAME 0.289 LINORAGX_GOLDEN probe,
+           mslug3 117 s) proves the mslug3-family BGM = FM freq/key-on regs
+           0xA1-A6/0xB1-B6 + operator regs + ADPCM-A regs, ALL written via
+           bank B.  The old split (bank A = OPM file, bank B = SSG/ADPCM-B)
+           came from legacy MAME ymopn.cpp semantics and is wrong for ymfm:
+           it dropped every bank-B FM write (freq regs never set -> silence)
+           and the 40-4D SSG alias only produced a DC rail. */
         y->chip.write(2, reg); y->sh_hreg = reg; y->chip.write(3, val); y->sh_hi[reg] = val;
-    } else if (reg >= 0x40 && reg <= 0x4d) {
-        /* YM2610 lower port decodes only A0-A4: bank-B writes 0x40-0x4D alias
-           down to 0x00-0x0D = the SSG register file.  The sm1/BIOS SSG
-           self-test writes 41-4E=7F through this alias; the old code dropped
-           them (after an earlier attempt routed them to the FM upper port and
-           muted FM).  Route the alias to ymfm's lower port SSG range instead. */
-        uint8_t s = reg & 0x0f;
-        /* 0D (envelope shape) must NOT ride the alias: the BIOS self-test
-           sweep writes 4D=7F -> envelope hold+continue+attack -> a 36-second
-           rising DC rail (peak 27607, zcmed~0 on ~49 cards).  ymfm's own
-           lower port treats 0E+ as dead; we additionally drop 0D. */
-        if (s < 0x0d) { y->chip.write(0, s); y->sh_lreg = s; y->chip.write(1, val); y->sh_lo[s] = val; }
-    } else if (reg == 0xb5) {
-        y->irqen[0] = (y->irqen[0] & 0x80) | (val & 0x40);   /* IRQA mask (0=enable) */
-    } else if (reg == 0xb6) {
-        y->irqen[1] = (y->irqen[1] & 0x40) | (val & 0x80);   /* IRQB mask */
     }
-    /* bank B 40-7F are YM2610 TEST registers: the old mapping aliased them
-       into ymfm's upper port at 0x140+ which routed straight into FM slot
-       registers 40-7F (BIOS writes 41-4E=7F every self-test -> FM muted,
-       the identically-zero FM stream).  Drop them. */
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
