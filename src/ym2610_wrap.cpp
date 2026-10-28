@@ -216,26 +216,33 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
-    if (c == 0) { /* timers belong to bank A only; bank B 24/25/27 are ADPCM-A regs */
-    if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0xFF00) | val; y->tloadb[c] = (y->tloadb[c] & 0x300) | val; }
-    if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x00FF) | ((val & 0x03) << 8); y->tloadb[c] = (y->tloadb[c] & 0x0FF) | ((val & 0x03) << 8); }
-    if (reg == 0x27) {  /* timer/irq control (LEGACY mapping - sm1 BIOS driver depends on it):
-                          bit1=/LOAD B, bit2=/LOAD A-ish, bit6/7=IRQ enables.
-                          Datasheet-strict remap (bit0/1=/LOAD, bit5/6=enable) was tried
-                          and killed the sm1 one-shot tick (BIOS BGM silent) - the BIOS
-                          driver toggles 0x1f/0x2f and relies on timer B running in BOTH
-                          states. kof2000 m1 arms 0x35 (enable B + /LOAD B=0) which no
-                          interpretation runs - m1 BGM tick remains an open question. */
+    if (c == 0) { /* timers belong to bank A only; bank B 24/27 are ADPCM-A regs */
+    /* STRICT OPN semantics (matches ymfm REG_MODE accessors, vendor
+       ymfm_opn.h:196-205, and the MAME golden trace):
+       0x24 = timer A value lo, 0x25 bits0-1 = timer A value hi (10-bit total,
+       period = (1024-value)*192 clocks), 0x26 = timer B value (8-bit,
+       period = (256-value)*80 clocks).  0x27: bit0 load A, bit1 load B,
+       bit2 enable A, bit3 enable B, bit4 reset A, bit5 reset B; bit6/7 kept
+       as the legacy active-low IRQ mask (all observed drivers write 0 there
+       = enabled, matching ymfm's default irq mask 0x03).
+       Golden proof: mslug3 arms 0x24=AC/0x25=03 (value 940) then re-loads
+       0x27=35 ~3x/frame -> timer A IRQ every (1024-940)*192=16128 clk ~4.5ms
+       -> MAME f800 heartbeat +3/frame; the legacy bit mapping ran this as
+       timer B at 940*80 clk (4.7x too slow) and starved the m1 sequencer. */
+    if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0x300) | val; }
+    if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x0FF) | ((val & 0x03) << 8); }
+    if (reg == 0x26) { y->tloadb[c] = val; }
+    if (reg == 0x27) {
         { static int r27 = -1;
           if (r27 < 0) r27 = getenv("R27DBG") ? 1 : 0;
           if (r27) { extern int g_ym_frame;
                      fprintf(stderr, "R27 bank%c f=%d val=%02x\n", 'A'+c, g_ym_frame, val); } }
-        if (!(val & 0x02)) { y->tcntb[c] = y->tloadb[c] ? y->tloadb[c] : 1024; }
-        if (!(val & 0x04)) { y->tcnt[c] = y->tload[c] ? y->tload[c] : 256; }
-        y->ten[c] = ((val >> 1) & 3);
+        if (val & 0x01) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
+        if (val & 0x02) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
+        y->ten[c] = ((val & 0x04) >> 1) | ((val & 0x08) >> 3);
         y->irqen[c] = val & 0xC0;
-        if (!(val & 0x02)) y->tflag[c] &= ~2;
-        if (!(val & 0x04)) y->tflag[c] &= ~1;
+        if (val & 0x10) y->tflag[c] &= ~1;
+        if (val & 0x20) y->tflag[c] &= ~2;
     }
     }
 }
@@ -261,7 +268,7 @@ void ym_advance(ym2610 *y, int zcycles)
                 y->tflag[c] |= 1;
                 extern long g_tflagA_sets; g_tflagA_sets++;
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
-                y->tcnt[c] = y->tload[c] ? y->tload[c] : 256;
+                { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
                 if (c == 0) y->intf.fire_timer(0);
             }
         }
@@ -274,7 +281,7 @@ void ym_advance(ym2610 *y, int zcycles)
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
-                y->tcntb[c] = y->tloadb[c] ? y->tloadb[c] : 1024;
+                { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
                 if (c == 0) y->intf.fire_timer(1);
             }
         }
