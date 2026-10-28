@@ -131,12 +131,29 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
 
 /* ---- lifecycle ---- */
 
-ym2610 *ym_create(void) { return new ym2610(); }
+/* ymfm's SSG reset state is a full-scale DC rail: the per-channel tone/noise
+   enable bits are active-low (all enabled at reset) and a tone period of 0
+   pins each tone state high, so every channel outputs s_amplitudes[0] =
+   16382 — a ~27600 DC sum on any card that never programs the SSG (~49 of
+   208).  Silence it by writing the mixer register (0F: all enable_n set). */
+static void ym_ssg_silence(ym2610 *y)
+{
+    y->chip.write(0, 0x0f);
+    y->chip.write(1, 0xff);
+}
+
+ym2610 *ym_create(void)
+{
+    ym2610 *y = new ym2610();
+    ym_ssg_silence(y);
+    return y;
+}
 void ym_destroy(ym2610 *y) { ae_destroy(y->ae); delete y; }
 
 void ym_reset(ym2610 *y)
 {
     y->chip.reset();
+    ym_ssg_silence(y);
     ae_reset(y->ae);
     memset(&y->busy, 0, (char *)(y->irqen + 2) - (char *)&y->busy);
 }
@@ -174,17 +191,13 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        never reached the SSG engine (FM+SSG stream identically zero). */
     if (chipno == 0) {
         if (reg >= 0x1d) { y->chip.write(0, reg); y->chip.write(1, val); }
-        else if (reg <= 0x0d) {
-            /* ymfm's lower port maps 00-0D to the SSG engine.  Bank A low
-               registers are the SSG tone/volume/enable file; forward them so
-               the SSG is reachable (BIOS sound test, SSG-using titles).  The
-               0E-1C gap is left dropped: those alias ADPCM-B START and the
-               OPM timer loads the host timer model owns. */
-            y->chip.write(0, reg); y->chip.write(1, val);
-        }
-        /* reg 0E-1C: OPM timer/noise — host-owned timers below.  Forwarding
-           these to ymfm's lower port aliased them as ADPCM-B START writes
-           (BIOS OPM timer loads polluted them). */
+        /* Bank A is the YM2151 OPM register file: 00-1C are test/timer/IO
+           (08/09/0A = OPM test, IO port, timer load — the BIOS self-test
+           writes 00 there every frame).  ymfm's ym2610 has NO OPM side, so
+           an earlier fix forwarded 00-0D to the SSG "for BIOS beeps"; that
+           instead set SSG volumes 08/09/0A to 00 = FULL SCALE with tone
+           periods 0 = a full-length DC rail (zcmed<5 on ~49 cards).  The
+           real SSG lives on bank B (alias 40-4D) and needs none of this. */
     } else if (reg <= 0x2f) {
         /* ADPCM-A register file (dump/total/test 00-02, levels 08-0D,
            start 10-1D, end 20-2D) — game m1 drivers write it here. */
@@ -196,7 +209,11 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            them (after an earlier attempt routed them to the FM upper port and
            muted FM).  Route the alias to ymfm's lower port SSG range instead. */
         uint8_t s = reg & 0x0f;
-        if (s <= 0x0d) { y->chip.write(0, s); y->chip.write(1, val); }
+        /* 0D (envelope shape) must NOT ride the alias: the BIOS self-test
+           sweep writes 4D=7F -> envelope hold+continue+attack -> a 36-second
+           rising DC rail (peak 27607, zcmed~0 on ~49 cards).  ymfm's own
+           lower port treats 0E+ as dead; we additionally drop 0D. */
+        if (s < 0x0d) { y->chip.write(0, s); y->chip.write(1, val); }
     } else if (reg == 0xb5) {
         y->irqen[0] = (y->irqen[0] & 0x80) | (val & 0x40);   /* IRQA mask (0=enable) */
     } else if (reg == 0xb6) {
