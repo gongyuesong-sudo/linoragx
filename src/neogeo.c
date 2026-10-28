@@ -3414,6 +3414,47 @@ void linoragx_z80_step(unsigned int pc)
           }
       } }
     int f = g_ng ? g_ng->frame : -1;
+    { static int fj = -2;
+      if (fj == -2) fj = getenv("FORCEJMP") ? (int)strtol(getenv("FORCEJMP"), 0, 16) : -1;
+      if (fj >= 0 && f == fj) {
+          extern void z80w_force_jmp(void*, uint16_t);
+          z80w_force_jmp(g_ng->z, 0x1ebe);
+          fprintf(stderr, "FORCEJMP fired f=%d\n", f); } }
+    { static int t158 = -2;
+      if (t158 == -2) t158 = getenv("T158TRACE") ? 1 : 0;
+      if (t158 && g_ng && f >= 590) {
+          extern uint16_t z80w_hl(void*); extern uint8_t z80w_peek(void*, uint32_t);
+          if (pc == 0x1fb2) { uint16_t iy = z80w_peek(g_ng->z, 0xf904) | (z80w_peek(g_ng->z, 0xf905) << 8);
+              fprintf(stderr, "T158 f=%d 1fb2 iy=%04x iy9=%02x\n", f, iy,
+                      z80w_peek(g_ng->z, (iy + 9) & 0xffff)); }
+          if (pc == 0x120e) fprintf(stderr, "T158 f=%d 120e hl=%04x\n", f, z80w_hl(g_ng->z)); } }
+    { static int pcn = 0; static unsigned pcaddr[16]; static unsigned long long pccnt[16]; static int pcinit = -2;
+      if (pcinit == -2) { pcinit = 1; const char *e = getenv("PCOUNT");
+          while (e && *e && pcn < 16) { pcaddr[pcn] = (unsigned)strtoul(e, (char**)&e, 16); pccnt[pcn] = 0; pcn++; if (*e == ',') e++; } }
+      if (pcn) { for (int i = 0; i < pcn; i++) if (pc == pcaddr[i]) pccnt[i]++;
+          if (g_ng && (f % 300) == 299) { fprintf(stderr, "PCOUNT f=%d", f);
+              for (int i = 0; i < pcn; i++) fprintf(stderr, " %04x=%llu", pcaddr[i], pccnt[i]);
+              fprintf(stderr, "\n"); } } }
+    { static int pkf = -2;
+      if (pkf == -2) pkf = getenv("Z80PEEKF") ? (int)strtol(getenv("Z80PEEKF"), 0, 16) : -1;
+      if (pkf >= 0 && g_ng && f == pkf) {
+          extern uint8_t z80w_peek(void*, uint32_t);
+          const char *rg = getenv("Z80PEEKR"); unsigned lo = rg ? (unsigned)strtol(rg, 0, 16) : 0xfaa0;
+          const char *d = rg ? strchr(rg, '-') : 0; unsigned hi = d ? (unsigned)strtol(d + 1, 0, 16) : lo + 0x5f;
+          fprintf(stderr, "ZPEEK f=%d", f);
+          for (unsigned a = lo; a <= hi; a++) { if ((a & 15) == 0) fprintf(stderr, "\nZP %04x:", a);
+              fprintf(stderr, " %02x", z80w_peek(g_ng->z, a)); }
+          fprintf(stderr, "\n"); } }
+    { static int rp_ok = -2; static unsigned rp_addr[8]; static unsigned rp_val[8]; static int rp_n = 0; static int rp_f = -1;
+      if (rp_ok == -2) { rp_ok = 1; const char *e = getenv("RAMPOKE"); rp_f = e ? (int)strtol(e, (char**)&e, 16) : -1;
+          if (e && *e == ':') { e++; while (*e && rp_n < 8) {
+              rp_addr[rp_n] = (unsigned)strtoul(e, (char**)&e, 16);
+              if (*e == ',') { e++; rp_val[rp_n] = (unsigned)strtoul(e, (char**)&e, 16); rp_n++; }
+              if (*e == ';') e++; } } }
+      if (rp_ok && rp_f >= 0 && g_ng && f == rp_f) {
+          extern void z80w_poke(void*, uint32_t, uint8_t);
+          for (int i = 0; i < rp_n; i++) z80w_poke(g_ng->z, rp_addr[i], (uint8_t)rp_val[i]);
+          fprintf(stderr, "RAMPOKE fired f=%d n=%d\n", f, rp_n); } }
     { static int zst_lo = -2, zst_hi = -2;
       if (zst_lo == -2) { const char *e = getenv("Z80STEP"); const char *d = e ? strchr(e, '-') : 0;
                           zst_lo = e ? atoi(e) : -1; zst_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }

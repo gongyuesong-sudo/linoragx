@@ -49,6 +49,14 @@ static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
     if (off < 0xFEC0 || (off >= 0xFE4A && off < 0xFE80) || (off >= 0xFC30 && off < 0xFC60) || (bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x\n", off, v, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
   if (off >= 0xF800) { w->cpu->ram_array()[off] = v;
+    { static int wal = -2, wah = -1;
+      if (wal == -2) { const char *e = getenv("Z80RAMWA");
+        if (e) { wal = (int)strtol(e, 0, 16); const char *d = strchr(e, '-');
+          wah = d ? (int)strtol(d + 1, 0, 16) : wal; } }
+      if (wal >= 0 && (int)off >= wal && (int)off <= wah) {
+        extern int g_ym_frame;
+        fprintf(stderr, "ZRW f=%d a=%04x v=%02x pc=%04x\n", g_ym_frame, off, v,
+                w->cpu->get_state().PC); } }
     if (getenv("FDWR") && (off == 0xFD67 || off == 0xFD66)) { static long fw = 0;
       if (fw++ < 40) fprintf(stderr, "FDWR a=%04x v=%02x zpc=%04x\n", off, v, w->cpu->get_state().PC);
       if (fw == 40) fprintf(stderr, "FDWR ...silenced\n"); }
@@ -93,10 +101,13 @@ void z80w_reset(void *v) {
 }
 unsigned long z80w_exec(void *v, unsigned long t) { return ((z80w*)v)->cpu->mz80exec(t); }
 uint8_t z80w_peek(void *v, uint32_t off) { return ((z80w*)v)->cpu->ram_array()[off & 0xFFFF]; }
+void z80w_poke(void *v, uint32_t off, uint8_t val) { ((z80w*)v)->cpu->ram_array()[off & 0xFFFF] = val; }
 int z80w_iff1(void *v) { return ((z80w*)v)->cpu->get_state().IFF1; }
 int z80w_im(void *v) { return ((z80w*)v)->cpu->get_state().NIM; }
 void z80w_force_ei(void *v) { cpu_z80::State st = ((z80w*)v)->cpu->get_state();
                               if (!st.IFF1) { st.IFF1 = 1; st.IFF2 = 1; ((z80w*)v)->cpu->set_state(st); } }
+void z80w_force_jmp(void *v, uint16_t pc) { cpu_z80::State st = ((z80w*)v)->cpu->get_state();
+                              st.PC = pc; ((z80w*)v)->cpu->set_state(st); }
 uint8_t z80w_a(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().AF >> 8); }
 uint16_t z80w_hl(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().HL); }
 uint16_t z80w_af(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().AF); }
