@@ -189,6 +189,14 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
         /* ADPCM-A register file (dump/total/test 00-02, levels 08-0D,
            start 10-1D, end 20-2D) — game m1 drivers write it here. */
         y->chip.write(2, reg); y->chip.write(3, val);
+    } else if (reg >= 0x40 && reg <= 0x4d) {
+        /* YM2610 lower port decodes only A0-A4: bank-B writes 0x40-0x4D alias
+           down to 0x00-0x0D = the SSG register file.  The sm1/BIOS SSG
+           self-test writes 41-4E=7F through this alias; the old code dropped
+           them (after an earlier attempt routed them to the FM upper port and
+           muted FM).  Route the alias to ymfm's lower port SSG range instead. */
+        uint8_t s = reg & 0x0f;
+        if (s <= 0x0d) { y->chip.write(0, s); y->chip.write(1, val); }
     } else if (reg == 0xb5) {
         y->irqen[0] = (y->irqen[0] & 0x80) | (val & 0x40);   /* IRQA mask (0=enable) */
     } else if (reg == 0xb6) {
