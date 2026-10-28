@@ -114,6 +114,10 @@ void z80w_statdump(void *v) {
 }
 unsigned long z80w_bc(void *v) { cpu_z80::State st = ((z80w*)v)->cpu->get_state(); return st.BC; }
 uint16_t z80w_sp(void *v) { cpu_z80::State s = ((z80w*)v)->cpu->get_state(); return s.SP; }
+void z80w_regdump(void *v, unsigned *out6) {
+  cpu_z80::State s = ((z80w*)v)->cpu->get_state();
+  out6[0]=s.PC; out6[1]=s.SP; out6[2]=s.AF; out6[3]=s.BC; out6[4]=s.DE; out6[5]=s.HL;
+}
 
 int z80w_save(void *v, void *buf)   /* buf = cpu_z80::State */
 { *(cpu_z80::State*)buf = ((z80w*)v)->cpu->get_state(); return (int)sizeof(cpu_z80::State); }

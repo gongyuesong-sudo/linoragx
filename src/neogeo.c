@@ -583,6 +583,7 @@ static void mc_rtc_init(neogeo *ng)
 {
     ng->mc_tp_half = 1;   /* ~64Hz idle square wave until first STB arms a mode */
     time_t t = time(NULL);
+    { const char *ml = getenv("MCLOCK"); if (ml) t = (time_t)strtoll(ml, 0, 0); }
     struct tm *lt = localtime(&t);
     ng->mc_time[0] = (uint8_t)(((lt->tm_sec/10)<<4) | (lt->tm_sec%10));
     ng->mc_time[1] = (uint8_t)(((lt->tm_min/10)<<4) | (lt->tm_min%10));
@@ -600,6 +601,10 @@ static void pvc_unpack_color(neogeo *ng);
 static void pvc_pack_color(neogeo *ng);
 
 static uint32_t bs_bits(uint32_t x, const int *p, int n);
+/* RDCHK: rolling per-frame checksum of every 68K-visible read (addr + value) */
+int g_rdchk = 0;
+unsigned long g_rd_a = 0, g_rd_v = 0;
+int g_rdchk_frame = 0;
 static uint16_t r16(neogeo *ng, uint32_t a)
 {
     a &= 0xFFFFFF;
@@ -1557,6 +1562,9 @@ unsigned int m68k_read_memory_8(unsigned int a)
 {
     uint16_t w = r16(g_ng, a & ~1u);
     uint8_t v = (a & 1) ? (w & 0xFF) : (w >> 8);
+    if (g_rdchk) { g_rd_a = g_rd_a*1315423911u + a; g_rd_v = g_rd_v*2654435761u + v;
+        if (g_rdchk_frame == -999 || (g_ng && (int)g_ng->frame == g_rdchk_frame))
+            fprintf(stderr, "RDL %06x %02x pc=%08x\n", a, v, m68k_get_reg(NULL,M68K_REG_PC)); }
     if (g_ng && g_ng->dbg_z80==4 && (a & 0xFFFF) == 0xE2FE && a >= 0x100000 && a < 0x200000)
         fprintf(stderr, "FLAGRD a=%06x %02x pc=%08x\n", a, v, m68k_get_reg(NULL,M68K_REG_PC));
     return v;
@@ -1564,6 +1572,7 @@ unsigned int m68k_read_memory_8(unsigned int a)
 unsigned int m68k_read_memory_16(unsigned int a)
 {
     uint16_t w = r16(g_ng, a);
+    if (g_rdchk) { g_rd_a = g_rd_a*1315423911u + a; g_rd_v = g_rd_v*2654435761u + w; }
     if (g_ng && g_ng->dbg_z80==4 && (a & 0xFFFFFF) >= 0x10E2F8 && (a & 0xFFFFFF) <= 0x10E300)
         fprintf(stderr, "W16RD a=%06x %04x pc=%08x\n", a, w, m68k_get_reg(NULL,M68K_REG_PC));
     if (g_ng && g_ng->dbg_z80==4 && (a & 0xFFFFFF) == 0x10E2FE)
@@ -1571,7 +1580,9 @@ unsigned int m68k_read_memory_16(unsigned int a)
     return w;
 }
 unsigned int m68k_read_memory_32(unsigned int a)
-{ return (r16(g_ng,a)<<16) | r16(g_ng,a+2); }
+{ uint32_t v = (r16(g_ng,a)<<16) | r16(g_ng,a+2);
+  if (g_rdchk) { g_rd_a = g_rd_a*1315423911u + a; g_rd_v = g_rd_v*2654435761u + v; }
+  return v; }
 void m68k_write_memory_8(unsigned int a, unsigned int v)
 {
     if (g_ng && g_ng->dbg_z80==4 && (a & 0xFFFFFF) == 0x10E2FE && v==0)
@@ -3246,6 +3257,17 @@ void linoragx_ringdump(unsigned n)
 }
 void linoragx_pc_hook(unsigned int pc)
 {
+    { static int ms_lo = -2, ms_hi = -2;
+      if (ms_lo == -2) { const char *e = getenv("M68STEP"); const char *d = e ? strchr(e, '-') : 0;
+                         ms_lo = e ? atoi(e) : -1; ms_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }
+      if (ms_lo >= 0 && g_ng && g_ng->frame >= ms_lo && g_ng->frame <= ms_hi) {
+          if (pc == 0x000039b6u)
+              fprintf(stderr, "MSB %d ir=%04x d0=%08x d1=%08x d2=%08x d3=%08x a0=%08x a1=%08x\n",
+                      (int)g_ng->frame, m68k_get_reg(NULL, M68K_REG_IR) & 0xFFFF,
+                      m68k_get_reg(NULL, M68K_REG_D0), m68k_get_reg(NULL, M68K_REG_D1),
+                      m68k_get_reg(NULL, M68K_REG_D2), m68k_get_reg(NULL, M68K_REG_D3),
+                      m68k_get_reg(NULL, M68K_REG_A0), m68k_get_reg(NULL, M68K_REG_A1));
+          fprintf(stderr, "MS %d %08x\n", (int)g_ng->frame, pc); } }
     { static int jd = -2; if (jd == -2) jd = getenv("JMPDBG") ? 1 : 0;
       if (jd) { g_jr_on = 1; } }
     if (g_jr_on) {
@@ -3391,8 +3413,13 @@ void linoragx_z80_step(unsigned int pc)
                   fprintf(stderr, "ZRING  %04x sp=%04x\n", ring[i & 127], spr[i & 127]);
           }
       } }
-    if (g_z80flow_lo < 0) return;
     int f = g_ng ? g_ng->frame : -1;
+    { static int zst_lo = -2, zst_hi = -2;
+      if (zst_lo == -2) { const char *e = getenv("Z80STEP"); const char *d = e ? strchr(e, '-') : 0;
+                          zst_lo = e ? atoi(e) : -1; zst_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }
+      if (zst_lo >= 0 && f >= zst_lo && f <= zst_hi)
+          fprintf(stderr, "ZS %d %04x\n", f, pc); }
+    if (g_z80flow_lo < 0) return;
     if (f >= g_z80flow_lo && f <= g_z80flow_hi) {
         if (getenv("ZBYTES") && pc < 0x8000 && g_ng->snd) {
             fprintf(stderr, "ZB %d %04x:", f, pc);
@@ -4411,11 +4438,54 @@ void ng_run_frame(neogeo *ng)
         while (ng->draw_next < NG_H) { ng_draw_line(ng, ng->fb, ng->draw_next); ng->draw_next++; }
     }
     ng->scanline = 0;
+    { static int rc = -2, rdf = -2;
+      if (rc == -2) { rc = getenv("RDCHK") ? 1 : 0;
+                      const char *rf = getenv("RDCHKF");
+                      rdf = !rf ? -1 : (strcmp(rf, "all") == 0 ? -999 : atoi(rf)); }
+      if (rc) { fprintf(stderr, "RDCHK f=%llu a=%016lx v=%016lx\n",
+                             (unsigned long long)ng->frame, g_rd_a, g_rd_v);
+                g_rd_a = 0; g_rd_v = 0;
+                g_rdchk = 1; g_rdchk_frame = rdf; } }
+    { static int m68st = -2;
+      if (m68st == -2) { const char *e = getenv("M68KTR"); m68st = e ? (int)strtol(e, NULL, 10) : 0; }
+      if (m68st > 1 && (int)ng->frame == m68st) {
+          { char mn[64]; snprintf(mn, sizeof mn, "/tmp/m68ram_%d.bin", m68st);
+            FILE *mf = fopen(mn, "wb");
+            if (mf) { for (uint32_t q = 0; q < 0x20000; q++) fputc((int)m68k_read_memory_8(0x100000 + q), mf);
+                      fclose(mf); } }
+          unsigned rv[10];
+          static const int rs[10] = {M68K_REG_D0,M68K_REG_D1,M68K_REG_D2,M68K_REG_D3,M68K_REG_D4,M68K_REG_D5,M68K_REG_D6,M68K_REG_D7,M68K_REG_PC,M68K_REG_SR};
+          for (int q = 0; q < 10; q++) rv[q] = m68k_get_reg(NULL, rs[q]);
+          fprintf(stderr, "M68ST f=%d pc=%08x sr=%04x ir=%04x d0=%08x d1=%08x d2=%08x d3=%08x d4=%08x d5=%08x d6=%08x d7=%08x\n",
+                  (int)ng->frame, rv[8], rv[9] & 0xFFFF, m68k_get_reg(NULL, M68K_REG_IR) & 0xFFFF, rv[0], rv[1], rv[2], rv[3], rv[4], rv[5], rv[6], rv[7]); } }
+    if (getenv("M68KTR") && (ng->frame % 1) == 0)
+        fprintf(stderr, "M68 f=%llu pc=%08x\n", (unsigned long long)ng->frame, m68k_get_reg(NULL, M68K_REG_PC));
+    if (ng->scanline == 0 && getenv("ZTRACE")) {
+        extern uint8_t z80w_peek(void*, uint32_t);
+        extern uint16_t z80w_sp(void*);
+        extern void z80w_regdump(void*, unsigned *);
+        extern int z80w_save(void*, void*);
+        unsigned rg[6]; z80w_regdump(ng->z, rg);
+        { static int zst = -2;
+          if (zst == -2) { const char *e = getenv("ZTRACE"); zst = e ? (int)strtol(e, NULL, 10) : 0; }
+          if (zst > 1 && (int)ng->frame == zst) {
+              char zn[64]; snprintf(zn, sizeof zn, "/tmp/zst_%d.bin", zst);
+              FILE *zf = fopen(zn, "wb");
+              if (zf) { char st[512]; int n = z80w_save(ng->z, st); fwrite(st, 1, n, zf); fclose(zf); } } }
+        unsigned ck = 0;
+        for (int q = 0; q < 0x1000; q++) ck = ck * 33 + z80w_peek(ng->z, 0xf000 + q);
+        fprintf(stderr, "ZTR f=%llu pc=%04x sp=%04x ck=%08x af=%04x bc=%04x de=%04x hl=%04x\n",
+                (unsigned long long)ng->frame, z80w_pc(ng->z), z80w_sp(ng->z), ck,
+                rg[2], rg[3], rg[4], rg[5]);
+    }
     if (ng->scanline == 0 && getenv("ZRAMDUMP")) {
         static int zrd = -2;
         if (zrd == -2) { const char *e = getenv("ZRAMDUMP"); zrd = e ? atoi(e) : 0; }
         if (zrd && ng->frame == zrd) {
             extern uint8_t z80w_peek(void*, uint32_t);
+            { char zn[64]; snprintf(zn, sizeof zn, "/tmp/zram_%llu.bin", (unsigned long long)ng->frame);
+              FILE *zf = fopen(zn, "wb");
+              if (zf) { for (int q = 0; q < 0x10000; q++) fputc(z80w_peek(ng->z, q), zf); fclose(zf); } }
             fprintf(stderr, "ZRD f=%d zpc=%04x\n", ng->frame, z80w_pc(ng->z));
             fprintf(stderr, "ZRD z00:");
             for (int q = 0; q < 0x40; q++) fprintf(stderr, " %02x", z80w_peek(ng->z, q));
@@ -4490,6 +4560,9 @@ void ng_run_frame(neogeo *ng)
     { static int smd = -2;
       if (smd == -2) { const char *e = getenv("SMEMDUMP"); smd = e ? (int)strtol(e, NULL, 10) : -1; }
       if (smd >= 0 && (int)ng->frame == smd) {
+          { char sn[64]; snprintf(sn, sizeof sn, "/tmp/smem_%llu.bin", (unsigned long long)ng->frame);
+            FILE *sf = fopen(sn, "wb");
+            if (sf) { fwrite(ng->smem, 1, 0x10000, sf); fclose(sf); } }
           for (int b = 0; b < 0x10000; b += 0x400) {
               int nz = 0;
               for (int i = b; i < b + 0x400; i++) if (ng->smem[i]) nz++;
