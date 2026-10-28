@@ -4779,7 +4779,7 @@ int ng_save_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
     struct hdr h; memset(&h, 0, sizeof h);
-    memcpy(h.magic, "NRXSTATE12", 11);
+    memcpy(h.magic, "NRXSTATE13", 11);
     h.crambank = ng->cram_bank | ((ng->screen_shadow & 1) << 1);  /* bit1 = shadow (NRXSTATE09-compatible) */
     h.prgbase = ng->prg_bank_base;
     h.cramrender = ng->cram_bank_render;
@@ -4843,6 +4843,15 @@ int ng_save_state(neogeo *ng, const char *path)
     { extern int ym_save_state(void*, void*); static uint8_t ymb[1024];
       int n = ng->ym ? ym_save_state(ng->ym, ymb) : 0;
       fwrite(&n, 4, 1, f); if (n > 0) fwrite(ymb, 1, n, f); }
+    /* NRXSTATE13: runtime-mutable ROM tables. The fix-layer buffer is rewritten
+       in place by live S-data rewrites / bootleg decryptors, and the vertical
+       zoom table is written through the $3C8000 read port; neither was saved,
+       so a resume kept boot-time contents wherever the game did not rewrite
+       them again (kof10th fix layer rendered zeros). */
+    { uint32_t fsz = ng->fixed ? ng->fixed_size : 0;
+      fwrite(&fsz, 4, 1, f);
+      if (fsz) fwrite(ng->fixed, 1, fsz, f);
+      fwrite(ng->zoomy, 1, 0x20000, f); }
     fclose(f);
     return 0;
 }
@@ -4900,6 +4909,9 @@ int ng_load_state(neogeo *ng, const char *path)
       m68k_set_virq(2, h.virq2 ? 1 : 0);
       m68k_set_virq(3, h.virq3 ? 1 : 0); }
     { extern void m68k_set_stopped(int); m68k_set_stopped(h.vstop); }
+    /* drop the boot-time reset cycle budget: it would eat the first execute
+       chunks of the restored run and defer the first VBL by one chunk */
+    { extern void m68k_clear_reset_cycles(void); m68k_clear_reset_cycles(); }
     if (fread(ng->vram, sizeof ng->vram, 1, f) != 1 ||
         fread(ng->cram, sizeof ng->cram, 1, f) != 1 ||
         fread(ng->workram, sizeof ng->workram, 1, f) != 1 ||
@@ -4921,6 +4933,18 @@ int ng_load_state(neogeo *ng, const char *path)
         if (fread(&n, 4, 1, f) == 1 && n > 0 && n <= 1024) {
             extern int ym_load_state(void*, const void*); static uint8_t ymb[1024];
             if (fread(ymb, 1, n, f) == (size_t)n && ng->ym) ym_load_state(ng->ym, ymb);
+        }
+    }
+    /* NRXSTATE13: runtime-mutable fix ROM + vertical zoom table */
+    if (h.magic[9] >= '3') {
+        uint32_t fsz = 0;
+        if (fread(&fsz, 4, 1, f) == 1) {
+            if (fsz && ng->fixed && ng->fixed_size == fsz) {
+                if (fread(ng->fixed, 1, fsz, f) != fsz) { fclose(f); return -5; }
+            } else if (fsz) {
+                fseek(f, fsz, SEEK_CUR);   /* size mismatch: keep boot-time decode */
+            }
+            if (fread(ng->zoomy, 1, 0x20000, f) != 0x20000) { /* partial: keep */ }
         }
     }
     fclose(f);

@@ -1035,6 +1035,10 @@ int m68k_cycles_remaining(void)
 /* NRXSTATE12: save-state accessors for the STOP/HALT latch (not an arch reg) */
 int m68k_get_stopped(void) { return (int)m68ki_cpu.stopped; }
 void m68k_set_stopped(int v) { m68ki_cpu.stopped = (unsigned)v; }
+/* save-state fix: a pending reset-cycle budget from boot must not leak into a
+   restored CPU state (it would silently swallow the first execute chunks and
+   defer the first VBL exception by one chunk). */
+void m68k_clear_reset_cycles(void) { m68ki_cpu.reset_cycles = 0; }
 
 /* Change the timeslice */
 void m68k_modify_timeslice(int cycles)
