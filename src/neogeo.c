@@ -1350,6 +1350,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                     int in_bios = (pc >= 0xC00000UL && pc < 0xD00000UL) || pc >= 0xFF8000UL;
                     if (!in_bios) { ng->cart_audio = 1;
                         z80w_reset(ng->z); ng->z80_nmi_asserted = 0; ng->m1_booted = 1; ng->m1_view = 1;
+                        /* MAME: no dedicated adpcmb region -> ADPCM-B reads the
+                           audiocpu (cart m1) program space. Install it as b_rom
+                           at every handoff so B reads never fall to zero. */
+                        if (ng->ym && ng->snd && ng->snd_size)
+                            ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
                     } else { ng->cart_audio = 0;   /* keep SM1 visible through BIOS phase */
                         ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
                 }
@@ -3638,6 +3643,8 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                    entry — the Z80 boots the cart m1 from power-on, sm1 is
                                    never visible (MVS carts are always present). */
                                 ng->m1_view = 1; ng->m1_booted = 1; ng->cart_audio = 1;
+                                if (ng->ym && ng->snd && ng->snd_size)
+                                    ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
                                 /* MAME install_banked_bios: bios bank entry 1 = mainbios + 0x20000
                                    (sp-4x.sp1 holds asia@0 / japan@0x20000; PCB HARDDIP3 = japan) */
                                 uint8_t *mb = 0; uint32_t msz = 0;
@@ -3866,6 +3873,12 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
     decode_sprites(ng);
 
     ng->ym = ym_create();
+    /* BIOS ADSP sample region (sm1+sp1v1 concat): ym_set_rom_b was never called,
+       so ADPCM-B external reads fell through to zero — the sm1 BIOS "INSERT
+       COIN" ADSP speech was silent.  Install it now; the game-side cart region
+       takes over at m1_booted via ym_set_rom (see ng_audio). */
+    if (ng->adsp_bios && ng->adsp_bios_size)
+        ym_set_rom_b(ng->ym, ng->adsp_bios, ng->adsp_bios_size);
     /* PCFLOW=lo-hi: instruction-level 68K PC flow dump (debug hook) */
     { const char *e = getenv("PCFLOW"); const char *d = e ? strchr(e, '-') : 0;
       if (e) { g_pcflow_lo = atoi(e); g_pcflow_hi = d ? atoi(d + 1) : 999999; g_pcflow_ng = ng; } }
@@ -4444,6 +4457,8 @@ void ng_run_frame(neogeo *ng)
                 z80w_reset(ng->z);
                 ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
                 ng->m1_booted = 1; ng->m1_view = 1;
+                if (ng->ym && ng->snd && ng->snd_size)
+                    ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
                 if (f_latch_tr()) fprintf(stderr, "PCHANDOFF f=%llu pc=%08lx\n",
                                           (unsigned long long)ng->frame, pc);
             }
