@@ -2,6 +2,12 @@ CC      = gcc
 CXX     = g++
 CFLAGS  = -O3 -march=native -std=gnu11 -w -Isrc -Igenerated -Ivendor $(EXTRA_CFLAGS)
 CXXFLAGS= -O3 -march=native -std=c++17 -w -Ivendor $(EXTRA_CFLAGS)
+# no-root fallback: user sysroot with vulkan/wayland/X11/zlib headers when system -dev pkgs are absent
+SYSROOT_INC := $(HOME)/opt/sysroot/usr/include
+ifneq ($(wildcard $(SYSROOT_INC)/vulkan/vulkan.h),)
+CFLAGS   += -I$(SYSROOT_INC)
+CXXFLAGS += -I$(SYSROOT_INC)
+endif
 LDFLAGS = $(EXTRA_LDFLAGS) -L$(HOME)/opt/lib/emulink
 LDLIBS  = -lm -lz -lvulkan -lwayland-client -lX11 -lxcb -ldl -lstdc++ -lpthread
 SRC     = src/neogeo.c src/video.c src/rom.c src/config.c \
