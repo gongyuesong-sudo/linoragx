@@ -1032,6 +1032,10 @@ int m68k_cycles_remaining(void)
 	return GET_CYCLES();
 }
 
+/* NRXSTATE12: save-state accessors for the STOP/HALT latch (not an arch reg) */
+int m68k_get_stopped(void) { return (int)m68ki_cpu.stopped; }
+void m68k_set_stopped(int v) { m68ki_cpu.stopped = (unsigned)v; }
+
 /* Change the timeslice */
 void m68k_modify_timeslice(int cycles)
 {

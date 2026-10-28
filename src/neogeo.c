@@ -4030,6 +4030,10 @@ void ng_run_frame(neogeo *ng)
         }
     }
     int64_t left = CYCLES_PER_FRAME;
+    { static int f_ft = -2; if (f_ft == -2) f_ft = getenv("FTRACE") ? 1 : 0;
+      if (f_ft) { extern unsigned int m68k_get_pc_snapshot(void);
+        fprintf(stderr, "FTR f=%u pc=%06x dc=%u\n", ng->frame,
+                m68k_get_pc_snapshot() & 0xFFFFFF, ng->display_counter); } }
     static int chunk_max = -1;
     if (chunk_max < 0) { const char *e = getenv("NG_CHUNK"); chunk_max = e ? atoi(e) : 16; }
     while (left > 0) {
@@ -4765,6 +4769,8 @@ struct hdr {
     uint8_t  adpcma_[4], adpcmb_[4], ymregl[2];
     int32_t  ch5pend; uint64_t ch5frame;
     int32_t  fixbanktype;
+    int32_t  virq1, virq2, virq3;  /* NRXSTATE12: pending virtual IRQ lines (VBL/sound) */
+    int32_t  vstop;                /* NRXSTATE12: 68K STOP/HALT latch */
 };
 #pragma pack(pop)
 
@@ -4773,7 +4779,7 @@ int ng_save_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
     struct hdr h; memset(&h, 0, sizeof h);
-    memcpy(h.magic, "NRXSTATE10", 11);
+    memcpy(h.magic, "NRXSTATE12", 11);
     h.crambank = ng->cram_bank | ((ng->screen_shadow & 1) << 1);  /* bit1 = shadow (NRXSTATE09-compatible) */
     h.prgbase = ng->prg_bank_base;
     h.cramrender = ng->cram_bank_render;
@@ -4800,6 +4806,9 @@ int ng_save_state(neogeo *ng, const char *path)
     memcpy(h.adpcma_, ng->adpcm_a, 4); memcpy(h.adpcmb_, ng->adpcm_b, 4); memcpy(h.ymregl, ng->ym_reg, 2);
     h.ch5pend = ng->ch5_bios_pend; h.ch5frame = ng->ch5_on_frame;
     h.fixbanktype = ng->fixed_bank_type;
+    { h.virq1 = (int32_t)m68k_get_virq(1);
+      h.virq2 = (int32_t)m68k_get_virq(2); h.virq3 = (int32_t)m68k_get_virq(3); }
+    { extern int m68k_get_stopped(void); h.vstop = m68k_get_stopped(); }
     h.frame = ng->frame; h.fc = ng->fc;
     h.sr = m68k_get_reg(NULL, M68K_REG_SR);
     h.ssp = m68k_get_reg(NULL, M68K_REG_A7);
@@ -4827,6 +4836,13 @@ int ng_save_state(neogeo *ng, const char *path)
     fwrite(ng->k10_cram, sizeof ng->k10_cram, 1, f);
     fwrite(ng->k10_cram2, sizeof ng->k10_cram2, 1, f);
     fwrite(ng->pvc_ram, sizeof ng->pvc_ram, 1, f);
+    /* NRXSTATE11: Z80 private RAM 0xF800-0xFFFF (sound-driver task blocks) */
+    { extern int z80w_save_ram(void*, void*); static uint8_t zram[0x800];
+      z80w_save_ram(ng->z, zram); fwrite(zram, 1, 0x800, f); }
+    /* NRXSTATE11: YM timer/IRQ state (host-owned) + ymfm reg shadow */
+    { extern int ym_save_state(void*, void*); static uint8_t ymb[1024];
+      int n = ng->ym ? ym_save_state(ng->ym, ymb) : 0;
+      fwrite(&n, 4, 1, f); if (n > 0) fwrite(ymb, 1, n, f); }
     fclose(f);
     return 0;
 }
@@ -4836,7 +4852,7 @@ int ng_load_state(neogeo *ng, const char *path)
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     struct hdr h;
-    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE10", 11)) { fclose(f); return -2; }
+    if (fread(&h, sizeof h, 1, f) != 1 || memcmp(h.magic, "NRXSTATE1", 9)) { fclose(f); return -2; }
     ng->frame = h.frame; ng->fc = h.fc;
     ng->vector_bank = h.vecbank;
     m68k_set_reg(M68K_REG_SR, h.sr);
@@ -4880,6 +4896,10 @@ int ng_load_state(neogeo *ng, const char *path)
     ng->fixed_bank_type = h.fixbanktype;
     /* re-assert the 68K IRQ line the core was holding at save time */
     m68k_set_irq(ng->irq_line);
+    { m68k_set_virq(1, h.virq1 ? 1 : 0);
+      m68k_set_virq(2, h.virq2 ? 1 : 0);
+      m68k_set_virq(3, h.virq3 ? 1 : 0); }
+    { extern void m68k_set_stopped(int); m68k_set_stopped(h.vstop); }
     if (fread(ng->vram, sizeof ng->vram, 1, f) != 1 ||
         fread(ng->cram, sizeof ng->cram, 1, f) != 1 ||
         fread(ng->workram, sizeof ng->workram, 1, f) != 1 ||
@@ -4892,6 +4912,17 @@ int ng_load_state(neogeo *ng, const char *path)
         fread(ng->k10_cram, sizeof ng->k10_cram, 1, f) != 1 ||
         fread(ng->k10_cram2, sizeof ng->k10_cram2, 1, f) != 1 ||
         fread(ng->pvc_ram, sizeof ng->pvc_ram, 1, f) != 1) { fclose(f); return -3; }
+    /* NRXSTATE11: Z80 private RAM (absent in NRXSTATE10 files -> leave zeroed) */
+    if (h.magic[9] >= '1') {
+        extern int z80w_load_ram(void*, const void*); static uint8_t zram[0x800];
+        if (fread(zram, 1, 0x800, f) != 0x800) { fclose(f); return -4; }
+        z80w_load_ram(ng->z, zram);
+        int n = 0;
+        if (fread(&n, 4, 1, f) == 1 && n > 0 && n <= 1024) {
+            extern int ym_load_state(void*, const void*); static uint8_t ymb[1024];
+            if (fread(ymb, 1, n, f) == (size_t)n && ng->ym) ym_load_state(ng->ym, ymb);
+        }
+    }
     fclose(f);
     return 0;
 }

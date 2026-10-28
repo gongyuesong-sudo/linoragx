@@ -369,6 +369,7 @@ public:
         uint32_t AF,BC,DE,HL,AF2,BC2,DE2,HL2,IX,IY;
         uint16_t PC,SP;
         uint8_t I,R,IFF1,IFF2,FHalt,NIM,IffDelay;
+        uint8_t NMI;   /* NRXSTATE12: pending-NMI edge latch (was tail padding) */
     };
     State get_state() {
         State s{};   /* zero-init: struct has a tail padding byte (offset 51) that no field write covers */
@@ -378,6 +379,7 @@ public:
         s.I=m_regI; s.R=m_regR;
         s.IFF1=(uint8_t)m_iff1; s.IFF2=(uint8_t)m_iff2;
         s.FHalt=m_fHalt?1:0; s.NIM=(uint8_t)m_nIM; s.IffDelay=iff_delay;
+        s.NMI=m_nmi_pending?1:0;
         return s;
     }
     void set_state(const State& s) {
@@ -387,6 +389,7 @@ public:
         m_regI=s.I; m_regR=s.R;
         m_iff1=s.IFF1; m_iff2=s.IFF2;
         m_fHalt=s.FHalt?true:false; m_nIM=s.NIM; iff_delay=s.IffDelay;
+        m_nmi_pending=(s.NMI!=0);
     }
 };
 

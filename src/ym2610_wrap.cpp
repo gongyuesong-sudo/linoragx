@@ -39,6 +39,8 @@ void ym_write(ym2610 *y, int chip, uint8_t reg, uint8_t val);
 uint8_t ym_read(ym2610 *y, int chip);
 int ym_irq_pending(ym2610 *y);
 void ym_stream(ym2610 *y, int16_t *stereo, int frames);
+int ym_save_state(ym2610 *y, void *buf);
+int ym_load_state(ym2610 *y, const void *buf);
 void ym_advance(ym2610 *y, int zcycles);
 void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size);
 }
@@ -66,6 +68,9 @@ struct ym2610 {
                        the Z80 INT was ever raised). Cleared by the status read
                        (ack) or once the window (~1 frame) expires. */
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
+    /* NRXSTATE11: shadow of the ymfm register store (last pair per port) so a
+       resumed run restores FM/SSG/ADPCM registers instead of a silent chip */
+    uint8_t sh_lo[256], sh_hi[256]; int sh_lreg, sh_hreg;
 
     const uint8_t *rom = nullptr;            /* cart audio ROM (ADPCM-A samples) */
     uint32_t rom_size = 0;
@@ -138,8 +143,8 @@ uint8_t ym2610::LinIntf::ymfm_external_read(ymfm::access_class type, uint32_t ad
    208).  Silence it by writing the mixer register (0F: all enable_n set). */
 static void ym_ssg_silence(ym2610 *y)
 {
-    y->chip.write(0, 0x0f);
-    y->chip.write(1, 0xff);
+    y->chip.write(0, 0x0f); y->sh_lreg = 0x0f;
+    y->chip.write(1, 0xff); y->sh_lo[0x0f] = 0xff;
 }
 
 ym2610 *ym_create(void)
@@ -191,7 +196,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        bank B 00-1C to ADPCM-A: the BIOS SSG test beeps (00/01 tone writes)
        never reached the SSG engine (FM+SSG stream identically zero). */
     if (chipno == 0) {
-        if (reg >= 0x1d) { y->chip.write(0, reg); y->chip.write(1, val); }
+        if (reg >= 0x1d) { y->chip.write(0, reg); y->sh_lreg = reg; y->chip.write(1, val); y->sh_lo[reg] = val; }
         /* Bank A is the YM2151 OPM register file: 00-1C are test/timer/IO
            (08/09/0A = OPM test, IO port, timer load — the BIOS self-test
            writes 00 there every frame).  ymfm's ym2610 has NO OPM side, so
@@ -202,7 +207,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     } else if (reg <= 0x2f) {
         /* ADPCM-A register file (dump/total/test 00-02, levels 08-0D,
            start 10-1D, end 20-2D) — game m1 drivers write it here. */
-        y->chip.write(2, reg); y->chip.write(3, val);
+        y->chip.write(2, reg); y->sh_hreg = reg; y->chip.write(3, val); y->sh_hi[reg] = val;
     } else if (reg >= 0x40 && reg <= 0x4d) {
         /* YM2610 lower port decodes only A0-A4: bank-B writes 0x40-0x4D alias
            down to 0x00-0x0D = the SSG register file.  The sm1/BIOS SSG
@@ -214,7 +219,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            sweep writes 4D=7F -> envelope hold+continue+attack -> a 36-second
            rising DC rail (peak 27607, zcmed~0 on ~49 cards).  ymfm's own
            lower port treats 0E+ as dead; we additionally drop 0D. */
-        if (s < 0x0d) { y->chip.write(0, s); y->chip.write(1, val); }
+        if (s < 0x0d) { y->chip.write(0, s); y->sh_lreg = s; y->chip.write(1, val); y->sh_lo[s] = val; }
     } else if (reg == 0xb5) {
         y->irqen[0] = (y->irqen[0] & 0x80) | (val & 0x40);   /* IRQA mask (0=enable) */
     } else if (reg == 0xb6) {
@@ -290,6 +295,46 @@ void ym_advance(ym2610 *y, int zcycles)
             }
         }
     }
+}
+
+/* NRXSTATE11: host-owned YM timer/IRQ state + ymfm register shadow.
+ * Without this a resumed run restarted the timers from zero: the Z80 music
+ * driver (tick-driven) fell permanently out of phase — kof10th diverged on
+ * screen within 20 frames of any mid-attract resume. */
+struct ym_blob {
+    int busy[2]; unsigned long clk; unsigned long busy_at[2];
+    int tcnt[2], tload[2], ten[2], tflag[2], tfrac, tpend[2];
+    int tcntb[2], tloadb[2], tfracb[2], irqen[2];
+    uint8_t sh_lo[256], sh_hi[256];
+};
+int ym_save_state(ym2610 *y, void *buf)
+{
+    ym_blob *b = (ym_blob*)buf;
+    memcpy(b->busy, y->busy, sizeof b->busy); b->clk = y->clk;
+    memcpy(b->busy_at, y->busy_at, sizeof b->busy_at);
+    memcpy(b->tcnt, y->tcnt, sizeof b->tcnt); memcpy(b->tload, y->tload, sizeof b->tload);
+    memcpy(b->ten, y->ten, sizeof b->ten);   memcpy(b->tflag, y->tflag, sizeof b->tflag);
+    b->tfrac = y->tfrac; memcpy(b->tpend, y->tpend, sizeof b->tpend);
+    memcpy(b->tcntb, y->tcntb, sizeof b->tcntb); memcpy(b->tloadb, y->tloadb, sizeof b->tloadb);
+    memcpy(b->tfracb, y->tfracb, sizeof b->tfracb); memcpy(b->irqen, y->irqen, sizeof b->irqen);
+    memcpy(b->sh_lo, y->sh_lo, 256); memcpy(b->sh_hi, y->sh_hi, 256);
+    return (int)sizeof(ym_blob);
+}
+int ym_load_state(ym2610 *y, const void *buf)
+{
+    const ym_blob *b = (const ym_blob*)buf;
+    memcpy(y->busy, b->busy, sizeof y->busy); y->clk = b->clk;
+    memcpy(y->busy_at, b->busy_at, sizeof y->busy_at);
+    memcpy(y->tcnt, b->tcnt, sizeof y->tcnt); memcpy(y->tload, b->tload, sizeof y->tload);
+    memcpy(y->ten, b->ten, sizeof y->ten);   memcpy(y->tflag, b->tflag, sizeof y->tflag);
+    y->tfrac = b->tfrac; memcpy(y->tpend, b->tpend, sizeof y->tpend);
+    memcpy(y->tcntb, b->tcntb, sizeof y->tcntb); memcpy(y->tloadb, b->tloadb, sizeof y->tloadb);
+    memcpy(y->tfracb, b->tfracb, sizeof y->tfracb); memcpy(y->irqen, b->irqen, sizeof y->irqen);
+    memcpy(y->sh_lo, b->sh_lo, 256); memcpy(y->sh_hi, b->sh_hi, 256);
+    /* NOTE: the shadow is intentionally NOT replayed into ymfm: writing the
+     * ADPCM-A/B start registers would fire phantom samples. Restoring the
+     * ymfm engine itself needs a proper export/import pass (future work). */
+    return 0;
 }
 
 int ym_irq_pending(ym2610 *y)

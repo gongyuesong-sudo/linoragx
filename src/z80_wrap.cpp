@@ -123,5 +123,11 @@ int z80w_save(void *v, void *buf)   /* buf = cpu_z80::State */
 { *(cpu_z80::State*)buf = ((z80w*)v)->cpu->get_state(); return (int)sizeof(cpu_z80::State); }
 int z80w_load(void *v, const void *buf)
 { ((z80w*)v)->cpu->set_state(*(const cpu_z80::State*)buf); return 0; }
+/* NRXSTATE11: private Z80 RAM (0xF800-0xFFFF) was never serialized; the sound
+ * driver's task blocks live there, so any resume silently wiped them. */
+int z80w_save_ram(void *v, void *buf)
+{ memcpy(buf, ((z80w*)v)->cpu->ram_array() + 0xF800, 0x800); return 0; }
+int z80w_load_ram(void *v, const void *buf)
+{ memcpy(((z80w*)v)->cpu->ram_array() + 0xF800, buf, 0x800); return 0; }
 
 }
