@@ -453,7 +453,7 @@ static uint16_t z_in(uint32_t p, void *c)
            so its track blocks never initialized and BGM stayed silent. */
         extern uint8_t z80w_a(void*);
         ng->zbank[port - 0x08] = z80w_a(ng->z);
-        { static long zbn = 0; if (zbn++ < 120) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
+        { static long zbn = 0; if (zbn++ < 200000) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
         return 0;
     }
     switch (port) {
