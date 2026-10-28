@@ -371,7 +371,7 @@ public:
         uint8_t I,R,IFF1,IFF2,FHalt,NIM,IffDelay;
     };
     State get_state() {
-        State s;
+        State s{};   /* zero-init: struct has a tail padding byte (offset 51) that no field write covers */
         s.AF=m_regAF; s.BC=m_regBC; s.DE=m_regDE; s.HL=m_regHL;
         s.AF2=m_regAF2; s.BC2=m_regBC2; s.DE2=m_regDE2; s.HL2=m_regHL2;
         s.IX=m_regIX; s.IY=m_regIY; s.PC=GetPC(); s.SP=GetSP();

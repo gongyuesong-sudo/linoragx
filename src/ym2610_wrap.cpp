@@ -145,6 +145,7 @@ static void ym_ssg_silence(ym2610 *y)
 ym2610 *ym_create(void)
 {
     ym2610 *y = new ym2610();
+    y->chip.reset();   /* ymfm write paths read internal state; never touch the chip before it is reset */
     ym_ssg_silence(y);
     return y;
 }
