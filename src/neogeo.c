@@ -285,6 +285,7 @@ DBGFLAG("SCRW",    f_scrw)
 DBGFLAG("LATCH_TR",f_latch_tr)
 DBGFLAG("WDTR",    f_wdtr)
 DBGFLAG("NOCARTAUDIO", f_nocartaudio)
+DBGFLAG("NORESET", f_noreset)
 DBGFLAG("M1BOOT1", f_m1boot1)
 DBGFLAG("ZTRAIL",  f_ztrail)
 DBGFLAG("ZPCHIST", f_zpchist)
@@ -1311,9 +1312,15 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         case 5: {
             int want = f_nocartaudio() ? 0 : v;
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 v=%d pc=%08x f=%d\n", v, m68k_get_reg(NULL,M68K_REG_PC), ng->frame);
+            if (!v) ng->ch5_bios_pend = 0;   /* BIOS self-test pulse returning to 0
+                                                cancels any pending handoff: only a
+                                                SUSTAINED ch5=1 at end of BIOS is the
+                                                handoff request (mslug3: pulse at f172
+                                                left pend set, PCHANDOFF fired at f176
+                                                while golden stays on sm1 until the
+                                                game's own enable ~f244) */
             if (want != ng->cart_audio) {
                 ng->cart_audio = want;
-                if (!want) ng->ch5_bios_pend = 0;
                 if (!want && !ng->m1_booted && !ng->m1_view && ng->snd && ng->sm1
                     && f_m1boot1()) {
                     /* BIOS self-test pulse just ended (0->1->0 within BIOS): boot cart m1
@@ -4595,8 +4602,13 @@ void ng_run_frame(neogeo *ng)
             if (ng->frame - ng->ch5_on_frame >= 2) {   /* debounce bank-switch transients */
                 ng->ch5_bios_pend = 0;
                 ng->cart_audio = 1;
-                z80w_reset(ng->z);
-                ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
+                if (!f_noreset()) {
+                    z80w_reset(ng->z);
+                    ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
+                }
+                /* MAME parity (NORESET): set_use_cart_audio is a pure bank switch —
+                   the Z80 is never reset, keeps running its driver task chain with
+                   live RAM state across the sm1->m1 view change. */
                 ng->m1_booted = 1; ng->m1_view = 1;
                 if (ng->ym && ng->snd && ng->snd_size)
                     ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
