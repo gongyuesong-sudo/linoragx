@@ -286,6 +286,8 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 
 void ym_advance(ym2610 *y, int zcycles)
 {
+    static int f_notimerb = -1;
+    if (f_notimerb < 0) f_notimerb = getenv("NOTIMERB") ? 1 : 0;
     /* timer A: 1 step / 192 clocks; timer B: 1 step / 80 clocks */
     y->clk += (unsigned long)zcycles;        /* busy D7 auto-clear clock */
     { static int tp = -2;
@@ -310,6 +312,11 @@ void ym_advance(ym2610 *y, int zcycles)
     }
     for (int c = 0; c < 2; c++) {
         if (!(y->ten[c] & 1)) continue;
+        if (f_notimerb) continue;   /* golden MAME proof (task-183): mslug3
+                                         status reads are 01-dominant — timer B
+                                         effectively never sets its flag. lin's
+                                         B tick rate over-asserts bit1 and flips
+                                         the driver's BIT-1 branch vs golden. */
         y->tfracb[c] += zcycles;
         while (y->tfracb[c] >= 80) {
             y->tfracb[c] -= 80;
