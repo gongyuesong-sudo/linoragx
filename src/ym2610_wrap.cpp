@@ -233,14 +233,18 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        0x27=35 ~3x/frame -> timer A IRQ every (1024-940)*192=16128 clk ~4.5ms
        -> MAME f800 heartbeat +3/frame; the legacy bit mapping ran this as
        timer B at 940*80 clk (4.7x too slow) and starved the m1 sequencer. */
-    if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0x300) | val; }
-    if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x0FF) | ((val & 0x03) << 8); }
+    if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0x300) | val;
+        { extern int g_ym_frame; static int t24=-1; if (t24<0) t24=getenv("R24DBG")?1:0;
+          if (t24) fprintf(stderr, "R24 f=%d val=%02x\n", g_ym_frame, val); } }
+    if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x0FF) | ((val & 0x03) << 8);
+        { extern int g_ym_frame; static int t25=-1; if (t25<0) t25=getenv("R24DBG")?1:0;
+          if (t25) fprintf(stderr, "R25 f=%d val=%02x tload=%d\n", g_ym_frame, val, y->tload[c]); } }
     if (reg == 0x26) { y->tloadb[c] = val; }
     if (reg == 0x27) {
         { static int r27 = -1;
           if (r27 < 0) r27 = getenv("R27DBG") ? 1 : 0;
           if (r27) { extern int g_ym_frame;
-                     fprintf(stderr, "R27 bank%c f=%d val=%02x\n", 'A'+c, g_ym_frame, val); } }
+                     fprintf(stderr, "R27 bank%c f=%d val=%02x tload=%d\n", 'A'+c, g_ym_frame, val, y->tload[c]); } }
         if (val & 0x01) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
         if (val & 0x02) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
         y->ten[c] = ((val & 0x04) >> 1) | ((val & 0x08) >> 3);
@@ -348,10 +352,22 @@ int ym_irq_pending(ym2610 *y)
        never written by any observed driver (golden: sm1+m1 zero writes), so
        in MAME timer B only ever sets a status bit. Letting B fire the crutch
        made the sm1 BIOS demo handler run at timer-B rate (8/frame) instead
-       of the golden 18.2ms timer-A cadence, killing the BIOS drum demo. */
-    if ((y->tflag[0] & 1) && !(y->irqen[0] & 0x40)) return 1;
-    if ((y->tflag[1] & 1) && !(y->irqen[1] & 0x40)) return 1;
-    return 0;
+       of the golden 18.2ms timer-A cadence, killing the BIOS drum demo.
+
+       Once-per-frame gate (vliner golden proof): MAME's YM IRQ line never
+       fires (zero 0x29 writes) — drivers tick by POLLING status once per
+       frame, so each frame yields exactly one tick no matter the timer fires
+       1x (BIOS 18.2ms) or 3x (game 6.0ms) per frame. Delivering the crutch
+       at raw overflow rate ran vliner's demo sequence gate (fdca vs fd66
+       counter compare) at 3.5x speed: audio content burned 3.5x early
+       (silent at f=450 while graphics stayed identical). Cap the crutch to
+       one delivery per emulated frame. */
+    extern int g_ym_frame;
+    static int fired_frame = -1;
+    if (!(y->tflag[0] & 1) || (y->irqen[0] & 0x40)) return 0;
+    if (fired_frame == g_ym_frame) return 0;
+    fired_frame = g_ym_frame;
+    return 1;
 }
 
 uint8_t ym_read(ym2610 *y, int chipno)
