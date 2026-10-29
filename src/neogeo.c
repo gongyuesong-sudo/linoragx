@@ -4338,7 +4338,9 @@ void ng_run_frame(neogeo *ng)
               else l1pulse = atoi(e); }
           { unsigned pcnow = m68k_get_reg(NULL, M68K_REG_PC);
             if (pcnow == l1_frozen_pc) l1_frozen_cyc++; else { l1_frozen_pc = pcnow; l1_frozen_cyc = 0; } }
-          if (l1_auto) l1_engaged = (l1_frozen_cyc > 6 * 200);   /* ~6 frames frozen */
+          if (l1_auto) { static int l1_fr = -2;
+              if (l1_fr == -2) { const char *e = getenv("L1FRAMES"); l1_fr = e ? atoi(e) : 24; }
+              l1_engaged = (l1_frozen_cyc > (unsigned)l1_fr * 200); }
           else l1_engaged = 1;
           if (l1pulse > 0 && ng->frame > 600 && l1_engaged) {
               int bucket = ng->scanline / l1pulse;
