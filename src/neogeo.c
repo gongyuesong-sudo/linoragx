@@ -3395,6 +3395,16 @@ void linoragx_z80_step(unsigned int pc)
           int v = z80w_peek(g_ng->z, zwa_a);
           if (v != zwa_v) { if (zwa_n++ < 400) fprintf(stderr, "ZWR f=%llu a=%04x v=%02x zpc=%04x\n",
                             (unsigned long long)g_ng->frame, zwa_a, v, pc); zwa_v = v; } } }
+    { static int qdbg = -2;
+      if (qdbg == -2) qdbg = getenv("QDBG") ? 1 : 0;
+      if (qdbg && g_ng && (pc == 0x2800 || pc == 0x2806 || pc == 0x2811)) {
+          extern uint8_t z80w_a(void*); extern uint16_t z80w_hl(void*); extern uint8_t z80w_peek(void*, uint32_t);
+          uint8_t a_ = z80w_a(g_ng->z); uint16_t hl_ = z80w_hl(g_ng->z);
+          fprintf(stderr, "QDBG f=%llu pc=%04x a=%02x hl=%04x tbl=%02x,%02x,%02x,%02x,%02x,%02x\n",
+                  (unsigned long long)g_ng->frame, pc, a_, hl_,
+                  z80w_peek(g_ng->z, hl_), z80w_peek(g_ng->z, hl_+1), z80w_peek(g_ng->z, hl_+2),
+                  z80w_peek(g_ng->z, hl_+3), z80w_peek(g_ng->z, hl_+4), z80w_peek(g_ng->z, hl_+5));
+      } }
     { static int zps = -2;
       if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
       if (zps) zpcstat_hook(pc); }
