@@ -3694,6 +3694,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                         if (ng->snd) free(ng->snd);
                                         ng->snd = calloc(0x90000, 1); ng->snd_size = 0x90000;
                                         if (ng->snd) cmc50_m1_decrypt(ng->acrypt, ng->acrypt_size, ng->snd);
+                                        /* CMC carts' decrypted m1 carries its own driver: golden MAME boots the Z80 on it
+                                           (mslug4 self-test writes 28=01..32 from m1, not sm1's 28x4+1Cx4). Gate for A/B. */
+                                        if (ng->snd && getenv("CMCM1BOOT")) ng->m1_view = 1;
                                         { const char *ds = getenv("DUMPSND"); if (ds && ng->snd) { FILE *f = fopen(ds, "wb"); if (f) { fwrite(ng->snd, 1, 0x80000, f); fclose(f); } } }
                                         if (f_cmctr()) fprintf(stderr, "M1DEC sw=%s acsz=%x snd[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x\n", ctab[ci].f, ng->acrypt_size, ng->snd[0],ng->snd[1],ng->snd[2],ng->snd[3],ng->snd[4],ng->snd[5],ng->snd[6],ng->snd[7]);
                                     }
