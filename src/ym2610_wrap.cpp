@@ -68,6 +68,10 @@ struct ym2610 {
                        the Z80 INT was ever raised). Cleared by the status read
                        (ack) or once the window (~1 frame) expires. */
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
+    int irqmask[2];              /* reg 0x29 timer-IRQ enable (bit0=A,bit1=B);
+                                    no observed driver writes 0x29 (golden:
+                                    sm1+m1 zero writes) so it is deliberately
+                                    NOT in the save-state blob. */
     /* NRXSTATE11: shadow of the ymfm register store (last pair per port) so a
        resumed run restores FM/SSG/ADPCM registers instead of a silent chip */
     uint8_t sh_lo[256], sh_hi[256]; int sh_lreg, sh_hreg;
@@ -161,7 +165,7 @@ void ym_reset(ym2610 *y)
     y->chip.reset();
     ym_ssg_silence(y);
     ae_reset(y->ae);
-    memset(&y->busy, 0, (char *)(y->irqen + 2) - (char *)&y->busy);
+    memset(&y->busy, 0, (char *)(y->irqmask + 2) - (char *)&y->busy);
 }
 
 void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size)
@@ -216,27 +220,41 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
-    if (c == 0) { /* timers belong to bank A only; bank B 24/25/27 are ADPCM-A regs */
-    if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0xFF00) | val; y->tloadb[c] = (y->tloadb[c] & 0x300) | val; }
-    if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x00FF) | ((val & 0x03) << 8); y->tloadb[c] = (y->tloadb[c] & 0x0FF) | ((val & 0x03) << 8); }
-    if (reg == 0x27) {  /* timer/irq control (LEGACY mapping - sm1 BIOS driver depends on it):
-                          bit1=/LOAD B, bit2=/LOAD A-ish, bit6/7=IRQ enables.
-                          Datasheet-strict remap (bit0/1=/LOAD, bit5/6=enable) was tried
-                          and killed the sm1 one-shot tick (BIOS BGM silent) - the BIOS
-                          driver toggles 0x1f/0x2f and relies on timer B running in BOTH
-                          states. kof2000 m1 arms 0x35 (enable B + /LOAD B=0) which no
-                          interpretation runs - m1 BGM tick remains an open question. */
+    if (c == 0) { /* timers belong to bank A only; bank B 24/27 are ADPCM-A regs */
+    /* STRICT OPN semantics (matches ymfm REG_MODE accessors, vendor
+       ymfm_opn.h:196-205, and the MAME golden trace):
+       0x24 = timer A value lo, 0x25 bits0-1 = timer A value hi (10-bit total,
+       period = (1024-value)*192 clocks), 0x26 = timer B value (8-bit,
+       period = (256-value)*80 clocks).  0x27: bit0 load A, bit1 load B,
+       bit2 enable A, bit3 enable B, bit4 reset A, bit5 reset B; bit6/7 kept
+       as the legacy active-low IRQ mask (all observed drivers write 0 there
+       = enabled, matching ymfm's default irq mask 0x03).
+       Golden proof: mslug3 arms 0x24=AC/0x25=03 (value 940) then re-loads
+       0x27=35 ~3x/frame -> timer A IRQ every (1024-940)*192=16128 clk ~4.5ms
+       -> MAME f800 heartbeat +3/frame; the legacy bit mapping ran this as
+       timer B at 940*80 clk (4.7x too slow) and starved the m1 sequencer. */
+    if (reg == 0x24) { y->tload[c] = (y->tload[c] & 0x300) | val; }
+    if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x0FF) | ((val & 0x03) << 8); }
+    if (reg == 0x26) { y->tloadb[c] = val; }
+    if (reg == 0x27) {
         { static int r27 = -1;
           if (r27 < 0) r27 = getenv("R27DBG") ? 1 : 0;
           if (r27) { extern int g_ym_frame;
                      fprintf(stderr, "R27 bank%c f=%d val=%02x\n", 'A'+c, g_ym_frame, val); } }
-        if (!(val & 0x02)) { y->tcntb[c] = y->tloadb[c] ? y->tloadb[c] : 1024; }
-        if (!(val & 0x04)) { y->tcnt[c] = y->tload[c] ? y->tload[c] : 256; }
-        y->ten[c] = ((val >> 1) & 3);
+        if (val & 0x01) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
+        if (val & 0x02) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
+        y->ten[c] = ((val & 0x04) >> 1) | ((val & 0x08) >> 3);
         y->irqen[c] = val & 0xC0;
-        if (!(val & 0x02)) y->tflag[c] &= ~2;
-        if (!(val & 0x04)) y->tflag[c] &= ~1;
+        if (val & 0x10) y->tflag[c] &= ~1;
+        if (val & 0x20) y->tflag[c] &= ~2;
     }
+    /* YM2610 timer IRQ enable lives in reg 0x29 (bit0=A, bit1=B, ACTIVE HIGH),
+       NOT in 0x27 bits6/7 (that's YM2203/OPN2 wiring). ymfm ym2610::write_data:
+       m_irq_enable=data; mask=enable&~flag_control&3. Golden proof: sm1 BIOS
+       and mslug3 m1 never write 0x29 -> YM IRQ line stays LOW in MAME and
+       every observed driver POLLS the status flags instead. linoragx's old
+       active-low 0x27 interpretation fed the Z80 a phantom IRQ storm. */
+    if (reg == 0x29) { y->irqmask[c] = val & 3; }
     }
 }
 
@@ -261,7 +279,7 @@ void ym_advance(ym2610 *y, int zcycles)
                 y->tflag[c] |= 1;
                 extern long g_tflagA_sets; g_tflagA_sets++;
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
-                y->tcnt[c] = y->tload[c] ? y->tload[c] : 256;
+                { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
                 if (c == 0) y->intf.fire_timer(0);
             }
         }
@@ -274,7 +292,7 @@ void ym_advance(ym2610 *y, int zcycles)
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
-                y->tcntb[c] = y->tloadb[c] ? y->tloadb[c] : 1024;
+                { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
                 if (c == 0) y->intf.fire_timer(1);
             }
         }
@@ -323,21 +341,16 @@ int ym_load_state(ym2610 *y, const void *buf)
 
 int ym_irq_pending(ym2610 *y)
 {
-    /* YM2610 reg 0x27: IRQA/IRQB enable bits are ACTIVE LOW (0 = enable).
-     * Timer A -> IRQA (bit6 of 0x27), Timer B -> IRQB (bit7). Getting this
-     * inverted starves the sm1 music sequencer: it is timer-IRQ driven.
-     * tpend[] latches the pulse for ~1 frame so a fast status-polling driver
-     * cannot clear tflag before the chunk-granular check ever raises INT. */
-    const int window = 30000;    /* ~3.75 YM ms: long enough to bridge one
-                                    chunk gap, short enough not to storm */
-    int l0 = (y->tflag[0] & 1) || (y->tpend[0] && (int)y->clk - y->tpend[0] < window);
-    int l0b = (y->tflag[0] & 2) || (y->tpend[0] && (int)y->clk - y->tpend[0] < window);
-    int l1 = (y->tflag[1] & 1) || (y->tpend[1] && (int)y->clk - y->tpend[1] < window);
-    int l1b = (y->tflag[1] & 2) || (y->tpend[1] && (int)y->clk - y->tpend[1] < window);
-    if (l0 && !(y->irqen[0] & 0x40)) return 1;
-    if (l1 && !(y->irqen[1] & 0x40)) return 1;
-    if (l0b && !(y->irqen[0] & 0x80)) return 1;
-    if (l1b && !(y->irqen[1] & 0x80)) return 1;
+    /* HYBRID, timer-A only: level IRQ = timer A flag (persistent, cleared by
+       the 0x27 bit4 reset) AND active-low IRQA (0x27 bit6) — empirically what
+       sm1/m1 drivers act on (they write 0x1f/0x35 with bit6=0 then wait).
+       Timer B must NOT drive the line: ymfm's real IRQ mask (reg 0x29) is
+       never written by any observed driver (golden: sm1+m1 zero writes), so
+       in MAME timer B only ever sets a status bit. Letting B fire the crutch
+       made the sm1 BIOS demo handler run at timer-B rate (8/frame) instead
+       of the golden 18.2ms timer-A cadence, killing the BIOS drum demo. */
+    if ((y->tflag[0] & 1) && !(y->irqen[0] & 0x40)) return 1;
+    if ((y->tflag[1] & 1) && !(y->irqen[1] & 0x40)) return 1;
     return 0;
 }
 
@@ -356,11 +369,10 @@ uint8_t ym_read(ym2610 *y, int chipno)
        make the driver punch each segment short (logo sound played too fast). */
     if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)) { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
     y->tflag[c] = 0;
-    /* Status read ACKs the timer IRQ: clear the tpend latch together with
-       tflag. With instruction-level delivery (linoragx_z80_step) the INT is
-       raised at the next Z80 instruction after tflag sets, so a heartbeat
-       poll can no longer swallow it — leaving tpend alive past the ACK just
-       re-storms the line (handler re-entered with no flag to service). */
+    /* Status read ACKs timer A: legacy read-clear semantics. Some m1 drivers
+       (shocktr2) spin "poll status; if flag: process" WITHOUT the 0x27 reset
+       bit — with a persistent flag they livelock. The 0x27 bit4/5 reset path
+       above still serves drivers that do clear explicitly. */
     y->tpend[c] = 0;
     return st;
 }
