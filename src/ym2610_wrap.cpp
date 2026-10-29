@@ -266,7 +266,13 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
           if (r27) { extern int g_ym_frame;
                      fprintf(stderr, "R27 bank%c f=%d val=%02x tload=%d\n", 'A'+c, g_ym_frame, val, y->tload[c]); } }
         if (val & 0x01) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
-        if (val & 0x02) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
+        /* ymfm one-shot parity (ymfm_fm.ipp update_timer: re-arm only when the
+           timer is NOT running): a running timer B is NEVER reloaded by the
+           driver's per-frame 0x27 writes; it counts down undisturbed, fires,
+           stops (tcntb=0) and is re-armed by the NEXT 0x27 write. lin's old
+           unconditional reload re-armed B every frame (mslug3 writes 27=2f
+           every frame) so B's flag timing was decoupled from the count. */
+        if (val & 0x02) { if (y->tcntb[c] <= 0) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; } }
         y->ten[c] = ((val & 0x04) >> 1) | ((val & 0x08) >> 3);
         y->irqen[c] = val & 0xC0;
         if (val & 0x10) y->tflag[c] &= ~1;
@@ -288,6 +294,13 @@ void ym_advance(ym2610 *y, int zcycles)
 {
     static int f_notimerb = -1;
     if (f_notimerb < 0) f_notimerb = getenv("NOTIMERB") ? 1 : 0;
+    /* ymfm fm_engine_base::update_timer (ymfm_fm.ipp:1480): timer B period =
+       16*(256-val) vs timer A (1024-val) — B steps 16x slower per count.
+       lin timer A step = 192 Z80 clocks, so B = 192*16 = 3072. The old 80
+       made B tick FASTER than A (opposite of ymfm) and over-asserted the
+       status bit1 that mslug-family drivers branch on. Override: BSTEP=<n>. */
+    static int bstep = -1;
+    if (bstep < 0) { const char *e = getenv("BSTEP"); bstep = e ? (int)strtol(e, NULL, 0) : 3072; }
     /* timer A: 1 step / 192 clocks; timer B: 1 step / 80 clocks */
     y->clk += (unsigned long)zcycles;        /* busy D7 auto-clear clock */
     { static int tp = -2;
@@ -318,12 +331,13 @@ void ym_advance(ym2610 *y, int zcycles)
                                          B tick rate over-asserts bit1 and flips
                                          the driver's BIT-1 branch vs golden. */
         y->tfracb[c] += zcycles;
-        while (y->tfracb[c] >= 80) {
-            y->tfracb[c] -= 80;
+        while (y->tfracb[c] >= bstep) {
+            y->tfracb[c] -= bstep;
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
+                y->tcntb[c] = 0;   /* one-shot: stop until next 0x27 arm (ymfm) */
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
-                { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
+                { int v = 256 - (y->tloadb[c] & 0xFF); (void)v; }
                 if (c == 0) y->intf.fire_timer(1);
             }
         }
