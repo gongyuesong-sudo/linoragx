@@ -198,14 +198,26 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        its 00-1C writes are YM2151-legacy test/timer regs the sm1 BIOS pings
        every frame and must NOT reach SSG/ADPCM-B (DC rail). */
     if (chipno == 0) {
-        if (reg >= 0x1d) { y->chip.write(0, reg); y->sh_lreg = reg; y->chip.write(1, val); y->sh_lo[reg] = val; }
-        /* Bank A is the YM2151 OPM register file: 00-1C are test/timer/IO
+        if (reg >= 0x10 && reg <= 0x1b) {
+            /* Bank A 10-1B = ADPCM-B registers, written DIRECTLY by the 68K
+               (mslug4 attract BGM = ADPCM-B cart-sample playback, golden
+               MAME LINORAGX_ADPCMB probe: reads from start<<8 for 31 s).
+               Forward to ymfm lower port; ymfm's ym2610::write_data applies
+               the real-chip `data|0x20 &~0x40` external-force on reg 10. */
+            y->chip.write(0, reg); y->sh_lreg = reg; y->chip.write(1, val); y->sh_lo[reg] = val;
+        } else if (reg == 0x1c) {
+            /* 1C: EOS flag reset (ymfm lower port) */
+            y->chip.write(0, reg); y->sh_lreg = reg; y->chip.write(1, val); y->sh_lo[reg] = val;
+        } else if (reg >= 0x1d) {
+            y->chip.write(0, reg); y->sh_lreg = reg; y->chip.write(1, val); y->sh_lo[reg] = val;
+        }
+        /* Bank A is the YM2151 OPM register file: 00-0F are test/timer/IO
            (08/09/0A = OPM test, IO port, timer load — the BIOS self-test
            writes 00 there every frame).  ymfm's ym2610 has NO OPM side, so
            an earlier fix forwarded 00-0D to the SSG "for BIOS beeps"; that
            instead set SSG volumes 08/09/0A to 00 = FULL SCALE with tone
            periods 0 = a full-length DC rail (zcmed<5 on ~49 cards).  Bank A
-           00-1C stays dropped: ymfm has no OPM and these are OPM-only regs. */
+           00-0F stays dropped: ymfm has no OPM and these are OPM-only regs. */
     } else {
         /* ymfm ym2610 upper port (write_data_hi): 0x100-0x12F -> ADPCM-A,
            0x130-0x1FF -> FM.  Golden trace (MAME 0.289 LINORAGX_GOLDEN probe,
@@ -442,7 +454,7 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
           int ma = 0, mb = 0;
           for (int i = 0; i < need; i++) { int v = y->tA[i] < 0 ? -y->tA[i] : y->tA[i]; if (v > ma) ma = v;
                                            v = y->tB[i] < 0 ? -y->tB[i] : y->tB[i]; if (v > mb) mb = v; }
-          fprintf(stderr, "[yms] need=%d frames=%d fm=%d aa=%d ab=%d\n", need, frames, mx, ma, mb); } }
+          fprintf(stderr, "[yms] f=%d need=%d frames=%d fm=%d aa=%d ab=%d\n", g_ym_frame, need, frames, mx, ma, mb); } }
     if (ytm) { clock_gettime(CLOCK_MONOTONIC, &yts1);
         ytm_acc += (yts1.tv_sec - yts0.tv_sec) * 1e6 + (yts1.tv_nsec - yts0.tv_nsec) / 1e3;
         if ((ytc++ % 300) == 0) { fprintf(stderr, "[ymtm] avg=%.0fus last=%.0fus frames=%d\n", ytm_acc / 300.0,

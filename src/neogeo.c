@@ -3466,7 +3466,7 @@ void linoragx_z80_step(unsigned int pc)
           const char *d = rg ? strchr(rg, '-') : 0; unsigned hi = d ? (unsigned)strtol(d + 1, 0, 16) : lo + 0x5f;
           fprintf(stderr, "ZPEEK f=%d", f);
           for (unsigned a = lo; a <= hi; a++) { if ((a & 15) == 0) fprintf(stderr, "\nZP %04x:", a);
-              fprintf(stderr, " %02x", z80w_peek(g_ng->z, a)); }
+              fprintf(stderr, " %02x", a >= 0xf800 ? z80w_peek(g_ng->z, a) : z_read(a, g_ng)); }
           fprintf(stderr, "\n"); } }
     { static int rp_ok = -2; static unsigned rp_addr[8]; static unsigned rp_val[8]; static int rp_n = 0; static int rp_f = -1;
       if (rp_ok == -2) { rp_ok = 1; const char *e = getenv("RAMPOKE"); rp_f = e ? (int)strtol(e, (char**)&e, 16) : -1;
