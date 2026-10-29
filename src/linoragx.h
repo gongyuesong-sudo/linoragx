@@ -79,6 +79,7 @@ void ym_destroy(ym2610 *y);
 void ym_reset(ym2610 *y);
 void ym_write(ym2610 *y, int chip, uint8_t reg, uint8_t val);
 uint8_t ym_read(ym2610 *y, int chip);
+uint8_t ym_read_data(ym2610 *y, int chip, uint8_t reg);
 int ym_irq_pending(ym2610 *y);
 void ym_stream(ym2610 *y, int16_t *stereo, int frames);
 void ym_advance(ym2610 *y, int zcycles);

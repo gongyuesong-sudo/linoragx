@@ -476,7 +476,8 @@ static uint16_t z_in(uint32_t p, void *c)
                  { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
                    if (st_rd) { static long c6=0; if ((c6++ % 200)==0) fprintf(stderr,"STATRD B=%02x f=%d\n", v, ng->frame); } }
                  return v; }   /* YM2610 B status */
-    case 0x05: case 0x07: return 0x00;      /* data read: not modelled */
+    case 0x05: return ym_read_data(ng->ym, 0, ng->ym_reg[0]);  /* bank A data readback (SSG shadow, mslug5 GPIO RMW) */
+    case 0x07: return ym_read_data(ng->ym, 1, ng->ym_reg[1]);  /* bank B data readback shadow */
     case 0xA0: case 0xA1: case 0xA2: case 0xA3:
         return 0x00;                       /* ADPCM-B: always ready (bit0=0) */
     }

@@ -37,6 +37,7 @@ void ym_destroy(ym2610 *y);
 void ym_reset(ym2610 *y);
 void ym_write(ym2610 *y, int chip, uint8_t reg, uint8_t val);
 uint8_t ym_read(ym2610 *y, int chip);
+uint8_t ym_read_data(ym2610 *y, int chip, uint8_t reg);
 int ym_irq_pending(ym2610 *y);
 void ym_stream(ym2610 *y, int16_t *stereo, int frames);
 int ym_save_state(ym2610 *y, void *buf);
@@ -217,7 +218,14 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            an earlier fix forwarded 00-0D to the SSG "for BIOS beeps"; that
            instead set SSG volumes 08/09/0A to 00 = FULL SCALE with tone
            periods 0 = a full-length DC rail (zcmed<5 on ~49 cards).  Bank A
-           00-0F stays dropped: ymfm has no OPM and these are OPM-only regs. */
+           00-0F stays dropped: ymfm has no OPM and these are OPM-only regs.
+           BUT shadow-record into sh_lo[]: mslug5's cart m1 ADPCM-A player
+           (0x0b87) uses SSG reg 7 as a GPIO read-modify-write handshake
+           (OUT(4)=7; IN(5); modify; OUT(4)=7,OUT(5)=v).  With IN(5) pinned 0
+           the RMW state machine never advances and the ADPCM-A start regs
+           (bank B 0B/13/1B/23/2B) are never emitted -> attract BGM silent.
+           Shadow readback gives the RMW its stored value with zero audio. */
+        if (reg < 0x10) y->sh_lo[reg] = val;
     } else {
         /* ymfm ym2610 upper port (write_data_hi): 0x100-0x12F -> ADPCM-A,
            0x130-0x1FF -> FM.  Golden trace (MAME 0.289 LINORAGX_GOLDEN probe,
@@ -380,6 +388,14 @@ int ym_irq_pending(ym2610 *y)
     if (fired_frame == g_ym_frame) return 0;
     fired_frame = g_ym_frame;
     return 1;
+}
+
+/* Data-port readback (Z80 IN on the YM data port). mslug5's cart m1 ADPCM-A
+ * player performs OUT(4)=reg; IN(5) read-modify-write on bank-A regs <0x0E
+ * (SSG reg 7 as GPIO). Return the shadow value; audio path untouched. */
+uint8_t ym_read_data(ym2610 *y, int chipno, uint8_t reg)
+{
+    return chipno ? y->sh_hi[reg] : y->sh_lo[reg];
 }
 
 uint8_t ym_read(ym2610 *y, int chipno)
