@@ -4849,6 +4849,7 @@ int ng_save_state(neogeo *ng, const char *path)
     memcpy(h.adpcma_, ng->adpcm_a, 4); memcpy(h.adpcmb_, ng->adpcm_b, 4); memcpy(h.ymregl, ng->ym_reg, 2);
     h.ch5pend = ng->ch5_bios_pend; h.ch5frame = ng->ch5_on_frame;
     h.fixbanktype = ng->fixed_bank_type;
+    if (h.fixbanktype != 0 && h.fixbanktype != 1) h.fixbanktype = 0;  /* never assigned anywhere: sanitize uninit garbage */
     { h.virq1 = (int32_t)m68k_get_virq(1);
       h.virq2 = (int32_t)m68k_get_virq(2); h.virq3 = (int32_t)m68k_get_virq(3); }
     { extern int m68k_get_stopped(void); h.vstop = m68k_get_stopped(); }
