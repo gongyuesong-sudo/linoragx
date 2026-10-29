@@ -3389,6 +3389,12 @@ void linoragx_z80_step(unsigned int pc)
        clocks < window 30000 -> IRQ asserted ~52x/frame, m1 main thread
        starved in the task-chain trampoline, command ring never consumed). */
     if (g_ng && ym_irq_pending(g_ng->ym)) z80w_irq(g_ng->z, 0xff);
+    { static int zwa = -2; static unsigned zwa_a = 0; static int zwa_v = -1; static long zwa_n = 0;
+      if (zwa == -2) { const char *e = getenv("ZRAMWA"); zwa = e ? 1 : 0; zwa_a = e ? (unsigned)strtoul(e, 0, 16) : 0; }
+      if (zwa && g_ng) { extern uint8_t z80w_peek(void*, uint32_t);
+          int v = z80w_peek(g_ng->z, zwa_a);
+          if (v != zwa_v) { if (zwa_n++ < 400) fprintf(stderr, "ZWR f=%llu a=%04x v=%02x zpc=%04x\n",
+                            (unsigned long long)g_ng->frame, zwa_a, v, pc); zwa_v = v; } } }
     { static int zps = -2;
       if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
       if (zps) zpcstat_hook(pc); }
@@ -3437,6 +3443,13 @@ void linoragx_z80_step(unsigned int pc)
               fprintf(stderr, "\n"); } } }
     { static int pkf = -2;
       if (pkf == -2) pkf = getenv("Z80PEEKF") ? (int)strtol(getenv("Z80PEEKF"), 0, 16) : -1;
+      { static int zdp = -2; static FILE *zdf = 0; static unsigned zdf_n = 0; static int zdf_f = -1;
+        if (zdp == -2) { zdp = getenv("Z80DUMP") ? 1 : 0;
+                         if (zdp) zdf = fopen(getenv("Z80DUMP"), "wb"); }
+        if (zdp && zdf && g_ng && f != zdf_f) { zdf_f = f;
+            extern uint8_t z80w_peek(void*, uint32_t);
+            for (unsigned a = 0xf800; a < 0x10000; a++) fputc(z80w_peek(g_ng->z, a), zdf);
+            if ((zdf_n++ & 63) == 0) fflush(zdf); } }
       if (pkf >= 0 && g_ng && f == pkf) {
           extern uint8_t z80w_peek(void*, uint32_t);
           const char *rg = getenv("Z80PEEKR"); unsigned lo = rg ? (unsigned)strtol(rg, 0, 16) : 0xfaa0;
