@@ -2805,6 +2805,86 @@ static void svcpcb_gfx_do(uint8_t *rom, uint32_t rom_size)
     free(buf);
 }
 
+/* MAME neopcb kf2k3pcb_gfx_decrypt: same xor/b32 as svcpcb, different b24
+   scramble (2MB window, no xor constant) and the scatter runs buf->rom. */
+static void kf2k3_gfx_do(uint8_t *rom, uint32_t rom_size)
+{
+    static const uint8_t xorval[4] = { 0x34, 0x21, 0xc4, 0xe9 };
+    static const int8_t b32[32] = { 0x09,0x0d,0x13,0x00,0x17,0x0f,0x03,0x05,
+        0x04,0x0c,0x11,0x1e,0x12,0x15,0x0b,0x06,0x1b,0x0a,0x1a,0x1c,0x14,0x02,
+        0x0e,0x1d,0x18,0x08,0x01,0x10,0x19,0x1f,0x07,0x16 };
+    static const int8_t b24[24] = { 0x17,0x15,0x0a,0x14,0x13,0x16,0x12,0x11,
+        0x10,0x0f,0x0e,0x0d,0x0c,0x0b,0x09,0x08,0x07,0x06,0x05,0x04,0x03,0x02,
+        0x01,0x00 };
+    uint8_t *buf = malloc(rom_size);
+    if (!buf) return;
+    for (uint32_t i = 0; i < rom_size; i++)
+        rom[i] ^= xorval[i & 3];
+    for (uint32_t i = 0; i + 4 <= rom_size; i += 4) {
+        uint32_t v = rom[i] | rom[i+1] << 8 | rom[i+2] << 16 | (uint32_t)rom[i+3] << 24;
+        v = mame_bitswap(v, b32, 32);
+        buf[i] = v & 0xff; buf[i+1] = (v >> 8) & 0xff;
+        buf[i+2] = (v >> 16) & 0xff; buf[i+3] = (v >> 24) & 0xff;
+    }
+    for (uint32_t i = 0; i + 4 <= rom_size; i += 4) {
+        uint32_t ofst = mame_bitswap(i & 0x7fffff, b24, 24);
+        ofst += i & 0xff800000;
+        memcpy(rom + ofst, buf + i, 4);
+    }
+    free(buf);
+}
+
+/* MAME neopcb kf2k3pcb_decrypt_s1data: two 0x80000 blocks off the tail of the
+   (already decrypted) sprites region fill the whole 1MB fixed region. */
+static void kf2k3_s1data_do(uint8_t *spr, uint32_t sz, uint8_t *fix, uint32_t fsz)
+{
+    if (sz < 0x1080000 || fsz < 0x100000) return;
+    const uint8_t *src = spr + sz - 0x1000000 - 0x80000;
+    uint8_t *dst = fix;
+    for (int i = 0; i < 0x80000; i++)
+        dst[i] = src[(i & ~0x1f) + ((i & 7) << 2) + ((~i & 8) >> 2) + ((i & 0x10) >> 4)];
+    src = spr + sz - 0x80000;
+    dst = fix + 0x80000;
+    for (int i = 0; i < 0x80000; i++)
+        dst[i] = src[(i & ~0x1f) + ((i & 7) << 2) + ((~i & 8) >> 2) + ((i & 0x10) >> 4)];
+    for (uint32_t i = 0; i < 0x100000; i++)
+        fix[i] = svc_s1_bitswap(fix[i] ^ 0xd2);
+}
+
+/* MAME neopcb kf2k3pcb_sp1_decrypt: spj.sp1 PCB BIOS (word view after wordswap). */
+static void kf2k3_sp1_dec(uint8_t *rom)
+{
+    static const uint8_t address[0x40] = {
+        0x04,0x0a,0x04,0x0a,0x04,0x0a,0x04,0x0a,
+        0x0a,0x04,0x0a,0x04,0x0a,0x04,0x0a,0x04,
+        0x09,0x07,0x09,0x07,0x09,0x07,0x09,0x07,
+        0x09,0x09,0x04,0x04,0x09,0x09,0x04,0x04,
+        0x0b,0x0d,0x0b,0x0d,0x03,0x05,0x03,0x05,
+        0x0e,0x0e,0x03,0x03,0x0e,0x0e,0x03,0x03,
+        0x03,0x05,0x0b,0x0d,0x03,0x05,0x0b,0x0d,
+        0x04,0x00,0x04,0x00,0x0e,0x0a,0x0e,0x0a };
+    uint16_t *r = (uint16_t *)rom;
+    uint16_t *buf = malloc(0x80000);
+    if (!buf) return;
+    for (int i = 0; i < 0x40000; i++) {
+        int addr = i ^ 0x0020;
+        if (i & 0x00020) addr ^= 0x0010;
+        if (~i & 0x00010) addr ^= 0x0040;
+        if (~i & 0x00004) addr ^= 0x0080;
+        if (i & 0x00200) addr ^= 0x0100;
+        if (~i & 0x02000) addr ^= 0x0400;
+        if (~i & 0x10000) addr ^= 0x1000;
+        if (i & 0x02000) addr ^= 0x8000;
+        addr ^= address[((i >> 1) & 0x38) | (i & 7)];
+        buf[i] = r[addr];
+        if (buf[i] & 0x0004) buf[i] ^= 0x0001;
+        if (buf[i] & 0x0010) buf[i] ^= 0x0002;
+        if (buf[i] & 0x0020) buf[i] ^= 0x0008;
+    }
+    memcpy(r, buf, 0x80000);
+    free(buf);
+}
+
 /* MAME cmc_prot_device::decrypt() */
 static void mame_cmc_decrypt(uint8_t *r0, uint8_t *r1, uint8_t c0, uint8_t c1,
                              const uint8_t *t0hi, const uint8_t *t0lo,
@@ -2872,6 +2952,22 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
         FILE *fp = fopen(getenv("SPRSAVE"), "wb");
         if (fp) { fwrite(ng->spr, 1, sz, fp); fclose(fp);
                   fprintf(stderr, "[sprsave] wrote %s sz=%x\n", getenv("SPRSAVE"), sz); }
+    }
+    if (s1data == 2) {
+        /* kf2k3pcb chain (MAME init_kf2k3pcb): kf2k3 gfx -> cmc50(0x9d) ->
+           s1data from sprites tail fills the whole 1MB fixed region (the
+           intermediate sfix_decrypt output is fully overwritten, skipped). */
+        kf2k3_gfx_do(ng->spr, sz);
+        mame_cmc50_gfx_decrypt(ng->spr, sz, key);
+        uint32_t fsz = 0x100000;
+        if (!ng->fixed || ng->fixed_size < fsz) {
+            uint8_t *nf = calloc(fsz, 1);
+            if (nf) { free(ng->fixed); ng->fixed = nf; ng->fixed_size = fsz; }
+        }
+        if (ng->fixed && ng->fixed_size >= fsz)
+            kf2k3_s1data_do(ng->spr, sz, ng->fixed, fsz);
+        if (getenv("FIXDUMP2")) { FILE *fp = fopen(getenv("FIXDUMP2"), "wb"); if (fp) { fwrite(ng->fixed, 1, ng->fixed_size, fp); fclose(fp); } }
+        return;
     }
     if (s1data) {
         /* svcpcb family full chain (MAME init_mslug5pcb/init_svcpcb).
@@ -3651,7 +3747,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                         int sno = getenv("SWNO") ? atoi(getenv("SWNO")) : 0;
                         int asz_spr = 0;
                         if (!(sno & 1) && !ng->rom && sw_area(sw, "maincpu", ents, 96, &ne, &asz) == 0)
-                            ng->rom = sw_build(gamezip, ents, ne, 0x1000000, asz, &ng->rom_size); /* cap 16MB */
+                            ng->rom = sw_build(gamezip, ents, ne, 0x2000000, asz, &ng->rom_size); /* cap 32MB (svcpcb 269-p1) */
                         if (!(sno & 2) && !ng->spr && sw_area(sw, "sprites", ents, 96, &ne, &asz) == 0) {
                             asz_spr = (int)asz;
                             ng->spr = sw_build(gamezip, ents, ne, 0x8000000, asz, &ng->spr_size);
@@ -3764,6 +3860,8 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
                                     {"boot_kf2k3pl\"",50,0x9d,0,0},{"boot_kf2k3upl\"",50,0x9d,0,0},
                                     {"pcb_ms5\"",50,0x19,1,1,1},
+                                    {"pcb_svc\"",50,0x57,1,1,1},
+                                    {"pcb_k3p3\"",50,0x9d,1,1,2},
                                     {"boot_ms5plus\"",50,0x19,1,1},
                                 };
                                 for (unsigned ci = 0; ci < sizeof ctab / sizeof ctab[0]; ci++) {
@@ -3835,6 +3933,67 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     if (nb) { memcpy(nb, mb + (getenv("BIOSA") ? 0 : 0x20000), 0x20000); free(ng->bios); ng->bios = nb; ng->bios_size = 0x20000; }
                                     free(mb);
                                     if (getenv("SWBUILD")) fprintf(stderr, "[swb] BIOS sp-4x.sp1 entry1\n");
+                                }
+                            }
+                            /* MAME neopcb svcpcb: svc_px_decrypt + pcm2 swap(3); gfx chain via ctab s1=1.
+                               svc_px_decrypt hard-codes its 8MB window (size arg ignored), so the
+                               generic pvc_run wordswap sandwich on the raw loader view is exact. */
+                            if (sw_has(sw, swend, "pcb_svc\"")) {
+                                if (ng->rom && ng->rom_size >= 0x800000) pvc_run(ng->rom, ng->rom_size, pvc_dec_svc);
+                                if (ng->adpcm && ng->adpcm_size >= 0x100000) pcm2_swap(ng->adpcm, 3);
+                                ng->cart_prot = 8; ng->fixed_bank_type = 2;   /* FIX_BANKTYPE_KOF2000 */
+                                ng->cpu601 = getenv("CPU600") ? 0 : 1;        /* same JAMMA PCB family as ms5pcb */
+                                ng->m1_view = 1; ng->m1_booted = 1; ng->cart_audio = 1;
+                                if (ng->ym && ng->snd && ng->snd_size)
+                                    ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
+                                uint8_t *mb = 0; uint32_t msz = 0;
+                                if (rom_load_zip(gamezip, "sp-4x.sp1", &mb, &msz) == 0 && msz >= 0x80000) {
+                                    wordswap(mb, 0x80000);
+                                    uint8_t *nb = malloc(0x20000);
+                                    if (nb) { memcpy(nb, mb + (getenv("BIOSA") ? 0 : 0x20000), 0x20000); free(ng->bios); ng->bios = nb; ng->bios_size = 0x20000; }
+                                    free(mb);
+                                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] BIOS sp-4x.sp1 entry1 (svcpcb)\n");
+                                }
+                            }
+                            /* MAME neopcb kf2k3pcb: kf2k3pcb_decrypt_68k + pcm2 swap(5)
+                               + spj.sp1 BIOS decrypt + extra m1 swap; gfx via ctab s1=2. */
+                            if (sw_has(sw, swend, "pcb_k3p3\"")) {
+                                /* p1/p2 load32_word_swap interleave: the generic loader
+                                   copies sequentially (p2 would overwrite p1) — rebuild
+                                   the MAME region interleave here (same as ms5pcb). */
+                                uint8_t *f1 = 0, *f2 = 0; uint32_t s1_ = 0, s2_ = 0;
+                                if (rom_load_zip(gamezip, "271-p1.p1", &f1, &s1_) == 0 &&
+                                    rom_load_zip(gamezip, "271-p2.p2", &f2, &s2_) == 0 &&
+                                    s1_ >= 0x400000 && s2_ >= 0x400000 && ng->rom_size >= 0x900000) {
+                                    for (uint32_t k = 0; k < 0x200000; k++) {
+                                        ng->rom[4*k+0] = f1[2*k+1]; ng->rom[4*k+1] = f1[2*k];
+                                        ng->rom[4*k+2] = f2[2*k+1]; ng->rom[4*k+3] = f2[2*k];
+                                    }
+                                    free(f1); free(f2);
+                                }
+                                if (ng->rom && ng->rom_size >= 0x900000) pvc_dec_kf2k3pcb(ng->rom);
+                                if (ng->adpcm && ng->adpcm_size >= 0x100000) pcm2_swap(ng->adpcm, 5);
+                                ng->cart_prot = 8; ng->fixed_bank_type = 2;   /* FIX_BANKTYPE_KOF2000 */
+                                ng->cpu601 = getenv("CPU600") ? 0 : 1;        /* same JAMMA PCB family */
+                                ng->m1_view = 1; ng->m1_booted = 1; ng->cart_audio = 1;
+                                /* MAME: extra swap on the decrypted m1 — must run AFTER the
+                                   ctab cmc50_m1_decrypt (checksum key uses pre-swap bytes). */
+                                if (ng->snd && ng->snd_size >= 0x90000) {
+                                    static const int mm[8] = {2,7,0,3,4,1,6,5};  /* MAME bitswap<8>(5,6,1,4,3,0,7,2) */
+                                    for (uint32_t i = 0; i < 0x90000; i++) ng->snd[i] = (uint8_t)bswp(ng->snd[i], 8, mm);
+                                }
+                                if (ng->ym && ng->snd && ng->snd_size)
+                                    ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
+                                uint8_t *mb = 0; uint32_t msz = 0;
+                                if (rom_load_zip(gamezip, "spj.sp1", &mb, &msz) == 0 && msz >= 0x80000) {
+                                    /* MAME's uint16_t* region view == raw-file LE word view
+                                       (WORD_SWAP cancels the LE read), so decrypt on the raw
+                                       bytes, THEN wordswap into the 68K bus byte order. */
+                                    kf2k3_sp1_dec(mb);
+                                    wordswap(mb, 0x80000);
+                                    free(ng->bios); ng->bios = mb; ng->bios_size = 0x80000;
+                                    if (getenv("SWBUILD")) fprintf(stderr, "[swb] BIOS spj.sp1 decrypted (kf2k3pcb) vec=%02x%02x %02x%02x\n", mb[0],mb[1],mb[8],mb[9]);
+                                    if (getenv("DUMPBIOSK")) { FILE *fp = fopen(getenv("DUMPBIOSK"), "wb"); if (fp) { fwrite(mb, 1, 0x80000, fp); fclose(fp); } }
                                 }
                             }
                             if (ng->k3bl_px && ng->rom && ng->rom_size >= 0x700000) {
