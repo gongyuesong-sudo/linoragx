@@ -509,7 +509,9 @@ static void z_out(uint32_t p, uint8_t v, void *c)
         if (ymw && ng->frame>=wlo && ng->frame<=whi) fprintf(stderr,"YMWR f=%d c0 r=%02x v=%02x zpc=%04x\n", ng->frame, ng->ym_reg[0], v, z80w_pc(ng->z));
         ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
-    case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
+    case 0x07: { extern int g_ym_frame; static int ymwb=-2; static int wlo=760, whi=900; if(ymwb==-2){ ymwb=getenv("YMWRB")?1:0; const char*e=getenv("YMWRB"); if(e&&*e){ wlo=(int)strtol(e,NULL,0); whi=strchr(e,':')?(int)strtol(strchr(e,':')+1,NULL,0):wlo+140; } }
+        if (ymwb && ng->frame>=wlo && ng->frame<=whi) fprintf(stderr,"YMWR f=%d c1 r=%02x v=%02x zpc=%04x\n", ng->frame, ng->ym_reg[1], v, z80w_pc(ng->z));
+        ym_write(ng->ym, 1, ng->ym_reg[1], v); } break;/* YM2610 B: data write */
     case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && f_irq2legacy() && ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME parity DEFAULT (2026-10-22): soundlatch2 writes fire NO IRQ — MAME's irq3_pending is set once at construction only (neogeo.cpp:1559), soundlatch2_w has no IRQ line. Legacy homebrew path (IRQ2 + L2GATE) behind IRQ2LEGACY=1. Matrix @20000f: kof2000 30->393, kof98 157->368, fatfury3 177->294, sengoku2 1->103, zero regressions. */
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
