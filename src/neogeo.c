@@ -3729,6 +3729,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
                                     {"boot_kf2k3pl\"",50,0x9d,0,0},{"boot_kf2k3upl\"",50,0x9d,0,0},
                                     {"pcb_ms5\"",50,0x19,1,1,1},
+                                    {"boot_ms5plus\"",50,0x19,1,1},
                                 };
                                 for (unsigned ci = 0; ci < sizeof ctab / sizeof ctab[0]; ci++) {
                                     if (!sw_has(sw, swend, ctab[ci].f)) continue;
