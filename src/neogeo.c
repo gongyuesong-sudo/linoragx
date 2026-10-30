@@ -3158,8 +3158,10 @@ static void cthd_swap_mid(neogeo *ng, uint8_t *p)  /* MAME tmp: swap [0x8000,0x1
 static void cthd2003_decrypt(neogeo *ng)
 {
     if (ng->fixed && ng->fixed_size >= 0x20000) cthd_swap_mid(ng, ng->fixed);
-    /* MAME's audio swap reads past the 0x20000 audiocpu region (m1 here is a
-     * complete 128K image; the swap+copy is OOB UB in MAME) — skip it. */
+    /* MAME's audio stage tmp-swap window (0x80000) overruns the 0x20000
+       audiocpu region: pure heap UB. The trailing second-half->first copy
+       was tried and made audio worse (peak 1191->0) — golden MAME relies on
+       its own heap layout, not reproducible. Skip. */
     if (ng->spr && ng->spr_size >= 0x800000) cthd2003_c(ng->spr, ng->spr_size & ~3u);
 }
 /* razoola CPU patches; ng->rom is bus-order (words byte-swapped vs MAME region) */
