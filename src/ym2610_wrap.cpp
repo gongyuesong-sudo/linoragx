@@ -443,13 +443,12 @@ int ym_irq_pending(ym2610 *y)
           return (y->irq_latch[c] || !(y->tflag[c] & y->irqmask[c] & 3)) ? 0 : 1; }
     }
     if (!(y->tflag[0] & 1) || (y->irqen[0] & 0x40)) return 0;
-    /* cthd2003 finding (task-203, gate FALSIFIED by neocup98 golden ZIRQ=95038):
-       ymfm default irq mask 0x03 means timer-A overflow DOES drive the golden IRQ
-       line even without a 0x29 write, so gating the crutch on 0x29/bit5 kills
-       neocup98 (loud 32->10). The real cthd2003 divergence is downstream: lin's
-       m1 task chain (1c63) re-arms itself 267x/frame from the IRQ handler while
-       golden's chain exits immediately (ZPCH: handler 1/1500f, main loop alive).
-       Next session: why lin's idle task 1ddf re-arms the chain loop. */
+    /* task-205: 0x27 bit5-as-MASK gate FALSIFIED again (mslug3 2f/vliner/kof10th
+       35 all bit5=1 yet depend on the crutch; golden kof10th ZIRQ=157Hz with
+       bit5=1 every frame). Golden cthd2003 bank A writes mirror lin's (27=35
+       x12954, ADPCM-B start/stop, FM keyons) — the divergence is downstream:
+       lin's task chain spins 268x/frame from the IRQ handler while golden's
+       main loop emits bank B FM notes (golden bank B 3455 writes, lin 38). */
     if (fired_frame == g_ym_frame) return 0;
     fired_frame = g_ym_frame;
     return 1;
