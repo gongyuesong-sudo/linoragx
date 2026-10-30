@@ -2925,6 +2925,7 @@ static void cmc_gfx_run(neogeo *ng, int is50, int key, int sfix, int s1data)
             for (uint32_t i = 0; i < fsz; i++) fxm[i] = svc_s1_bitswap(fxm[i] ^ 0xd2);
         for (uint32_t i = 0; i < fsz && i < ng->fixed_size; i++) ng->fixed[i] |= fxm[i];
         free(fxm);
+        if (getenv("FIXDUMP")) { FILE *fp = fopen(getenv("FIXDUMP"), "wb"); if (fp) { fwrite(ng->fixed, 1, ng->fixed_size, fp); fclose(fp); } }
     }
 }
 
