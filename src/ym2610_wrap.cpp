@@ -265,7 +265,12 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
           if (r27 < 0) r27 = getenv("R27DBG") ? 1 : 0;
           if (r27) { extern int g_ym_frame;
                      fprintf(stderr, "R27 bank%c f=%d val=%02x tload=%d\n", 'A'+c, g_ym_frame, val, y->tload[c]); } }
-        if (val & 0x01) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
+        /* ymfm one-shot parity for timer A too (task-188): re-arm only when
+           the timer is stopped. mslug4 golden proof: the 68K BIOS self-test
+           polls status bit0 and takes 241 frames in MAME (timer A fires once
+           per frame, one-shot) but only 25 frames in lin because the old
+           auto-reload kept bit0 permanently set, collapsing every wait loop. */
+        if (val & 0x01) { if (y->tcnt[c] <= 0) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; } }
         /* ymfm one-shot parity (ymfm_fm.ipp update_timer: re-arm only when the
            timer is NOT running): a running timer B is NEVER reloaded by the
            driver's per-frame 0x27 writes; it counts down undisturbed, fires,
@@ -318,7 +323,7 @@ void ym_advance(ym2610 *y, int zcycles)
                 y->tflag[c] |= 1;
                 extern long g_tflagA_sets; g_tflagA_sets++;
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
-                { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; }
+                y->tcnt[c] = 0;   /* one-shot (ymfm): stop until next 0x27 arm */
                 if (c == 0) y->intf.fire_timer(0);
             }
         }
