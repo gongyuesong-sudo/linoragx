@@ -924,7 +924,17 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     if (a >= 0x380050 && a < 0x380052 && (ng->mc_shift[6] & 0xF))   /* UPD4990A out: bit6 TP, bit7 DO (state-driven, no frame gate) */
         return (uint16_t)(((ng->mc_tp ? 0x40 : 0) | (ng->mc_dout ? 0x80 : 0)) * 0x101);
     if (a < 0x3E0000) {                     /* video registers R (mirror 0x1FFF8) */
-        switch ((a & 0x6)>>1) {
+        switch ((a & 0x6)>>1) {             /* NOTE: MAME routes offsets 4..7 (incl.
+                                               $3C0006, polled by the BIOS RAM-test
+                                               loop) to videoram_data via switch
+                                               fallthrough. Aligning that here HANGS
+                                               lin: MAME's videoram_data is refreshed
+                                               by the per-scanline sprite fetcher;
+                                               lin's vram_readbuf only updates on
+                                               VLOAD, so the test loop's bit6 wait
+                                               never resolves (all-black at 3k frames,
+                                               kof2000/mslug4/s1v3). Scanline-count
+                                               return is the working approximation. */
         case 0: case 1:
             { static int v7f = -2;
               if (v7f == -2) v7f = getenv("VFB55") ? 1 : 0;
@@ -1237,6 +1247,9 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             if (f_wdtr()) fprintf(stderr, "WDFEED f=%d a=%06x pc=%08x\n", ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC));
         }
         if (a >= 0x320000 && (a & 1) == 0 && (mem_mask & 0xFF00)) {
+            { static int s1t = -2; static long n1t = 0;
+              if (s1t == -2) s1t = getenv("SL1T") ? 1 : 0;
+              if (s1t && n1t++ < 40) fprintf(stderr, "SL1T f=%d cmd=%02x\n", ng->frame, (d>>8)&0xFF); }
             /* even-address byte lane = the command byte (Musashi: even byte
                write presents data<<8 with mask 0xFF00; word write d>>8;
                odd-byte writes (mask 0x00FF: watchdog $300001 etc.) must NOT
@@ -4678,6 +4691,11 @@ void ng_run_frame(neogeo *ng)
     if (ng->frame == 2 && !getenv("NOQPRE") &&
         (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
+    if (ng->frame == 30 && getenv("RAM68K"))
+    {   /* golden parity probe: dump 68K RAM code window 0x1e00-0x2000 */
+        FILE *g = fopen("/tmp/lin_ram68k.bin", "wb");
+        if (g) { for (int a = 0x1e00; a < 0x2000; a += 2) { uint16_t w = ng->workram[(a >> 1) & 0x7fff]; fputc(w >> 8, g); fputc(w & 0xff, g); } fclose(g); }
+    }
     ng->frame++;
     { extern int g_ym_frame; g_ym_frame = (int)ng->frame; }  /* YMBDBG timeline fix: was never assigned, all YM writes printed f=0 */
     if (ng->tp_rise && --ng->tp_rise == 0) { ng->mc_tp = 1; ng->tp_cnt = 0; }  /* armed TP rising edge, 2 frames after STB */
