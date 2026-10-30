@@ -71,6 +71,7 @@ struct ym2610 {
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
     int irqmask[2];              /* reg 0x29 timer-IRQ enable (bit0=A,bit1=B);
                                     ymfm reset value is 0x03, NOT 0 (task-196) */
+    int irqen5[2];               /* 1 while last 0x27 write had bit5 (YM2610 IRQ-EN) */
     int irq29[2];                /* 1 once reg 0x29 was ever written: switch from
                                     the once-per-frame crutch to ymfm level IRQ */
     /* NRXSTATE11: shadow of the ymfm register store (last pair per port) so a
@@ -275,7 +276,9 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            polls status bit0 and takes 241 frames in MAME (timer A fires once
            per frame, one-shot) but only 25 frames in lin because the old
            auto-reload kept bit0 permanently set, collapsing every wait loop. */
-        if (val & 0x01) { if (y->tcnt[c] <= 0) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1; } }
+        if (val & 0x01) { if (y->tcnt[c] <= 0) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1;
+            if (getenv("ARMDBG") && c == 0) { extern long g_arm_n; extern unsigned g_cur_zpc; extern int g_ym_frame;
+                if ((g_arm_n++ % 50) == 0) fprintf(stderr, "ARM f=%d zpc=%04x tload=%d\n", g_ym_frame, g_cur_zpc, y->tload[c] & 0x3FF); } } }
         /* ymfm one-shot parity (ymfm_fm.ipp update_timer: re-arm only when the
            timer is NOT running): a running timer B is NEVER reloaded by the
            driver's per-frame 0x27 writes; it counts down undisturbed, fires,
@@ -285,6 +288,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
         if (val & 0x02) { if (y->tcntb[c] <= 0) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; } }
         y->ten[c] = ((val & 0x04) >> 1) | ((val & 0x08) >> 3);
         y->irqen[c] = val & 0xC0;
+        y->irqen5[c] = (val >> 5) & 1;
         if (val & 0x10) y->tflag[c] &= ~1;
         if (val & 0x20) y->tflag[c] &= ~2;
     }
@@ -371,6 +375,7 @@ struct ym_blob {
     int busy[2]; unsigned long clk; unsigned long busy_at[2];
     int tcnt[2], tload[2], ten[2], tflag[2], tfrac, tpend[2];
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
+    int irqmask[2], irq29[2], irqen5[2];
     uint8_t sh_lo[256], sh_hi[256];
 };
 int ym_save_state(ym2610 *y, void *buf)
@@ -383,6 +388,8 @@ int ym_save_state(ym2610 *y, void *buf)
     b->tfrac = y->tfrac; memcpy(b->tpend, y->tpend, sizeof b->tpend);
     memcpy(b->tcntb, y->tcntb, sizeof b->tcntb); memcpy(b->tloadb, y->tloadb, sizeof b->tloadb);
     memcpy(b->tfracb, y->tfracb, sizeof b->tfracb); memcpy(b->irqen, y->irqen, sizeof b->irqen);
+    memcpy(b->irqmask, y->irqmask, sizeof b->irqmask); memcpy(b->irq29, y->irq29, sizeof b->irq29);
+    memcpy(b->irqen5, y->irqen5, sizeof b->irqen5);
     memcpy(b->sh_lo, y->sh_lo, 256); memcpy(b->sh_hi, y->sh_hi, 256);
     return (int)sizeof(ym_blob);
 }
@@ -396,6 +403,8 @@ int ym_load_state(ym2610 *y, const void *buf)
     y->tfrac = b->tfrac; memcpy(y->tpend, b->tpend, sizeof y->tpend);
     memcpy(y->tcntb, b->tcntb, sizeof y->tcntb); memcpy(y->tloadb, b->tloadb, sizeof y->tloadb);
     memcpy(y->tfracb, b->tfracb, sizeof y->tfracb); memcpy(y->irqen, b->irqen, sizeof y->irqen);
+    memcpy(y->irqmask, b->irqmask, sizeof y->irqmask); memcpy(y->irq29, b->irq29, sizeof y->irq29);
+    memcpy(y->irqen5, b->irqen5, sizeof y->irqen5);
     memcpy(y->sh_lo, b->sh_lo, 256); memcpy(y->sh_hi, b->sh_hi, 256);
     /* NOTE: the shadow is intentionally NOT replayed into ymfm: writing the
      * ADPCM-A/B start registers would fire phantom samples. Restoring the
@@ -403,6 +412,7 @@ int ym_load_state(ym2610 *y, const void *buf)
     return 0;
 }
 
+extern "C" int ym_irq_pending_dbg(void *y) { return ym_irq_pending((ym2610 *)y); }
 int ym_irq_pending(ym2610 *y)
 {
     /* HYBRID, timer-A only: level IRQ = timer A flag (persistent, cleared by
@@ -433,6 +443,13 @@ int ym_irq_pending(ym2610 *y)
           return (y->irq_latch[c] || !(y->tflag[c] & y->irqmask[c] & 3)) ? 0 : 1; }
     }
     if (!(y->tflag[0] & 1) || (y->irqen[0] & 0x40)) return 0;
+    /* cthd2003 finding (task-203, gate FALSIFIED by neocup98 golden ZIRQ=95038):
+       ymfm default irq mask 0x03 means timer-A overflow DOES drive the golden IRQ
+       line even without a 0x29 write, so gating the crutch on 0x29/bit5 kills
+       neocup98 (loud 32->10). The real cthd2003 divergence is downstream: lin's
+       m1 task chain (1c63) re-arms itself 267x/frame from the IRQ handler while
+       golden's chain exits immediately (ZPCH: handler 1/1500f, main loop alive).
+       Next session: why lin's idle task 1ddf re-arms the chain loop. */
     if (fired_frame == g_ym_frame) return 0;
     fired_frame = g_ym_frame;
     return 1;
@@ -487,6 +504,8 @@ static const double OUT_RATE = 48000.0;           /* MAME default output rate */
 /* global frame counter for debug prints (advanced by ym_stream) */
 int g_ym_frame = 0;
 long g_tflagA_sets = 0;   /* diagnostic: count of timer-A flag assertions */
+long g_arm_n = 0;         /* diagnostic: count of timer-A re-arms (ARMDBG) */
+unsigned g_cur_zpc = 0;   /* diagnostic: latest Z80 PC (set from neogeo.c step hook) */
 
 void ym_stream(ym2610 *y, int16_t *stereo, int frames)
 {

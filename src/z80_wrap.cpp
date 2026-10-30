@@ -112,6 +112,8 @@ uint8_t z80w_a(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().AF >> 8)
 uint16_t z80w_hl(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().HL); }
 uint16_t z80w_af(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().AF); }
 uint16_t z80w_de(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().DE); }
+uint16_t z80w_ix(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().IX); }
+uint16_t z80w_iy(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().IY); }
 uint8_t z80w_if(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().IFF1); }
 unsigned long long z80w_dbg_frame = 0;
 unsigned long g_zirq_assert_n = 0;

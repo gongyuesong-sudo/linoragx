@@ -505,8 +505,8 @@ static void z_out(uint32_t p, uint8_t v, void *c)
       if (zio && (p & 0xFF) != 0x0C) fprintf(stderr, "ZIO %02x=%02x\n", p & 0xFF, v); }
     switch (p & 0xFF) {
     case 0x04: ng->ym_reg[0] = v; break;                    /* YM2610 A: register latch (YM2151 shares bus) */
-    case 0x05: { static int ymw=-2; if(ymw==-2) ymw=getenv("YMWR")?1:0;
-        if (ymw && ng->frame>=760 && ng->frame<=900) fprintf(stderr,"YMWR f=%d c0 r=%02x v=%02x zpc=%04x\n", ng->frame, ng->ym_reg[0], v, z80w_pc(ng->z));
+    case 0x05: { static int ymw=-2; static int wlo=760, whi=900; if(ymw==-2){ ymw=getenv("YMWR")?1:0; const char*e=getenv("YMWR"); if(e&&*e){ wlo=(int)strtol(e,NULL,0); whi=strchr(e,':')?(int)strtol(strchr(e,':')+1,NULL,0):wlo+140; } }
+        if (ymw && ng->frame>=wlo && ng->frame<=whi) fprintf(stderr,"YMWR f=%d c0 r=%02x v=%02x zpc=%04x\n", ng->frame, ng->ym_reg[0], v, z80w_pc(ng->z));
         ym_write(ng->ym, 0, ng->ym_reg[0], v); } break;/* YM2610 A: data write (bank A = OPM/YM2151 FM, handled inside ymfm) */
     case 0x06: ng->ym_reg[1] = v; break;                    /* YM2610 B: register latch */
     case 0x07: ym_write(ng->ym, 1, ng->ym_reg[1], v); break;/* YM2610 B: data write */
@@ -3418,6 +3418,7 @@ void linoragx_pc_hook(unsigned int pc)
 static int g_z80flow_lo = -1, g_z80flow_hi = -1;
 void linoragx_z80_step(unsigned int pc)
 {
+    { extern unsigned g_cur_zpc; g_cur_zpc = pc; }
     /* Instruction-level YM2610 timer IRQ delivery. The YM IRQ is a LEVEL
        signal: real hardware takes it at the next Z80 instruction boundary,
        before any status-polling heartbeat can ACK it. Chunk-granularity
@@ -3427,6 +3428,10 @@ void linoragx_z80_step(unsigned int pc)
        clocks < window 30000 -> IRQ asserted ~52x/frame, m1 main thread
        starved in the task-chain trampoline, command ring never consumed). */
     if (g_ng && ym_irq_pending(g_ng->ym)) z80w_irq(g_ng->z, 0xff);
+    { static int iqdbg = -2; static long iq_n = 0;
+      if (iqdbg == -2) iqdbg = getenv("IRQRATE") ? 1 : 0;
+      if (iqdbg && (iq_n++ % 20000) == 0) { extern int ym_irq_pending_dbg(void*); extern int g_ym_frame;
+          fprintf(stderr, "IRQRATE f=%d pend=%d n=%ld\n", g_ym_frame, ym_irq_pending_dbg(g_ng ? g_ng->ym : NULL), iq_n); } }
     { static int zdbg=-2; extern uint8_t z80w_if(void*); extern int z80w_im(void*); extern unsigned long zirq_assert_n(void), g_rst38_n;
       if (zdbg==-2) zdbg=getenv("ZIRQDBG")?1:0;
       if (zdbg && (g_ng->frame % 300)==0)
@@ -3439,6 +3444,23 @@ void linoragx_z80_step(unsigned int pc)
           int v = z80w_peek(g_ng->z, zwa_a);
           if (v != zwa_v) { if (zwa_n++ < 400) fprintf(stderr, "ZWR f=%llu a=%04x v=%02x zpc=%04x\n",
                             (unsigned long long)g_ng->frame, zwa_a, v, pc); zwa_v = v; } } }
+    { static int tdbg = -2;
+      if (tdbg == -2) tdbg = getenv("TCBDBG") ? 1 : 0;
+      if (tdbg && g_ng && pc == 0x1c63 && g_ng->frame == 899) {
+          extern uint16_t z80w_ix(void*), z80w_iy(void*); extern uint8_t z80w_peek(void*, uint32_t);
+          uint16_t ix = z80w_ix(g_ng->z), iy = z80w_iy(g_ng->z);
+          fprintf(stderr, "TCB ix=%04x iy=%04x fd97=%02x%02x win:", ix, iy,
+                  z80w_peek(g_ng->z, 0xfd97), z80w_peek(g_ng->z, 0xfd96));
+          for (int q = 0; q < 16; q++) fprintf(stderr, " %02x", z_read(ix + q, g_ng));
+          fprintf(stderr, "\n"); } }
+    { static int cdbg = -2;
+      if (cdbg == -2) cdbg = getenv("CODEDBG") ? 1 : 0;
+      if (cdbg && g_ng && pc == 0x1bc7 && g_ng->frame == 899) {
+          fprintf(stderr, "CODE 1bb9:");
+          for (int q = 0; q < 24; q++) fprintf(stderr, " %02x", z_read(0x1bb9 + q, g_ng));
+          fprintf(stderr, "\nCODE 1d72:");
+          for (int q = 0; q < 16; q++) fprintf(stderr, " %02x", z_read(0x1d72 + q, g_ng));
+          fprintf(stderr, "\n"); } }
     { static int qdbg = -2;
       if (qdbg == -2) qdbg = getenv("QDBG") ? 1 : 0;
       if (qdbg && g_ng && (pc == 0x2800 || pc == 0x2806 || pc == 0x2811)) {
@@ -4981,7 +5003,7 @@ int ng_save_state(neogeo *ng, const char *path)
     { extern int z80w_save_ram(void*, void*); static uint8_t zram[0x800];
       z80w_save_ram(ng->z, zram); fwrite(zram, 1, 0x800, f); }
     /* NRXSTATE11: YM timer/IRQ state (host-owned) + ymfm reg shadow */
-    { extern int ym_save_state(void*, void*); static uint8_t ymb[1024];
+    { extern int ym_save_state(void*, void*); static uint8_t ymb[8192];
       int n = ng->ym ? ym_save_state(ng->ym, ymb) : 0;
       fwrite(&n, 4, 1, f); if (n > 0) fwrite(ymb, 1, n, f); }
     /* NRXSTATE13: runtime-mutable ROM tables. The fix-layer buffer is rewritten
@@ -5071,8 +5093,8 @@ int ng_load_state(neogeo *ng, const char *path)
         if (fread(zram, 1, 0x800, f) != 0x800) { fclose(f); return -4; }
         z80w_load_ram(ng->z, zram);
         int n = 0;
-        if (fread(&n, 4, 1, f) == 1 && n > 0 && n <= 1024) {
-            extern int ym_load_state(void*, const void*); static uint8_t ymb[1024];
+        if (fread(&n, 4, 1, f) == 1 && n > 0 && n <= 8192) {
+            extern int ym_load_state(void*, const void*); static uint8_t ymb[8192];
             if (fread(ymb, 1, n, f) == (size_t)n && ng->ym) ym_load_state(ng->ym, ymb);
         }
     }
