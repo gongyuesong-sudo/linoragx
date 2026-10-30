@@ -141,6 +141,7 @@ struct neogeo {
     int irq_sound;            /* IRQ_SOUND: set by Z80 soundlatch2 write, acked on AUDIO_COIN read */
     unsigned long hit_a, hit_b, hit_c;
     int cart_audio;   /* HC259 ch5: 0=sm1 BIOS sound, 1=cart m1 */
+    int snd_mirrored; /* 1 = CMC50 decrypted snd uses MAME region layout [head64K][full]; 0 = flat m1 */
     uint8_t zbank[4];         /* f000,e000,c000,8000 entries */
 
     /* buttons: bit0 UP,1 DN,2 LF,3 RT,4 C,5 D,6 A,7 B,8 start,9 select,10 coin */
@@ -318,8 +319,19 @@ DBGFLAG("FD82W", f_fd82w)
 static uint32_t zbank_base(neogeo *ng, int region, int entry, uint32_t len)
 {
     if (len <= 0x10000) return 0;           /* small roms: no banking */
-    uint32_t mask = (len - 0x10000 - 1) & 0x3FFFF;
-    return 0x10000 + (((uint32_t)entry << (11 + region)) & mask);
+    /* MAME parity (neogeo.cpp init_audio): audiocpu region len = m1sz+0x10000
+       (ROM_RELOAD mirror at 0x10000), address_mask = (region-0x10000-1)
+       &0x3FFFF, window -> region[0x10000+x+off] == m1[x+off].
+       lin's snd buffer layout differs by card type:
+       - plain m1: flat m1[len], no mirror  -> window maps to snd[x+off]
+       - CMC50 decrypted: snd mirrors the MAME region [head64K][full]
+         -> window maps to snd[0x10000+x+off]
+       (Old formula assumed the mirror for every card: plain 128K carts such
+       as kof10th read track data one 16K page off -> attract BGM silent;
+       mirrored CMC carts such as jockeygp must KEEP the +0x10000.) */
+    uint32_t mask = ng->snd_mirrored ? 0x3FFFF : ((len - 1) & 0x3FFFF);
+    uint32_t x = ((uint32_t)entry << (11 + region)) & mask;
+    return (ng->snd_mirrored ? 0x10000u : 0u) + x;
 }
 static unsigned long g_zpc_hits[8];
 static void zpcstat_hook(unsigned pc) {
@@ -454,7 +466,8 @@ static uint16_t z_in(uint32_t p, void *c)
            so its track blocks never initialized and BGM stayed silent. */
         extern uint8_t z80w_a(void*);
         ng->zbank[port - 0x08] = z80w_a(ng->z);
-        { static long zbn = 0; if (zbn++ < 200000) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
+        { static int zbn=-2; if (zbn==-2) zbn=getenv("ZBANKDBG")?1:0;
+          if (zbn) fprintf(stderr, "ZBANK %d <= %02x zpc=%04x f=%llu\n", port - 8, ng->zbank[port - 8], z80w_pc(ng->z), (unsigned long long)ng->frame); }
         return 0;
     }
     switch (port) {
@@ -3715,6 +3728,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     if (ctab[ci].m1 && ng->acrypt && ng->acrypt_size >= 0x10000) {
                                         if (ng->snd) free(ng->snd);
                                         ng->snd = calloc(0x90000, 1); ng->snd_size = 0x90000;
+                                        ng->snd_mirrored = 1;
                                         if (ng->snd) cmc50_m1_decrypt(ng->acrypt, ng->acrypt_size, ng->snd);
                                         /* CMC carts' decrypted m1 carries its own driver: golden MAME boots the Z80 on it
                                            (mslug4 self-test writes 28=01..32 from m1, not sm1's 28x4+1Cx4). Gate for A/B. */
