@@ -70,9 +70,9 @@ struct ym2610 {
                        (ack) or once the window (~1 frame) expires. */
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
     int irqmask[2];              /* reg 0x29 timer-IRQ enable (bit0=A,bit1=B);
-                                    no observed driver writes 0x29 (golden:
-                                    sm1+m1 zero writes) so it is deliberately
-                                    NOT in the save-state blob. */
+                                    ymfm reset value is 0x03, NOT 0 (task-196) */
+    int irq29[2];                /* 1 once reg 0x29 was ever written: switch from
+                                    the once-per-frame crutch to ymfm level IRQ */
     /* NRXSTATE11: shadow of the ymfm register store (last pair per port) so a
        resumed run restores FM/SSG/ADPCM registers instead of a silent chip */
     uint8_t sh_lo[256], sh_hi[256]; int sh_lreg, sh_hreg;
@@ -156,6 +156,7 @@ ym2610 *ym_create(void)
 {
     ym2610 *y = new ym2610();
     y->chip.reset();   /* ymfm write paths read internal state; never touch the chip before it is reset */
+    y->irqmask[0] = y->irqmask[1] = 3;   /* ymfm reset IRQ mask (task-196) */
     ym_ssg_silence(y);
     return y;
 }
@@ -167,6 +168,10 @@ void ym_reset(ym2610 *y)
     ym_ssg_silence(y);
     ae_reset(y->ae);
     memset(&y->busy, 0, (char *)(y->irqmask + 2) - (char *)&y->busy);
+    /* ymfm ym2610 reset: m_irq_enable=0x03 -> IRQ mask = timer A|B from reset
+       (task-196 golden kof10th proof: sm1/m1 timer IRQs fire with NO 0x29 write) */
+    y->irqmask[0] = y->irqmask[1] = 3;
+    y->irq29[0] = y->irq29[1] = 0;
 }
 
 void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size)
@@ -289,7 +294,7 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        and mslug3 m1 never write 0x29 -> YM IRQ line stays LOW in MAME and
        every observed driver POLLS the status flags instead. linoragx's old
        active-low 0x27 interpretation fed the Z80 a phantom IRQ storm. */
-    if (reg == 0x29) { y->irqmask[c] = val & 3; }
+    if (reg == 0x29) { y->irqmask[c] = val & 0x1f; y->irq29[c] = 1; }
     }
 }
 
@@ -305,7 +310,7 @@ void ym_advance(ym2610 *y, int zcycles)
        made B tick FASTER than A (opposite of ymfm) and over-asserted the
        status bit1 that mslug-family drivers branch on. Override: BSTEP=<n>. */
     static int bstep = -1;
-    if (bstep < 0) { const char *e = getenv("BSTEP"); bstep = e ? (int)strtol(e, NULL, 0) : 3072; }
+    if (bstep < 0) { const char *e = getenv("BSTEP"); bstep = e ? (int)strtol(e, NULL, 0) : 4576; }
     /* timer A: 1 step / 192 clocks; timer B: 1 step / 80 clocks */
     y->clk += (unsigned long)zcycles;        /* busy D7 auto-clear clock */
     { static int tp = -2;
@@ -315,8 +320,15 @@ void ym_advance(ym2610 *y, int zcycles)
                     fprintf(stderr, "TIM ten=%d tload=%d tcnt=%d tflag=%d irqen=%02x clk=%lu\n",
                             y->ten[0], y->tload[0], y->tcnt[0], y->tflag[0], y->irqen[0], y->clk); } }
     y->tfrac += zcycles;
-    while (y->tfrac >= 192) {
-        y->tfrac -= 192;
+    /* Tick calibration (task-196 golden kof10th): timer A period measured in
+       two independent golden phases — sm1 latch 0x51 (tcnt 256) -> 18.4ms and
+       m1 latch 0xAC (tcnt 84) -> 6.0ms — both = 286 Z80 clocks per tick at
+       4 MHz. The old 192 ran every timer-driven driver 1.5x fast. Override:
+       TSTEP=<n>. */
+    static int tstep = -1;
+    if (tstep < 0) { const char *e = getenv("TSTEP"); tstep = e ? (int)strtol(e, NULL, 0) : 286; }
+    while (y->tfrac >= tstep) {
+        y->tfrac -= tstep;
         for (int c = 0; c < 2; c++) {
             if (!(y->ten[c] & 2)) continue;
             if (--y->tcnt[c] <= 0) {
@@ -410,6 +422,12 @@ int ym_irq_pending(ym2610 *y)
        one delivery per emulated frame. */
     extern int g_ym_frame;
     static int fired_frame = -1;
+    if (!getenv("LEGACYIRQ")) {
+        /* FULL ymfm parity (task-196): level IRQ = (status & mask) & 3,
+           mask from 0x29 (reset 0x03). No bit6 crutch, no once-per-frame
+           cap: golden kof10th IRQ runs 157 Hz (2.6/frame) off timer A. */
+        return (y->tflag[0] & y->irqmask[0] & 3) ? 1 : 0;
+    }
     if (!(y->tflag[0] & 1) || (y->irqen[0] & 0x40)) return 0;
     if (fired_frame == g_ym_frame) return 0;
     fired_frame = g_ym_frame;
