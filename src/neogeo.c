@@ -3652,7 +3652,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "k2k2_matrim\"")) { matrim_dec68k(ng);  ng->cart_prot = 10; ng->fixed_bank_type = 2; }
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_sams5s\"")) { samsh5sp_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
-                            else if (sw_has(sw, swend, "k2k2_kof2k2\"")) { matrim_dec68k(ng);  ng->fixed_bank_type = 2; }  /* MAME kof2002: same 8x0x80000 sec table as matrim */
+                            else if (sw_has(sw, swend, "k2k2_kof2k2\"") || sw_has(sw, swend, "k2k2_kf2k2p\"")) { matrim_dec68k(ng);  ng->fixed_bank_type = 2; }  /* MAME kof2002: same 8x0x80000 sec table as matrim */
                             else if (sw_has(sw, swend, "sfix_from_cx\"")) {
                                 /* decrypted bootleg (kof2000ps2): fixed graphics live as the
                                    tail of the already-decrypted Cx — same extraction MAME's
@@ -3727,6 +3727,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"pcm2_pnyaa\"",50,0x2e,1,1},{"k2k2_matrim\"",50,0x6a,1,1},{"k2k2_samsh5\"",50,0x0f,1,1},
                                     {"k2k2_sams5s\"",50,0x0d,1,1},
                                     {"k2k2_kof2k2\"",50,0xec,1,1},
+                                    {"k2k2_kf2k2p\"",50,0xec,0,1},
                                     {"pvc_kf2k3\"",50,0,1,0},{"pvc_kf2k3h\"",50,0,1,0},
                                     {"boot_kf2k3pl\"",50,0x9d,0,0},{"boot_kf2k3upl\"",50,0x9d,0,0},
                                     {"pcb_ms5\"",50,0x19,1,1,1},
@@ -3755,7 +3756,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 }
                             }
                             /* MAME kof2002 cart: pcm2 swap(ym,0) on the ADPCM sample region */
-                            if (sw_has(sw, swend, "k2k2_kof2k2\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
+                            if ((sw_has(sw, swend, "k2k2_kof2k2\"") || sw_has(sw, swend, "k2k2_kf2k2p\"")) && ng->adpcm && ng->adpcm_size >= 0x1000000)
                                 pcm2_swap(ng->adpcm, 0);
                             /* MAME samsh5sp cart: pcm2 swap(ym,6) */
                             if (sw_has(sw, swend, "k2k2_sams5s\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
