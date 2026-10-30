@@ -3676,6 +3676,15 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 load_bios_pref(ng, biosdir, "asia-s3.rom");
                             }
                             if (!getenv("LINORAGX_BIOS") &&
+                                (sw_has(sw, swend, "\"mslug4\"") || sw_has(sw, swend, "\"mslug4h\""))) {
+                                /* mslug4 attract BGM is silent under uni-bios: its fast-boot path
+                                   skips the stock-BIOS init the game's audio command flow depends
+                                   on (first SL1 cmd f25 vs stock f172; golden f237). Stock NEO-GEO
+                                   BIOS restores full command stream: loud 35/50s vs golden 31/50s. */
+                                free(ng->bios); ng->bios = NULL;
+                                load_bios_pref(ng, biosdir, "NEO-GEO.ROM");
+                            }
+                            if (!getenv("LINORAGX_BIOS") &&
                                 (sw_has(sw, swend, "\"b2b\"") || sw_has(sw, swend, "\"fightfev\""))) {
                                 /* b2b/fightfev call a self-test stub the stock s3 BIOS installs at
                                    0x11012; uni-bios never installs it -> halt.  Stock s3 boots fine. */
@@ -4695,6 +4704,11 @@ void ng_run_frame(neogeo *ng)
     {   /* golden parity probe: dump 68K RAM code window 0x1e00-0x2000 */
         FILE *g = fopen("/tmp/lin_ram68k.bin", "wb");
         if (g) { for (int a = 0x1e00; a < 0x2000; a += 2) { uint16_t w = ng->workram[(a >> 1) & 0x7fff]; fputc(w >> 8, g); fputc(w & 0xff, g); } fclose(g); }
+    }
+    if (ng->frame == 30 && getenv("ROMDUMP"))
+    {   /* dump loaded 68K ROM window 0x1e00-0x2000 (C00000-relative) */
+        FILE *g = fopen("/tmp/lin_rom68k.bin", "wb");
+        if (g) { for (int a = 0x1e00; a < 0x2000; a++) fputc(a < (int)ng->rom_size ? ng->rom[a] : 0xEE, g); fclose(g); }
     }
     ng->frame++;
     { extern int g_ym_frame; g_ym_frame = (int)ng->frame; }  /* YMBDBG timeline fix: was never assigned, all YM writes printed f=0 */
