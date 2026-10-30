@@ -61,7 +61,7 @@ struct ym2610 {
     int busy[2];
     unsigned long clk;             /* YM tick clock (for busy auto-clear) */
     unsigned long busy_at[2];      /* tick at which D7 busy self-clears (~25us) */
-    int tcnt[2], tload[2], ten[2], tflag[2], tfrac;
+    int tcnt[2], tload[2], ten[2], tflag[2], tfrac, irq_latch[2];
     int tpend[2];   /* clk of last timer overflow: keeps the IRQ latched so a
                        driver that status-polls faster than our chunk-granular
                        pending check cannot swallow the pulse (mslug m1 heartbeat
@@ -333,6 +333,7 @@ void ym_advance(ym2610 *y, int zcycles)
             if (!(y->ten[c] & 2)) continue;
             if (--y->tcnt[c] <= 0) {
                 y->tflag[c] |= 1;
+                y->irq_latch[c] = 0;
                 extern long g_tflagA_sets; g_tflagA_sets++;
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
                 y->tcnt[c] = 0;   /* one-shot (ymfm): stop until next 0x27 arm */
@@ -352,6 +353,7 @@ void ym_advance(ym2610 *y, int zcycles)
             y->tfracb[c] -= bstep;
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
+                y->irq_latch[c] = 0;
                 y->tcntb[c] = 0;   /* one-shot: stop until next 0x27 arm (ymfm) */
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
                 { int v = 256 - (y->tloadb[c] & 0xFF); (void)v; }
@@ -422,11 +424,13 @@ int ym_irq_pending(ym2610 *y)
        one delivery per emulated frame. */
     extern int g_ym_frame;
     static int fired_frame = -1;
-    if (!getenv("LEGACYIRQ")) {
-        /* FULL ymfm parity (task-196): level IRQ = (status & mask) & 3,
-           mask from 0x29 (reset 0x03). No bit6 crutch, no once-per-frame
-           cap: golden kof10th IRQ runs 157 Hz (2.6/frame) off timer A. */
-        return (y->tflag[0] & y->irqmask[0] & 3) ? 1 : 0;
+    if (getenv("LEVELIRQ")) {
+        /* opt-in full ymfm level model (task-196 experiment): kept for A/B.
+           Default pulse+cap below wins the 208-card batch: level model made
+           vliner/vlinero BIOS-demo sequencers burn 6x/frame (golden IRQ line
+           stays LOW there; drivers poll status, they don't take the IRQ). */
+        { int c = 0;
+          return (y->irq_latch[c] || !(y->tflag[c] & y->irqmask[c] & 3)) ? 0 : 1; }
     }
     if (!(y->tflag[0] & 1) || (y->irqen[0] & 0x40)) return 0;
     if (fired_frame == g_ym_frame) return 0;
@@ -457,6 +461,11 @@ uint8_t ym_read(ym2610 *y, int chipno)
        make the driver punch each segment short (logo sound played too fast). */
     if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)) { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
     y->tflag[c] = 0;
+    y->irq_latch[c] = 1;   /* status read ACKs the level IRQ: line stays low
+                              until the NEXT timer overflow re-clears the latch
+                              (ymfm read_status parity; without it the Z80
+                              re-accepts the level IRQ every return-from-int
+                              and the demo/task sequencers burn ~6000x/frame) */
     /* Status read ACKs timer A: legacy read-clear semantics. Some m1 drivers
        (shocktr2) spin "poll status; if flag: process" WITHOUT the 0x27 reset
        bit — with a persistent flag they livelock. The 0x27 bit4/5 reset path

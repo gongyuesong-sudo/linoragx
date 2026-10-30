@@ -337,6 +337,7 @@ static unsigned long g_zpc_hits[8];
 static void zpcstat_hook(unsigned pc) {
     switch (pc) {
         case 0x0066: g_zpc_hits[0]++; break;   /* NMI entry */
+        case 0x0038: { extern unsigned long g_rst38_n; g_rst38_n++; } break;  /* IM1 IRQ taken */
         case 0x012b: g_zpc_hits[1]++; break;   /* main scheduler */
         case 0x0146: g_zpc_hits[2]++; break;   /* queue consume */
         case 0x0175: g_zpc_hits[3]++; break;   /* cmd dispatch entry (CP 20) */
@@ -3423,6 +3424,12 @@ void linoragx_z80_step(unsigned int pc)
        clocks < window 30000 -> IRQ asserted ~52x/frame, m1 main thread
        starved in the task-chain trampoline, command ring never consumed). */
     if (g_ng && ym_irq_pending(g_ng->ym)) z80w_irq(g_ng->z, 0xff);
+    { static int zdbg=-2; extern uint8_t z80w_if(void*); extern int z80w_im(void*); extern unsigned long zirq_assert_n(void), g_rst38_n;
+      if (zdbg==-2) zdbg=getenv("ZIRQDBG")?1:0;
+      if (zdbg && (g_ng->frame % 300)==0)
+        fprintf(stderr, "ZIRQDBG f=%llu assert=%lu taken=%lu iff=%d im=%d pc=%04x\n",
+                (unsigned long long)g_ng->frame, zirq_assert_n(), g_rst38_n,
+                z80w_if(g_ng->z), z80w_im(g_ng->z), z80w_pc(g_ng->z)); }
     { static int zwa = -2; static unsigned zwa_a = 0; static int zwa_v = -1; static long zwa_n = 0;
       if (zwa == -2) { const char *e = getenv("ZRAMWA"); zwa = e ? 1 : 0; zwa_a = e ? (unsigned)strtoul(e, 0, 16) : 0; }
       if (zwa && g_ng) { extern uint8_t z80w_peek(void*, uint32_t);

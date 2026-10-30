@@ -112,9 +112,13 @@ uint8_t z80w_a(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().AF >> 8)
 uint16_t z80w_hl(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().HL); }
 uint16_t z80w_af(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().AF); }
 uint16_t z80w_de(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().DE); }
+uint8_t z80w_if(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().IFF1); }
 unsigned long long z80w_dbg_frame = 0;
+unsigned long g_zirq_assert_n = 0;
+unsigned long g_rst38_n = 0;
 void z80w_set_step_hook(void *v, void (*h)(unsigned pc)) { ((z80w*)v)->cpu->set_step_hook(h); }
-void z80w_irq(void *v, uint8_t vector) { ((z80w*)v)->cpu->mz80int(vector); }
+void z80w_irq(void *v, uint8_t vector) { g_zirq_assert_n++; ((z80w*)v)->cpu->mz80int(vector); }
+unsigned long zirq_assert_n(void) { return g_zirq_assert_n; }
 void z80w_nmi(void *v) { ((z80w*)v)->cpu->mz80nmi(); }
 uint16_t z80w_pc(void *v) { return ((z80w*)v)->cpu->GetPC(); }
 void z80w_statdump(void *v) {
