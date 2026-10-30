@@ -277,7 +277,8 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            per frame, one-shot) but only 25 frames in lin because the old
            auto-reload kept bit0 permanently set, collapsing every wait loop. */
         if (val & 0x01) { if (y->tcnt[c] <= 0) { int v = 1024 - (y->tload[c] & 0x3FF); y->tcnt[c] = v > 0 ? v : 1;
-            if (getenv("ARMDBG") && c == 0) { extern long g_arm_n; extern unsigned g_cur_zpc; extern int g_ym_frame;
+            static int armd = -1; if (armd < 0) armd = getenv("ARMDBG") ? 1 : 0;
+        if (armd && c == 0) { extern long g_arm_n; extern unsigned g_cur_zpc; extern int g_ym_frame;
                 if ((g_arm_n++ % 50) == 0) fprintf(stderr, "ARM f=%d zpc=%04x tload=%d\n", g_ym_frame, g_cur_zpc, y->tload[c] & 0x3FF); } } }
         /* ymfm one-shot parity (ymfm_fm.ipp update_timer: re-arm only when the
            timer is NOT running): a running timer B is NEVER reloaded by the
@@ -434,7 +435,8 @@ int ym_irq_pending(ym2610 *y)
        one delivery per emulated frame. */
     extern int g_ym_frame;
     static int fired_frame = -1;
-    if (getenv("LEVELIRQ")) {
+    static int lvl = -1; if (lvl < 0) lvl = getenv("LEVELIRQ") ? 1 : 0;
+    if (lvl) {
         /* opt-in full ymfm level model (task-196 experiment): kept for A/B.
            Default pulse+cap below wins the 208-card batch: level model made
            vliner/vlinero BIOS-demo sequencers burn 6x/frame (golden IRQ line

@@ -21,16 +21,34 @@ struct z80w {
     void *ctx;
 };
 
+/* Hot-path debug flags: getenv() is a linear scan of environ and tr_rd/tr_wr
+   run on EVERY Z80 memory access — calling it per access cost a 2.5-6x whole
+   emulator slowdown (bisected at f4a1fe2).  Cache all probe flags once. */
+static int g_zdbg = -1;
+static inline int zdbg(void)
+{
+    int f = g_zdbg;
+    if (f < 0) {
+        f = 0;
+        if (getenv("BLKRD"))  f |= 1;
+        if (getenv("ZTR"))    f |= 2;
+        if (getenv("ZRAM"))   f |= 4;
+        if (getenv("ZCRASH")) f |= 8;
+        if (getenv("FDWR"))   f |= 16;
+        g_zdbg = f;
+    }
+    return f;
+}
 static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
-{ if (getenv("BLKRD") && off >= 0xFEB0 && off < 0xFF00) {
+{ if ((zdbg() & 1) && off >= 0xFEB0 && off < 0xFF00) {
     static long brd = 0; z80w *w0 = (z80w*)h->pUserArea;
     if (off < 0xFED0 || (brd++ % 100) == 0) fprintf(stderr, "BLKRD a=%04x pc=%04x\n", off, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
-  if (getenv("ZTR") && off < 0xF800) { static long zt = 0;
+  if ((zdbg() & 2) && off < 0xF800) { static long zt = 0;
     if (zt++ < 4000) fprintf(stderr, "ZTR rd=%04x pc=%04x\n", off, w->cpu->get_state().PC); }
-  if (getenv("ZRAM") && off >= 0xFF00) { static long zr = 0;
+  if ((zdbg() & 4) && off >= 0xFF00) { static long zr = 0;
     if (zr++ < 30) fprintf(stderr, "ZRAM rd=%04x pc=%04x\n", off, w->cpu->get_state().PC); }
-  if (getenv("ZCRASH")) { static uint16_t ring[4096]; static int rp = 0; static int fired = 0;
+  if (zdbg() & 8) { static uint16_t ring[4096]; static int rp = 0; static int fired = 0;
     ring[rp++ & 4095] = w->cpu->get_state().PC;
     if (!fired && off == 0xFFFD) { fired = 1; fprintf(stderr, "ZCRASH ring (oldest->newest):\n");
       for (int qi = 0; qi < 4096; qi++) fprintf(stderr, "  %04x\n", ring[(rp + qi) & 4095]); } }
@@ -44,7 +62,7 @@ static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
   if (off >= 0xF800) return w->cpu->ram_array()[off];
   return w->rd(off + h->lowAddr, w->ctx); }
 static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
-{ if (getenv("BLKRD") && ((off >= 0xFEB0 && off < 0xFF00) || (off >= 0xFE4A && off < 0xFE80))) {
+{ if ((zdbg() & 1) && ((off >= 0xFEB0 && off < 0xFF00) || (off >= 0xFE4A && off < 0xFE80))) {
     static long bwr = 0; z80w *w0 = (z80w*)h->pUserArea;
     if (off < 0xFEC0 || (off >= 0xFE4A && off < 0xFE80) || (off >= 0xFC30 && off < 0xFC60) || (bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x\n", off, v, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
@@ -57,7 +75,7 @@ static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
         extern int g_ym_frame;
         fprintf(stderr, "ZRW f=%d a=%04x v=%02x pc=%04x\n", g_ym_frame, off, v,
                 w->cpu->get_state().PC); } }
-    if (getenv("FDWR") && (off == 0xFD67 || off == 0xFD66)) { static long fw = 0;
+    if ((zdbg() & 16) && (off == 0xFD67 || off == 0xFD66)) { static long fw = 0;
       if (fw++ < 40) fprintf(stderr, "FDWR a=%04x v=%02x zpc=%04x\n", off, v, w->cpu->get_state().PC);
       if (fw == 40) fprintf(stderr, "FDWR ...silenced\n"); }
     return; }

@@ -642,7 +642,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         ng->hit_a = c1; ng->hit_b = c2; ng->hit_c = c3;
     }
     if (a < 0x80) {                         /* vectors (mirror of bank base) */
-        if (getenv("VECPROBE") && a < 8) fprintf(stderr, "VECRD a=%02x v=%p sz=%x -> %04x\n", a, (void*)(ng->vector_bank?ng->rom:ng->bios), ng->vector_bank?ng->rom_size:0x20000, (ng->vector_bank?ng->rom:ng->bios)?((ng->vector_bank?ng->rom:ng->bios)[a]<<8|(ng->vector_bank?ng->rom:ng->bios)[a+1]):0xFFFF);
+        static int vpb = -1; if (vpb < 0) vpb = getenv("VECPROBE") ? 1 : 0;
+        if (vpb && a < 8) fprintf(stderr, "VECRD a=%02x v=%p sz=%x -> %04x\n", a, (void*)(ng->vector_bank?ng->rom:ng->bios), ng->vector_bank?ng->rom_size:0x20000, (ng->vector_bank?ng->rom:ng->bios)?((ng->vector_bank?ng->rom:ng->bios)[a]<<8|(ng->vector_bank?ng->rom:ng->bios)[a+1]):0xFFFF);
         if (ng->dbg_z80==4 && (a==0x64||a==0x68)) fprintf(stderr, "VFETCH%02x vbank=%d pc=%08x\n", a, ng->vector_bank, m68k_get_reg(NULL,M68K_REG_PC));
         /* MAME banked_vectors_r: cart vectors = maincpu region[0..0x3FF]
            (region order == our rom[] load order, ROM_CONTINUE swaps halves);
@@ -821,7 +822,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
             otherwise the game's self-test readback (copy ROM d0610 -> window -> cmp) reads
             the bank ROM mirror instead and retries forever (kf2k3upl black screen). */
             uint32_t wo = (a - 0x2FE000) >> 1;
-            if (getenv("K3DBG"))
+            static int k3d = -1; if (k3d < 0) k3d = getenv("K3DBG") ? 1 : 0;
+            if (k3d)
                 fprintf(stderr, "K3RD f=%d a=%06x v=%04x pc=%08x\n", ng->frame, a, ng->k3bl_ram[wo & 0xFFF], m68k_get_reg(NULL,M68K_REG_PC));
             return ng->k3bl_ram[wo & 0xFFF];
         }
@@ -845,7 +847,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         return (ng->rom[o]<<8)|ng->rom[o+1];
     }
     if (a < 0x320000) {                     /* P1 control @0x300000 (mirror 0x01FF7E
-        if (getenv("SMEMWIN") && a < 0x301000 && (ng->frame % 1 == 0)) {
+        static int smw = -1; if (smw < 0) smw = getenv("SMEMWIN") ? 1 : 0;
+        if (smw && a < 0x301000 && (ng->frame % 1 == 0)) {
             static long swc = 0;
             if (swc++ < 400) fprintf(stderr, "SMEMRD f=%llu a=%06x pc=%08x\n",
                 (unsigned long long)ng->frame, a, m68k_get_reg(NULL,M68K_REG_PC));
@@ -976,7 +979,8 @@ static uint16_t r16(neogeo *ng, uint32_t a)
     if (a < 0x400000) {
         if (ng->cart_prot == 13 && a >= 0x2FE000 && a <= 0x2FFFFF) {   /* kf2k3pl bootleg prot window: protection_r = cart_ram[word] */
             uint32_t wo = (a - 0x2FE000) >> 1;
-            if (getenv("K3DBG"))
+            static int k3d = -1; if (k3d < 0) k3d = getenv("K3DBG") ? 1 : 0;
+            if (k3d)
                 fprintf(stderr, "K3RD f=%d a=%06x v=%04x pc=%08x\n", ng->frame, a, ng->k3bl_ram[wo & 0xFFF], m68k_get_reg(NULL,M68K_REG_PC));
             return ng->k3bl_ram[wo & 0xFFF];
         }
@@ -3338,7 +3342,10 @@ void linoragx_pc_hook(unsigned int pc)
        and expects each rising edge ~30 frames after the STB that started the
        1-second interrupt; an immediate in-loop edge made the whole test finish
        in ~33 frames and the BIOS rejected the elapsed count (< $39). */
-    if (g_ng->cpu601 && pc == 0x00640064 && getenv("JMPDBG")) {
+    static int dbg_jmp = -1; if (dbg_jmp < 0) dbg_jmp = getenv("JMPDBG") ? 1 : 0;
+    static int dbg_err = -1; if (dbg_err < 0) dbg_err = getenv("ERRDBG") ? 1 : 0;
+    static int dbg_edg = -1; if (dbg_edg < 0) dbg_edg = getenv("EDGDBG") ? 1 : 0;
+    if (g_ng->cpu601 && pc == 0x00640064 && dbg_jmp) {
         static long jc; if (++jc <= 3) {
             unsigned a0 = m68k_get_reg(NULL, M68K_REG_A0), a1 = m68k_get_reg(NULL, M68K_REG_A1);
             unsigned a2 = m68k_get_reg(NULL, M68K_REG_A2), a5 = m68k_get_reg(NULL, M68K_REG_A5);
@@ -3352,14 +3359,14 @@ void linoragx_pc_hook(unsigned int pc)
             fprintf(stderr, "\nJMPDBG a5w:");
             for (int si = 0x960; si < 0x9a0; si += 2) fprintf(stderr, " %04x", dbg_r16(g_ng, a5 + si));
             fprintf(stderr, "\n"); } }
-    if (g_ng->cpu601 && pc == 0x00c16092 && getenv("ERRDBG")) {
+    if (g_ng->cpu601 && pc == 0x00c16092 && dbg_err) {
         static long ec2; static unsigned ld6 = 0xFFFFFFFF;
         unsigned d6 = m68k_get_reg(NULL, M68K_REG_D6);
         if (d6 != ld6 && ++ec2 % 1 == 0) {
             fprintf(stderr, "ERRDBG f=%d d6=%u pc_ret=%08x\n", g_ng->frame, d6 & 0xFF,
                 (unsigned)(m68k_get_reg(NULL, M68K_REG_A6) & 0xFFFFFF));
             ld6 = d6; } }
-    if (g_ng->cpu601 && pc == 0x00c10ed0 && getenv("EDGDBG")) {
+    if (g_ng->cpu601 && pc == 0x00c10ed0 && dbg_edg) {
         static long ec; static unsigned last_d0 = 0xFFFFFFFF;
         if (++ec % 500 == 0) {
             unsigned d0 = m68k_get_reg(NULL, M68K_REG_D0), d2 = m68k_get_reg(NULL, M68K_REG_D2);
