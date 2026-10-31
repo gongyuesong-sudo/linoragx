@@ -4472,6 +4472,16 @@ void ng_run_frame(neogeo *ng)
                   (unsigned)m68k_get_reg(NULL,M68K_REG_A4),(unsigned)m68k_get_reg(NULL,M68K_REG_A5),(unsigned)m68k_get_reg(NULL,M68K_REG_A6)); } }
         { static int vd = -2;
           if (vd == -2) vd = getenv("VRAMDUMP") ? 280 : -1;
+          { const char *vb = getenv("VRAMBIN");
+            static int vbf = -2;
+            if (vbf == -2) vbf = vb ? (int)strtol(getenv("VRAMD2F") ? getenv("VRAMD2F") : "3000", 0, 0) : -1;
+            if (vbf >= 0 && (int)ng->frame == vbf) {
+              FILE *f = fopen(vb, "wb");
+              if (f) { fwrite(ng->vram, 2, 0x10000, f); fclose(f); }
+              f = fopen(getenv("CRAMBIN"), "wb");
+              if (f) { fwrite(ng->cram, 2, 0x10000, f); fclose(f); }
+              vbf = -1;
+            } }
           if (vd >= 0 && ng->frame >= (unsigned)vd) { vd = -1;
               fprintf(stderr, "VRAMDUMP raw vram nonzero map:\n");
               for (int t = 0; t < 0xC000; t += 0x800) {
