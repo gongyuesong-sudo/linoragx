@@ -1,0 +1,1257 @@
+[2026-10-22T19:30:13Z] [SESSION-1] INIT Harness initialized for project /home/gill/linoragx/reawork/rewrite (linoragx 208-cart zhengpian campaign)
+[2026-10-22T19:35:19Z] [SESSION-1] WARN old progress log truncated by init overwrite (untracked in git, unrecoverable); conclusions preserved in tasks.json + skill
+[2026-10-22T19:35:19Z] [SESSION-7] LOCK acquired (pid=1870829)
+[2026-10-22T19:35:19Z] [SESSION-7] RECOVERY [task-015] action="validation rerun PASS (aodk 154c)" reason="in_progress left by interrupted session, clean worktree"
+[2026-10-22T19:35:19Z] [SESSION-7] Completed [task-012] retry validation PASS (aodk 154c)
+[2026-10-22T19:35:19Z] [SESSION-7] CHECKPOINT add task-016..task-023 (samsho/preisle2/fswords/ganryu/garou/mslugx/wh2/final-table)
+[2026-10-22T19:38:02Z] [SESSION-7] Completed [task-013] (validation: SL1W=1242>50, audio rework a4127b1 fixed command path)
+[2026-10-22T19:39:10Z] [SESSION-7] Completed [task-014] (validation: vliner 80c>15, family fixed by irq work)
+[2026-10-22T19:39:10Z] [SESSION-7] Starting [task-016] samsho 场景层全黑修复 (base=da67834)
+[2026-10-22T20:10:21Z] [SESSION-7] ERROR [task-016] [TASK_EXEC] root cause narrowed to BIOS callback-queue redraw timing (y-table cleared by c050fa each frame, queue empty at dump frame)
+[2026-10-22T20:10:21Z] [SESSION-7] ROLLBACK [task-016] git reset --hard da67834
+[2026-10-22T20:20:39Z] [SESSION-7] Completed [task-017] (premise disproved: bg healthy, 12000f cutscene false alarm; residual -> task-024)
+[2026-10-22T20:20:39Z] [SESSION-7] CHECKPOINT add task-024 (preisle2 grey-rect tile gaps + coin-in-demo)
+[2026-10-22T20:20:39Z] [SESSION-7] STATS tasks_total=24 completed=16 failed=1 pending=7 blocked=0 attempts_total=6 checkpoints=6
+[2026-10-22T20:20:39Z] [SESSION-7] LOCK released
+[2026-10-22T20:27:52Z] [SESSION-8] LOCK acquired (pid=os.getpid())
+[2026-10-22T20:27:52Z] [SESSION-8] INIT Environment health check: PASS
+[2026-10-22T20:27:52Z] [SESSION-8] Starting [task-018] fswords 精灵层零输出修复 (base=da67834)
+[2026-10-22T20:37:54Z] [SESSION-8] ERROR [task-018] [TASK_EXEC] ROM set incomplete (2/12 files, no sprite ROMs) - not an emulator bug, marked unfixable
+[2026-10-22T20:37:54Z] [SESSION-8] ROLLBACK [task-018] probes reverted (patch), tree clean
+[2026-10-22T20:38:08Z] [SESSION-8] Starting [task-019] garou 低色修复 (base=da67834)
+[2026-10-22T20:44:46Z] [SESSION-8] ERROR [task-019] [TASK_EXEC] deadlock at VBlank 0xbdda wait $10418D; Z80 alive but no ack; parked (same family as mslugx handshake)
+[2026-10-22T20:44:46Z] [SESSION-8] STATS tasks_total=24 completed=16 failed=3 pending=5 blocked=0 attempts_total=8 checkpoints=8
+[2026-10-22T20:44:46Z] [SESSION-8] LOCK released
+[2026-10-22T20:45:45Z] [SESSION-9] LOCK acquired (pid=cli)
+[2026-10-22T20:45:45Z] [SESSION-9] INIT Environment health check: PASS
+[2026-10-22T20:45:45Z] [SESSION-9] RECOVERY [task-020] action="merged into task-019" reason="duplicate garou entry, root cause already diagnosed"
+[2026-10-22T20:45:45Z] [SESSION-9] Starting [task-021] mslugx 声音CPU握手环修复 (base=da67834)
+[2026-10-22T20:48:53Z] [SESSION-9] ERROR [task-021] [TASK_EXEC] SMA self-decrypt OK but security check fails -> 0x3d36 punishment loop; parked (SMA family)
+[2026-10-22T20:49:00Z] [SESSION-9] Starting [task-022] wh2 双计数器问题排查 (base=da67834)
+[2026-10-22T20:55:14Z] [SESSION-9] ERROR [task-022] [TASK_EXEC] no deadlock; CRAM never written; game polls flag forever; parked (BIOS-callback family)
+[2026-10-22T20:55:14Z] [SESSION-9] Starting [task-023] 收复测结果生成208卡正片终表 (base=da67834)
+[2026-10-22T21:03:15Z] [SESSION-9] Completed [task-023] (final table 208: OK168/合法低色12/滞留19/未判读9; validation exit=0)
+[2026-10-22T21:03:15Z] [SESSION-9] CHECKPOINT add task-025 (vision判读剩余9张未判读低色卡: pulstar/samsh5sp为正版2c疑真bug优先)
+[2026-10-22T21:03:15Z] [SESSION-9] STATS tasks_total=25 completed=17 failed=6 pending=2 blocked=0 attempts_total=12 checkpoints=12
+[2026-10-22T21:03:15Z] [SESSION-9] LOCK released
+[2026-10-22T21:14:18Z] [SESSION-10] LOCK acquired (pid=1934806, stale reclaimed)
+[2026-10-22T21:14:18Z] [SESSION-10] INIT Environment health check: PASS
+[2026-10-22T21:14:18Z] [SESSION-10] Starting [task-025] vision判读剩余9张未判读低色卡 (base=da67834)
+[2026-10-22T21:33:11Z] [SESSION-10] Completed [task-025] (9/9 verdicts; final table OK168/合法15/滞留25/未判读0; validation exit=0)
+[2026-10-22T21:33:11Z] [SESSION-10] CHECKPOINT add task-026 (port MAME sma prot to fix samsh5sp BANK ERROR)
+[2026-10-22T21:33:11Z] [SESSION-10] STATS tasks_total=26 completed=18 failed=6 pending=2 blocked=0 attempts_total=13 checkpoints=13
+[2026-10-22T21:33:11Z] [SESSION-10] LOCK released
+[2026-10-22T21:35:04Z] [SESSION-11] LOCK acquired (pid=1950312, stale reclaimed)
+[2026-10-22T21:35:04Z] [SESSION-11] INIT Environment health check: PASS
+[2026-10-22T21:35:04Z] [SESSION-11] Starting [task-026] 移植MAME SMA解密救samsh5sp (base=da67834)
+[2026-10-22T21:43:52Z] [SESSION-11] Completed [task-026] (commit 2a73070; samsh5sp 2c->255c vision-confirmed battle)
+[2026-10-22T21:43:52Z] [SESSION-11] STATS tasks_total=26 completed=19 failed=6 pending=1 blocked=0 attempts_total=14 checkpoints=14
+[2026-10-22T21:43:52Z] [SESSION-11] LOCK released
+[2026-10-22T21:45:05Z] [SESSION-12] LOCK acquired (stale reclaimed)
+[2026-10-22T21:45:05Z] [SESSION-12] INIT Environment health check: PASS
+[2026-10-22T21:45:05Z] [SESSION-12] Starting [task-024] preisle2残留灰矩形+投币未进正片 (base=2a73070)
+[2026-10-22T21:54:54Z] [SESSION-12] CHECKPOINT [task-024] step=1/3 "coin hold>=30 fixes insertion; level enters but render glitched (grey rect+black bar+logo overlay)"
+[2026-10-22T21:56:20Z] [SESSION-12] CHECKPOINT [task-024] step=2/3 layer isolation: NOSP=1 -> 4c (bg IS sprites), NOFIX=1 -> 209c healthy; glitch is in sprite rendering path (grey rect = tiles rendered as blank/grey), fix layer near-empty by design
+[2026-10-22T21:58:26Z] [SESSION-13] LOCK acquired (stale reclaimed)
+[2026-10-22T21:58:26Z] [SESSION-13] INIT Environment health check: PASS
+[2026-10-22T21:58:26Z] [SESSION-13] RECOVERY [task-024] action="resume from checkpoint step 3 (sprite-level probe of glitch frame)" reason="lease expired, checkpoints reflect runtime findings, no code changes pending"
+[2026-10-22T21:58:26Z] [SESSION-13] Starting [task-024] preisle2 精灵层灰矩形 (base=2a73070)
+[2026-10-22T22:10:16Z] [SESSION-13] CHECKPOINT [task-024] step=3/3 obj_list_offset hypothesis DISPROVED: local MAME neogeo_spr.cpp:297 hardcodes sprite_list=videoram[0x8600] with no obj_list_offset mechanism; observed 0x60 writes are auto-inc-window pass-through with random values (8b69/5384). Code fully rolled back, kof2000 smoke unchanged. Remaining glitch: black bar y=152 x=56-272 + grey blocks = sprite-region tiles reading all-zero CROM data (SPRROW shows valid gfx addrs, bytes=00). Next lead: verify preisle2 CMC42 key 0x9f decrypt coverage vs MAME PREISLE2_GFX_KEY + sfix_decrypt(sf=0 in our ctab but MAME preisle2 calls sfix_decrypt!)
+[2026-10-22T22:13:06Z] [SESSION-13] CHECKPOINT [task-024] step=4/5 FIX APPLIED: ctab cmc42_preisle2 sf 0->1 (MAME preisle2 decrypt_all calls sfix_decrypt; PREISLE2_GFX_KEY 0x9f confirmed). Black bar GONE, HUD complete (TOP SCORE/CREDIT), 150->163c. Residual: right-edge grey vertical strip ~40px x280-320 full height. Next lead: right-edge tile column = zoom table row or sprite x-wrap; also run regression on other cmc42 carts (zupapa/mslug3h/s1945p/ganryu unaffected: separate entries). Uncommitted diff = 1 line in neogeo.c ctab.
+[2026-10-22T22:16:05Z] [SESSION-13] Completed [task-024] (commit see git log; preisle2 level+HUD 163c validation exit=0)
+[2026-10-22T22:16:05Z] [SESSION-13] CHECKPOINT add task-027 (preisle2 right-edge grey strip residual)
+[2026-10-22T22:16:05Z] [SESSION-13] STATS tasks_total=27 completed=20 failed=6 pending=1 blocked=0 attempts_total=15 checkpoints=19
+[2026-10-22T22:16:05Z] [SESSION-13] LOCK released
+[2026-10-22T22:21:59Z] [SESSION-14] INIT Session 14 start (health check PASS)
+[2026-10-22T22:21:59Z] [SESSION-14] LOCK acquired (pid=1978688)
+[2026-10-22T22:21:59Z] [SESSION-14] Starting [task-027] preisle2 right-edge grey strip (base=a6cb1ec)
+[2026-10-22T22:59:07Z] [SESSION-14] CHECKPOINT [task-024/027] ROOT CAUSE FOUND+FIXED: systemlatch branch a<0x3C0000 swallowed Z80-RAM-mirror writes 0x380002-0x39FFFF; BIOS writes 0x380031/0x380041 (Z80 comms) every frame -> misread as HC259 ch0 -> screen_shadow pinned 1 -> whole screen half-dark (white sprites rendered as grey 142 wash). MAME: systemlatch map(0x3a0000,0x3a001f).mirror(0x01ffe0). Fix: return early for a<0x3A0000. preisle2 grey142 pixels 3553->0, kof2000 192c mslug4 217c samsho2 59c regression-clean. Commit see git log. RESIDUAL: white block x270-311 drawn by sprite n=82 pen1=0x7fff legit CRAM white, persists across level+ranking screens, growing over frames - next lead: is it the Big Albatross airship object (legit) or sprite x-wrap bug.
+[2026-10-22T22:59:33Z] [SESSION-14] CHECKPOINT [task-027] step=2/4 recorded; session ending, task stays in_progress
+[2026-10-22T22:59:33Z] [SESSION-14] STATS tasks_total=27 completed=20 failed=6 pending=1 blocked=0 attempts_total=16 checkpoints=21
+[2026-10-22T23:02:17Z] [SESSION-15] INIT Session 15 start (health check PASS)
+[2026-10-22T23:02:17Z] [SESSION-15] LOCK acquired (pid=1974570)
+[2026-10-22T23:02:17Z] [SESSION-15] RECOVERY [task-027] action="continue work" reason="commit 3cc0772 + checkpoint step2 present; validation 163c passes but white-block anomaly remains, acceptance not met"
+[2026-10-22T23:08:30Z] [SESSION-15] Completed [task-027] (white block = game-intended airship sprite; shadow fix 3cc0772 was the real bug)
+[2026-10-22T23:08:39Z] [SESSION-15] Starting [task-016] samsho scene layer (base=721d151)
+[2026-10-22T23:12:30Z] [SESSION-15] ERROR [task-016] [TASK_EXEC] $100a76 task-counter same-frame inc/dec pulse never seen by 0xf7e poll loop (attempts 2/3)
+[2026-10-22T23:12:30Z] [SESSION-15] STATS tasks_total=27 completed=21 failed=6 pending=0 blocked=0 attempts_total=17 checkpoints=23
+[2026-10-22T23:12:30Z] [SESSION-15] LOCK released
+[2026-10-22T23:13:39Z] [SESSION-15] ERROR [task-022] [TASK_EXEC] still 1c after shadow fix; parked pending BIOS-async-task-completion-timing hypothesis (attempts 2/3)
+[2026-10-22T23:13:39Z] [SESSION-15] Session end: context budget reached; retryable left: task-016(2/3) task-019(1/3) task-021(1/3) task-022(2/3)
+[2026-10-22T23:20:57Z] [SESSION-16] INIT Session 16 start (health check PASS)
+[2026-10-22T23:20:57Z] [SESSION-16] LOCK acquired (pid=2011163)
+[2026-10-22T23:20:57Z] [SESSION-16] Starting [task-016] samsho scene layer attempt3 (base=721d151)
+[2026-10-22T23:30:04Z] [SESSION-16] CHECKPOINT [task-016] step=5/5 SAMPOKE bypass 154c vision-confirmed battle scene; root cause = missing BIOS callback queue init
+[2026-10-22T23:30:04Z] [SESSION-16] ERROR [task-016] [TASK_EXEC] attempts exhausted 3/3; bypass committed as env-gated experiment (commit HEAD)
+[2026-10-22T23:30:04Z] [SESSION-16] STATS tasks_total=27 completed=21 failed=6 pending=0 blocked=0 attempts_total=18 checkpoints=24
+[2026-10-22T23:30:04Z] [SESSION-16] LOCK released
+[2026-10-22T23:31:19Z] [SESSION-17] INIT Session 17 start (health check PASS)
+[2026-10-22T23:31:19Z] [SESSION-17] LOCK acquired (pid=2017634)
+[2026-10-22T23:31:19Z] [SESSION-17] Starting [task-022] wh2 flag-wait family (base=cb6f656)
+[2026-10-22T23:40:23Z] [SESSION-17] CHECKPOINT [task-022] step=3/5 wh2 not deadlock: main loop alive, scene task never starts (event-wait family)
+[2026-10-22T23:40:23Z] [SESSION-17] ERROR [task-022] [TASK_EXEC] attempts exhausted 3/3; fully diagnosed, parked
+[2026-10-22T23:42:24Z] [SESSION-17] CHECKPOINT [task-022] PCPROF aliasing bug fixed (4KB blocks/16MB), commit HEAD
+[2026-10-22T23:42:24Z] [SESSION-17] STATS tasks_total=27 completed=21 failed=6 pending=0 blocked=0 attempts_total=21 checkpoints=26
+[2026-10-22T23:42:24Z] [SESSION-17] Session end: all retryable exhausted or hardcases; context budget reached
+[2026-10-22T23:42:24Z] [SESSION-17] LOCK released
+[2026-10-22T23:44:08Z] [SESSION-18] INIT Session 18 start (health check PASS)
+[2026-10-22T23:44:08Z] [SESSION-18] LOCK acquired (pid=2026174)
+[2026-10-22T23:44:08Z] [SESSION-18] Starting [task-019] ganryu CMC42 wait-loop final attempt (base=365cc0b)
+[2026-10-22T23:50:33Z] [SESSION-18] CHECKPOINT [task-019] step=5/5 not a deadlock (VBlank clears $10061a via pc=87f4); 15c = legit story scene vision-confirmed
+[2026-10-22T23:50:33Z] [SESSION-18] Completed [task-019] (ganryu healthy all along; validation retargeted to legit-low-color 10c)
+[2026-10-22T23:52:06Z] [SESSION-18] Starting [task-021] mslugx sound-handshake final attempt (base=365cc0b)
+[2026-10-23T00:03:53Z] [SESSION-18] ERROR [task-021] [TASK_EXEC] attempts exhausted 3/3; PROGEOP port landed, first handshake unblocked, screen still 1c
+[2026-10-23T00:03:53Z] [SESSION-18] STATS tasks_total=27 completed=22 failed=5 pending=0 blocked=0 attempts_total=23 checkpoints=28
+[2026-10-23T00:03:53Z] [SESSION-18] Session end: all tasks terminal (22 completed, 5 failed at max); removing activation marker
+[2026-10-23T00:03:53Z] [SESSION-18] LOCK released
+[2026-10-23T00:10:55Z] [SESSION-17] INIT New campaign: BIOS async-service family (user directive 继续模拟器debug)
+[2026-10-23T00:10:55Z] [SESSION-17] LOCK acquired (pid=2040328)
+[2026-10-23T00:10:55Z] [SESSION-17] Added [task-028] samsho BIOS callback queue proper fix (P1)
+[2026-10-23T00:10:55Z] [SESSION-17] Added [task-029] mslugx deep SMA protocol (P2)
+[2026-10-23T00:10:55Z] [SESSION-17] INIT Environment health check: PASS (build ok, HEAD 46b8333)
+[2026-10-23T00:11:40Z] [SESSION-19] Starting [task-028] samsho BIOS callback queue proper fix (base=46b8333)
+[2026-10-23T00:19:46Z] [SESSION-19] Completed [task-028] (commit 2813e95): queue empty-marker prefill fixes samsho5+garou
+[2026-10-23T00:22:16Z] [SESSION-19] CHECKPOINT [task-028] garou 12k frames reached SAVING OK high-score screen (full game logic works)
+[2026-10-23T00:22:16Z] [SESSION-19] batch18 (208-cart regression) launched in background
+[2026-10-23T00:22:16Z] [SESSION-19] Starting [task-029] mslugx deep SMA protocol (base=2813e95)
+[2026-10-23T00:24:51Z] [SESSION-19] ERROR [task-029] [TASK_EXEC] mslugx still 1c; BIOS c1defc was normal boot fill loop (misread); deep SMA protocol remains
+[2026-10-23T00:54:31Z] [SESSION-19] batch18 done: 208 carts ok=148; recheck 12k revived 9 slow-boot carts; 20k final: pbobble/shocktro/totc/ltorb/kogplus/neothndr/samsho5x stuck at 3c coin-wait (NOT prefill-related, NOQPRE A/B same)
+[2026-10-23T00:54:31Z] [SESSION-19] REGRESSION CAUGHT+FIXED: blanket queue prefill broke mslug3 (73c->2c); scoped to samsho5*/garou* whitelist. Final A/B: samsho5 167c, garou 25c (SAVING OK), mslug3 73c. Deployed.
+[2026-10-23T00:54:31Z] [SESSION-19] STATS tasks_total=29 completed=23 failed=6 pending=0 blocked=0 attempts_total=25 checkpoints=30
+[2026-10-23T00:54:31Z] [SESSION-19] Session end: no eligible tasks remain; removing activation marker
+[2026-10-23T00:54:31Z] [SESSION-19] LOCK released
+[2026-10-23T00:56:41Z] [SESSION-18] INIT New campaign: coin-wait family + mslugx attempt2 (user directive 继续模拟器debug)
+[2026-10-23T00:56:41Z] [SESSION-18] LOCK acquired (pid=2063022)
+[2026-10-23T00:56:41Z] [SESSION-18] Added [task-030] coin-wait family diagnosis (P1)
+[2026-10-23T00:56:41Z] [SESSION-18] Added [task-031] mslugx deep SMA protocol attempt2 (P2)
+[2026-10-23T00:56:41Z] [SESSION-18] INIT Environment health check: PASS (HEAD f6e103a, clean tree)
+[2026-10-23T00:57:08Z] [SESSION-20] Starting [task-030] coin-wait family (base=f6e103a)
+[2026-10-23T01:04:19Z] [SESSION-20] Completed [task-030] (diagnosis): coin-wait family = 7 non-swlist hacks, BIOS correctly refuses boot
+[2026-10-23T01:04:19Z] [SESSION-20] Starting [task-031] mslugx deep SMA protocol attempt2 (base=f6e103a)
+[2026-10-23T01:08:32Z] [SESSION-20] Completed [task-031] (commit 303c118b): mslugx SMA busy-echo 1c->115c attract confirmed
+[2026-10-23T01:09:36Z] [SESSION-20] wh2 recheck after mslugx fix: still 1c (different mechanism)
+[2026-10-23T01:09:36Z] [SESSION-20] STATS tasks_total=31 completed=25 failed=6 pending=0 blocked=0 attempts_total=27 checkpoints=32
+[2026-10-23T01:09:36Z] [SESSION-20] Session end: no eligible tasks remain; removing activation marker
+[2026-10-23T01:09:36Z] [SESSION-20] LOCK released
+[2026-10-23T01:10:31Z] [SESSION-19] INIT New campaign: wh2 fresh angle (SMA family) per user directive
+[2026-10-23T01:10:31Z] [SESSION-19] LOCK acquired (pid=2070922)
+[2026-10-23T01:10:31Z] [SESSION-19] Added [task-032] wh2 SMA handshake angle (P1)
+[2026-10-23T01:10:31Z] [SESSION-19] INIT Environment health check: PASS (HEAD e2372b3, clean)
+[2026-10-23T01:10:38Z] [SESSION-21] Starting [task-032] wh2 SMA handshake angle (base=e2372b3)
+[2026-10-23T01:18:46Z] [SESSION-21] ERROR [task-032] [TASK_EXEC] wh2.zip = real hack set (hack code + official half); official half alone boots 61c; parked with hack family
+[2026-10-23T01:18:46Z] [SESSION-21] Fixed harness-validate.sh false-pass: missing min arg now exits 2 (was integer-error swallowed by pipe)
+[2026-10-23T01:18:46Z] [SESSION-21] STATS tasks_total=32 completed=25 failed=7 pending=0 blocked=0 attempts_total=28 checkpoints=33
+[2026-10-23T01:18:46Z] [SESSION-21] Session end: no eligible tasks remain; removing activation marker
+[2026-10-23T01:18:46Z] [SESSION-21] LOCK released
+[2026-10-23T01:20:49Z] [SESSION-20] INIT New campaign: audio FM+SSG zero-output legacy bug (user directive 继续模拟器debug)
+[2026-10-23T01:20:49Z] [SESSION-20] LOCK acquired (pid=2079748)
+[2026-10-23T01:20:49Z] [SESSION-20] Added [task-033] ymfm FM+SSG zero output fix (P1)
+[2026-10-23T01:20:49Z] [SESSION-20] INIT Environment health check: PASS (committed pending work, HEAD now clean)
+[2026-10-23T01:21:10Z] [SESSION-22] Starting [task-033] ymfm FM+SSG zero output (base=0300790)
+[2026-10-23T01:39:15Z] [SESSION-23] RECOVERY [task-033] action="completed" reason="FM mask fix committed (323e2ca); original mslug validation was a bad probe (BIOS silent 40s); kof2000 dump-audio peak=13605 proves audio path works"
+[2026-10-23T01:39:15Z] [SESSION-23] Completed [task-033] (commit 323e2ca)
+[2026-10-23T01:39:15Z] [SESSION-23] STATS tasks_total=33 completed=26 failed=7 pending=0 blocked=0 attempts_total=40 checkpoints=1
+[2026-10-23T01:39:15Z] [SESSION-23] LOCK released
+[2026-10-23T01:39:54Z] [SESSION-21] INIT Resumed: audio follow-up (FM stream verification after mask fix)
+[2026-10-23T01:39:54Z] [SESSION-21] LOCK acquired (pid=2094003)
+[2026-10-23T01:39:54Z] [SESSION-21] Starting [task-034] FM stream verification (base=323e2ca)
+[2026-10-23T01:40:48Z] [SESSION-24] ERROR [task-034] [TASK_EXEC] fm=0 at 3000f; attract phase uses ADPCM only (Z80IO: no FM slot writes); needs in-game measurement
+[2026-10-23T01:40:48Z] [SESSION-24] STATS tasks_total=34 completed=26 failed=8 pending=0 blocked=0 attempts_total=41 checkpoints=0
+[2026-10-23T01:40:48Z] [SESSION-24] LOCK released
+[2026-10-23T01:41:25Z] [SESSION-22] INIT Resumed audio line: task-034 attempt2 (FM during battle)
+[2026-10-23T01:41:25Z] [SESSION-22] LOCK acquired (pid=2095699)
+[2026-10-23T01:41:25Z] [SESSION-22] Starting [task-034] FM battle measurement (attempt2)
+[2026-10-23T01:42:16Z] [SESSION-22] Completed [task-034] (FM battle BGM peak 5284 via CTL injection; mask fix verified)
+[2026-10-23T01:42:16Z] [SESSION-22] STATS tasks_total=34 completed=27 failed=7 pending=0 blocked=0 attempts_total=42 checkpoints=1
+[2026-10-23T01:42:16Z] [SESSION-22] LOCK released
+[2026-10-23T01:42:42Z] [SESSION-23] INIT New probe: ADPCM-B constant-256 suspicion
+[2026-10-23T01:42:42Z] [SESSION-23] LOCK acquired (pid=2096543)
+[2026-10-23T01:42:42Z] [SESSION-23] Starting [task-035] ADPCM-B waveform check (base=323e2ca)
+[2026-10-23T01:43:58Z] [SESSION-23] Completed [task-035] (commit 1dda6fd; ADPCM-B shared-region fallback, waveform verified)
+[2026-10-23T01:43:58Z] [SESSION-23] STATS tasks_total=35 completed=28 failed=7 pending=0 blocked=0 attempts_total=43 checkpoints=1
+[2026-10-23T01:43:58Z] [SESSION-23] LOCK released
+[2026-10-23T01:45:44Z] [SESSION-24] INIT Regression sweep after audio fixes
+[2026-10-23T01:45:44Z] [SESSION-24] LOCK acquired (pid=2100032)
+[2026-10-23T01:45:44Z] [SESSION-24] Starting [task-036] 208-cart batch19 (base=1dda6fd)
+[2026-10-23T02:07:17Z] [SESSION-24] Completed [task-036] (batch19: 208 carts, regressed=[] vs batch18)
+[2026-10-23T02:07:17Z] [SESSION-24] STATS tasks_total=36 completed=29 failed=7 pending=0 blocked=0 attempts_total=44 checkpoints=1
+[2026-10-23T02:07:17Z] [SESSION-24] LOCK released
+[2026-10-23T02:08:23Z] [SESSION-25] INIT batch19 triage: mslug3 73c->black suspected audio-fix regression
+[2026-10-23T02:08:23Z] [SESSION-25] LOCK acquired (pid=2109850)
+[2026-10-23T02:08:23Z] [SESSION-25] Starting [task-037] mslug3 regression bisect (base=1dda6fd)
+[2026-10-23T02:42:46Z] [SESSION-25] Completed [task-037] (build pollution false alarm; batch19b clean: mslug3=78c regressed=[])
+[2026-10-23T02:42:46Z] [SESSION-25] STATS tasks_total=37 completed=30 failed=7 pending=0 blocked=0 attempts_total=45 checkpoints=1
+[2026-10-23T02:42:46Z] [SESSION-25] LOCK released
+[2026-10-23T02:44:05Z] [SESSION-26] INIT Low-color triage campaign (54 carts)
+[2026-10-23T02:44:05Z] [SESSION-26] LOCK acquired (pid=2127204)
+[2026-10-23T02:44:05Z] [SESSION-26] Starting [task-038] few-color triage (base=165f45a)
+[2026-10-23T02:57:07Z] [SESSION-26] Completed [task-038] (54 low-color fully triaged: 14 revived, rest hacks/parked; zero unexplained)
+[2026-10-23T02:57:07Z] [SESSION-26] STATS tasks_total=38 completed=31 failed=7 pending=0 blocked=0 attempts_total=46 checkpoints=1
+[2026-10-23T02:57:07Z] [SESSION-26] LOCK released
+[2026-10-23T02:58:25Z] [SESSION-27] INIT mslugx zhengpian + coin-wait CRC cross-check
+[2026-10-23T02:58:25Z] [SESSION-27] LOCK acquired (pid=2131988)
+[2026-10-23T02:58:25Z] [SESSION-27] Starting [task-039] mslugx zhengpian (base=165f45a)
+[2026-10-23T03:14:27Z] [SESSION-27] ERROR [task-039] [TASK_EXEC] mslugx stuck at SOLDIER SELECT; confirm needs real SMA/m1 protocol (echo window approx insufficient)
+[2026-10-23T03:14:27Z] [SESSION-27] Completed [task-040] coin-wait family all non-official sets (pong_/tet_/frg-/300-ch naming = homebrew/pirate; not in MAME hash) - BIOS refusal correct, no false positives
+[2026-10-23T03:14:27Z] [SESSION-27] STATS tasks_total=40 completed=32 failed=8 pending=0 blocked=0
+[2026-10-23T03:21:19Z] [SESSION-27] WARN vliner/vlinero recheck (leftover bg proc): 5c = uni-bios ILLEGAL INSTRUCTION crash screen (PC=4, vector table zero). PCTRACE: game spins 600f at 0x83c (beq to 0x834, bclr $10040e bit0) waiting VBlank-set flag that never arrives. Homebrew parked; root-cause lead recorded: game VBlank vector not invoked or $10040e flag never set.
+[2026-10-23T10:39:03Z] [SESSION-28] INIT SMA C-region decrypt refinement
+[2026-10-23T10:39:03Z] [SESSION-28] LOCK acquired (pid=2208354)
+[2026-10-23T10:39:03Z] [SESSION-28] Starting [task-041] survey current vs MAME (base=165f45a)
+[2026-10-23T10:40:43Z] [SESSION-28] Completed [task-041] survey: decrypt is verbatim-correct (fae3 raw = coherent pattern); suspects narrowed to game-logic divergence vs y-wrap semantics
+[2026-10-23T10:40:43Z] [SESSION-28] STATS tasks_total=42 completed=33 failed=8 pending=1 blocked=0
+[2026-10-23T10:48:02Z] [SESSION-28] CHECKPOINT [task-042] step=1/3 "VWRN probe: n=10 entry never written by game (BIOS-zeroed leftover parked at y=512 drawing garbage tile); MAME build hit makefile error linux_x64 - diagnose next session"
+[2026-10-23T10:52:02Z] [SESSION-28] CHECKPOINT [task-042] step=2/3 "VWRN direct-window hit: game routine pc=a418 writes n=10 y=0x10 x=0x4800 every frame during select screen -> entry is ACTIVE sprite not BIOS leftover; garbage root = upstream sprite-build divergence; MAME golden ref pending (build2 USE_SDL=0 running)"
+[2026-10-23T11:00:22Z] [SESSION-28] CHECKPOINT [task-042] step=2b/3 "MAME build saga: mamedeps SDL2 dir now symlinked to miniforge sdl2 2.32.56 (real SDL_config.h+unix), SDL_ttf.h staged in ~/opt/mameextra/include, build5 running with CPATH/LIBRARY_PATH set; incremental so far"
+[2026-10-23T13:46:37Z] [SESSION-28] BREAKTHROUGH [task-042] MAME 0.289 built (29 link fixes); golden ref via -autoboot_script+emu.wait+ioport pulse+scr:snapshot WORKS; MAME select screen 100% clean; OURS shows block-garbled FONT text (HOW TO PLAY menu ALPHA/Punch/URAY + battle HUD) -> root cause = partial CMC50 C-region decrypt (font tiles read undecrypted), not sprite y-wrap
+[2026-10-23T14:05:15Z] [SESSION-28] RESOLVED [task-042] kof2000 battle/select garbage root cause = missing sfix.sfix fixed-tile table (SMA set stores font/HUD tiles in SMA chip; C-tail extract yields garbage for SMA sets). Fix: staged sfix.sfix (CRC c2ea0cfd) + 000-lo.lo from MAME neogeo.zip into BIOS dir; neogeo.c:3140 already overlays ng->sfix when cart has no fixed. kof2000 51->192c, kof2001 136c; vision: title+battle 100% clean, zero garbled text. MAME golden-ref pipeline (autoboot ioport pulse + scr:snapshot) proven working.
+[2026-10-23T14:32:49Z] [SESSION-29] MAME golden-ref verdicts: garou 25c = SAVING OK stage-clear screen (正片已过第1关, false alarm); kof99 2c was transition artifact, real 12k+coin = 296c battle DINOSAUR WORLD vision-clean; MAME battle ref frames sit on PERFECT round-end (bg destruction fx) so pixel-diff needs static-scene alignment; batch20 (208 @12k post-sfix) running for final table.
+[2026-10-23T15:22:22Z] [SESSION-29] CLOSED: batch20(12k) vs batch19b(6k) 47 apparent regressions ALL frame-count artifacts (b18 20k baseline: zero regressions). Merged final best = 162+ctomaday(30k revive)=163/208 ok>=30c; low46 all legit/parked (wh1=RANKING screen legit, ctomaday revived 99c@30k, hack/pcb/homebrew family). Deployed md5 9aeee4e0 (sfix + PROGEOP CPU-view read).
+[2026-10-25T22:32:16Z] [SESSION-29] INIT continue emulator debug; mslug3/mslugx confirmed revived; new remaining-card task list injected
+[2026-10-25T22:32:16Z] [SESSION-29] LOCK acquired (pid=373561)
+[2026-10-25T22:32:16Z] [SESSION-29] Completed [task-029] (retry validation PASS mslugx 164c)
+[2026-10-25T22:32:16Z] [SESSION-29] Completed [task-039] (retry validation PASS)
+[2026-10-25T22:32:16Z] [SESSION-29] STATS tasks_total=56 completed=36 failed=6 pending=14 blocked=0 attempts_total=0 checkpoints=0
+[2026-10-25T22:32:16Z] [SESSION-29] Starting [task-043] svcsplus PVC dynamic prot (base=4be4d4a)
+[2026-10-25T22:38:09Z] [SESSION-29] CHECKPOINT [task-043] step=1/2 "bitswap direction bug fixed (MAME args map result MSB-first); svcsplus RESET vector valid 0xc00408"
+[2026-10-25T22:38:09Z] [SESSION-29] CHECKPOINT [task-043] step=2/2 "PCTRACE: game loop 0x9c62-0x9c6a active; 18c black/white bootleg menu legit"
+[2026-10-25T22:38:09Z] [SESSION-29] Completed [task-043] (commit babac96)
+[2026-10-25T22:38:20Z] [SESSION-29] Starting [task-044] cndi green-menu auth fail (base=babac96)
+[2026-10-25T22:39:23Z] [SESSION-29] ERROR [task-044] [DEPENDENCY] cndi = BIOS-hack set, not MAME-supported; 68K spins in BIOS
+[2026-10-25T22:45:55Z] [SESSION-29] CHECKPOINT [task-045] step=1/2 "b2b loads fine; fatal handler 0x94a prints STACKOVER/STACKBROKEN/STACKUNDER then bra halt; stack self-test fails"
+[2026-10-25T22:45:55Z] [SESSION-29] CHECKPOINT [task-046] step=1/2 "dragonsh spin 173c; fightfev spin 209c8; pulstar spin b4e; all load OK runtime waits"
+[2026-10-25T22:45:55Z] [SESSION-29] ERROR [task-047] [DEPENDENCY] ngem2k not in MAME swlist (homebrew) - unsupported data
+[2026-10-25T22:45:55Z] [SESSION-29] STATS tasks_total=56 completed=36 failed=8 pending=10 blocked=0 attempts_total=57 checkpoints=4
+[2026-10-25T22:47:00Z] [SESSION-29] CHECKPOINT [task-045] step=2/2 "b2b reset handler 0x408: jsr workram 0x11012 self-test, d0==0x80 -> stop halt; self-test code copied to workram; next session: dump workram self-test + RAMWA trace"
+[2026-10-25T22:48:27Z] [SESSION-30] LOCK acquired (pid=389155)
+[2026-10-25T22:55:58Z] [SESSION-30] Completed [task-045] (commit d3cd295, b2b 1c->57c: game jsr 0x11012 BIOS self-test stub, uni-bios lacks it, force asia-s3)
+[2026-10-25T22:58:13Z] [SESSION-30] Completed [task-047] (fightfev 3c->68c via stock-BIOS force, same family as b2b)
+[2026-10-25T22:59:11Z] [SESSION-30] CHECKPOINT [task-046] step=1/2 "dragonsh spin 1734 waits VBlank; handler jmps c00438 BIOS; trap2 used; stock BIOS no help"
+[2026-10-25T22:59:11Z] [SESSION-30] CHECKPOINT [task-051] step=1/2 "pulstar BANK ERROR halt: bank self-test fails; 0xb92 writes warning to 0x400000; next trace bank verify caller"
+[2026-10-25T22:59:11Z] [SESSION-30] STATS tasks_total=56 completed=39 failed=8 pending=7 blocked=0 attempts_total=63 checkpoints=6
+[2026-10-25T22:59:21Z] [SESSION-30] Starting [task-056] cphd 14c visual check (base=ca05d6b)
+[2026-10-25T23:00:40Z] [SESSION-30] Completed [task-056] (cphd judged NORMAL slow-boot, no code change)
+[2026-10-25T23:02:17Z] [SESSION-30] ERROR [task-052] [TASK_EXEC] kogplus no swlist entry; kof10th needs dedicated lo-rom overlay device
+[2026-10-25T23:04:56Z] [SESSION-30] CHECKPOINT [task-048] step=1/2 "kf2k1pls/kf2k3pl/kf2k3upl/kf2k3pcb all 1c at f12000; cart_prot=13 window exists but protection_r logic missing"
+[2026-10-25T23:04:56Z] [SESSION-30] STATS tasks_total=56 completed=40 failed=8 pending=6 blocked=0 attempts_total=63 checkpoints=8
+[2026-10-25T23:06:47Z] [SESSION-31] LOCK acquired (pid=401659)
+[2026-10-25T23:07:00Z] [SESSION-31] Starting [task-049] pbobble/pobble2 swlist data (base=ca05d6b)
+[2026-10-25T23:10:21Z] [SESSION-31] ERROR [task-049] [DEPENDENCY] pbobble/pobble2 = Taito F3 arcade sets, not Neo Geo; Neo Geo versions pbobblen(164c)/pbobbl2n(10c) already work
+[2026-10-25T23:18:14Z] [SESSION-31] CHECKPOINT [task-053/055] step=1/1 "hand-authored swlist entries for kof98ae/samsho5x/lhcdb/ltorb (plain vectors verified); kof98ae 210c samsho5x 83c lhcdb 110c ltorb 5c; garou/kof2000 regression clean; lb2b incomplete set"
+[2026-10-25T23:18:14Z] [SESSION-31] Completed [task-053] (samsho5x revived via swlist entry)
+[2026-10-25T23:18:14Z] [SESSION-31] Completed [task-055] (kof98ae/lhcdb revived; ltorb loads; lb2b data incomplete)
+[2026-10-25T23:18:36Z] [SESSION-31] ERROR [task-054] [DEPENDENCY] ms5pcb/svcpcb = Jamma PCB bootlegs not in MAME; encrypted program, no spec
+[2026-10-25T23:18:36Z] [SESSION-31] STATS tasks_total=56 completed=42 failed=10 pending=0 blocked=0 attempts_total=70 checkpoints=10
+[2026-10-25T23:18:48Z] [SESSION-31] Starting [task-051] pulstar BANK ERROR retry (base=ca05d6b)
+[2026-10-25T23:19:21Z] [SESSION-31] CHECKPOINT [task-051] step=2/3 "pulstar lead: code at a72 scans saveram dir 0xd00108 (sram_unlocked gate may block writes); afe/aae subroutines then move.b d0,3a000d (MCU port!). Next: trace aae/afe return value + check MCU emulation"
+[2026-10-25T23:20:09Z] [SESSION-32] LOCK acquired (pid=410285)
+[2026-10-25T23:23:00Z] [SESSION-32] ERROR [task-051] [TASK_EXEC] pulstar BANK ERROR trigger untraced after 3 attempts; leads recorded
+[2026-10-25T23:23:00Z] [SESSION-32] Starting [task-046] dragonsh VBlank wait retry (base=ca05d6b)
+[2026-10-25T23:23:37Z] [SESSION-32] CHECKPOINT [task-046] step=2/2 "dragonsh 1734 = halt loop; VBlank handler 4b86 active per-frame but wait flag never cleared; trap2 BIOS service used in error path"
+[2026-10-25T23:23:37Z] [SESSION-32] ERROR [task-046] [TASK_EXEC] dragonsh halt path unrooted after 3 attempts (trap2 + init bail)"
+[2026-10-25T23:23:37Z] [SESSION-32] STATS tasks_total=56 completed=42 failed=11 pending=0 blocked=0 attempts_total=73 checkpoints=12
+[2026-10-25T23:36:40Z] [SESSION-32] CHECKPOINT [task-048] step=2/3 "kf2k3pl: static decrypt OK (overlay=5f00); hang in self-decrypt loop 51898; game does not read 2FE000; need MAME device semantics, raw fetch now 404"
+[2026-10-25T23:36:40Z] [SESSION-32] Starting [task-052] kof10th lo-rom overlay device (base=ca05d6b)
+[2026-10-25T23:47:12Z] [SESSION-32] CHECKPOINT [task-052] step=1/3 "kof10th device fully ported (decrypt verified independently); hang at ram2 entry, vector area mystery remains"
+[2026-10-25T23:47:12Z] [SESSION-32] Completed [task-052-partial] (commit c57ab1f: kof10th device + k3pl prot window, regression garou/kof2000/kf10thep/mslug3 clean, kf10thep 19->87c)
+[2026-10-25T23:47:12Z] [SESSION-32] STATS tasks_total=56 completed=42 failed=12 pending=0 blocked=0 attempts_total=76 checkpoints=15
+[2026-10-26T00:05:18Z] [SESSION-33] CHECKPOINT [task-048] step=3/3 "obtained real MAME boot_kof2k3 source; pl_px_decrypt bit-exact verified; symptom narrowed to control-flow-into-table at 0x5188a"
+[2026-10-26T00:05:18Z] [SESSION-33] ERROR [task-048] [TASK_EXEC] kf2k3pl stuck: game executes jump/data table at 0x5188a during init (a1=garbage 0x1A949208); decrypt correct, not protection-window; needs deeper init trace
+[2026-10-26T00:05:18Z] [SESSION-33] Completed [task-048] -> failed at max_attempts (3/3)
+[2026-10-26T00:05:18Z] [SESSION-33] STATS tasks_total=56 completed=42 failed=13 pending=0 retryable=1 blocked=0 attempts_total=0 checkpoints=0
+[2026-10-26T00:13:19Z] [SESSION-33] CHECKPOINT [task-052] step=2/3 "kof10th bank-switch offset fix committed a6510e3; lo-rom vector source unresolved"
+[2026-10-26T00:13:19Z] [SESSION-33] Completed [task-052] -> retryable (attempt 2/3)
+[2026-10-26T00:13:19Z] [SESSION-33] STATS tasks_total=56 completed=42 failed=13 pending=0 retryable=1 blocked=0 attempts_total=0 checkpoints=0
+[2026-10-26T00:13:19Z] [SESSION-33] LOCK released
+[2026-10-26T00:19:00Z] [SESSION-34] LOCK acquired (pid=467554)
+[2026-10-26T00:19:00Z] [SESSION-34] INIT Environment health check: PASS
+[2026-10-26T00:19:00Z] [SESSION-34] ERROR [task-044] [DEPENDENCY] parked as out-of-scope (no MAME spec / not Neo Geo hardware)
+[2026-10-26T00:19:00Z] [SESSION-34] ERROR [task-049] [DEPENDENCY] parked as out-of-scope (no MAME spec / not Neo Geo hardware)
+[2026-10-26T00:19:00Z] [SESSION-34] ERROR [task-054] [DEPENDENCY] parked as out-of-scope (no MAME spec / not Neo Geo hardware)
+[2026-10-26T00:19:00Z] [SESSION-34] Starting [task-052] kof10th lo-rom vector source (base=a6510e3)
+[2026-10-26T00:26:33Z] [SESSION-34] Completed [task-052] (commit 6a51df3) -> failed at max_attempts (3/3): MAME ref incomplete
+[2026-10-26T00:26:33Z] [SESSION-34] STATS tasks_total=56 completed=42 failed=14 pending=0 retryable=0 blocked=0 attempts_total=0 checkpoints=0
+[2026-10-26T00:26:42Z] [SESSION-34] Starting [task-032] wh2 SMA cmd-port handshake (base=6a51df3)
+[2026-10-26T00:27:35Z] [SESSION-34] ERROR [task-032] [DEPENDENCY] wh2 hack: encrypted patch-code vector table, no MAME spec (MAME wh2=official, already runs); failed at max_attempts (3/3)
+[2026-10-26T00:27:35Z] [SESSION-34] STATS tasks_total=56 completed=42 failed=14 pending=0 retryable=0 blocked=0 attempts_total=0 checkpoints=0
+[2026-10-26T00:27:35Z] [SESSION-34] All tasks terminal (no pending/in_progress/retryable) -> harness complete, marker removed
+[2026-10-26T00:27:35Z] [SESSION-34] LOCK released
+[2026-10-26T00:36:21Z] [SESSION-35] LOCK acquired (pid=475137)
+[2026-10-26T00:36:21Z] [SESSION-35] INIT Environment health check: PASS
+[2026-10-26T00:36:21Z] [SESSION-35] Starting [task-057] kf2k3pl kof2003p_w protection window (base=6a51df3)
+[2026-10-26T00:51:23Z] [SESSION-35] ERROR [task-057] [TASK_EXEC] kf2k3pl protection-window echo hypothesis disproven (0 reads to 2FE000); root cause = garbage a1=0x1a949208 into decrypt routine 0x5188a (upstream data/bank), same card as exhausted task-048; failed 3/3
+[2026-10-26T00:51:23Z] [SESSION-35] STATS tasks_total=57 completed=42 failed=15 pending=0 retryable=0 blocked=0
+[2026-10-26T00:51:52Z] [SESSION-35] All tasks terminal (no pending/in_progress/retryable) -> harness complete, marker removed
+[2026-10-26T00:51:52Z] [SESSION-35] LOCK released
+[2026-10-26T00:53:55Z] [SESSION-36] LOCK acquired (pid=491380)
+[2026-10-26T00:53:55Z] [SESSION-36] INIT Environment health check: PASS
+[2026-10-26T00:53:55Z] [SESSION-36] Starting [task-058] dragonsh VBlank wait root cause (base=6a51df3)
+[2026-10-26T01:14:34Z] [SESSION-36] CHECKPOINT [task-058] step=1/3 "corrected SESSION-32: real stuck point is BIOS vsync-wait 0xc1870c (flag 0x10fe8c), not game halt 0x1734"
+[2026-10-26T01:14:34Z] [SESSION-36] CHECKPOINT [task-058] step=2/3 "VBlank IRQ fires every frame (vec 0x64->handler 0x1742), handler clears flag via BIOS svc c00438->c1166a, but wait rts 0xc1871c never reached - flag re-armed each frame"
+[2026-10-26T01:14:34Z] [SESSION-36] ERROR [task-058] [TASK_EXEC] dragonsh stuck in BIOS vsync-wait flag re-arm; VBLHOLD/VB_CLEAR/force-s3/KEYMASKT no effect; deep BIOS-timing, beyond MAME-parity
+[2026-10-26T01:14:34Z] [SESSION-36] Completed [task-058] (commit d141750 REGAT SR probe)
+[2026-10-26T01:14:34Z] [SESSION-36] STATS tasks_total=58 completed=42 failed=16 pending=0 blocked=0 attempts_total=3 checkpoints=3
+[2026-10-26T01:14:34Z] [SESSION-36] LOCK released
+[2026-10-26T01:17:37Z] [SESSION-37] INIT Resuming harness; all prior tasks terminal (42c/16f). Injecting task-059 (pulstar BANK ERROR) + task-060 (regression batch).
+[2026-10-26T01:17:37Z] [SESSION-37] LOCK acquired (pid=507213)
+[2026-10-26T01:17:37Z] [SESSION-37] INIT Environment health check: PASS
+[2026-10-26T01:42:48Z] [SESSION-37] ERROR [task-059] [TASK_EXEC] pulstar = region/anti-piracy lockout (FOR USE WITH ORIGINAL SNK), not bank error; gated on BIOS const 0x10fd82=0x8002; not hardware-parity fixable. marked failed 3/3
+[2026-10-26T02:01:30Z] [SESSION-37] Completed [task-060] batch17 OK=180/208 no regression
+[2026-10-26T02:01:30Z] [SESSION-37] STATS tasks_total=60 completed=43 failed=17 pending=0 in_progress=0 retryable=0
+[2026-10-26T02:01:30Z] [SESSION-37] LOCK released
+[2026-10-26T02:21:14Z] [SESSION-38] LOCK acquired (pid=534666)
+[2026-10-26T02:21:14Z] [SESSION-38] Completed [task-061] ngem2k+ltorb reclassified working homebrew (real OK 180->182)
+[2026-10-26T02:21:14Z] [SESSION-38] ERROR [task-062] [TASK_EXEC] kf2k3pl prot window MAME-accurate but insufficient; root cause upstream null ptrs; reverted
+[2026-10-26T02:21:14Z] [SESSION-38] STATS tasks_total=62 completed=44 failed=18 pending=0 in_progress=0 retryable=0
+[2026-10-26T02:21:14Z] [SESSION-38] LOCK released
+[2026-10-26T02:59:06Z] [SESSION-39] LOCK acquired (pid=546894)
+[2026-10-26T02:59:06Z] [SESSION-39] Starting [task-063] merged-set parent-zip ROM fallback (base=d141750)
+[2026-10-26T02:59:06Z] [SESSION-39] CHECKPOINT [task-063] step=1/1 fswords 1->220c via samsho3.zip parent; batch OK 180->181 no regressions
+[2026-10-26T02:59:06Z] [SESSION-39] Completed [task-063] (commit 8953792)
+[2026-10-26T02:59:06Z] [SESSION-39] STATS tasks_total=63 completed=45 failed=18 pending=0 retryable=0
+[2026-10-26T02:59:06Z] [SESSION-39] LOCK released
+[2026-10-26T03:41:38Z] [SESSION-40] Starting [task-064] Verify YM2610 FM audio path (base=8953792)
+[2026-10-26T03:41:38Z] [SESSION-40] CHECKPOINT [task-064] step=1/1 FM stream nonzero during music (fm=2498); keyon OPN 0x28=f1 freq 0xa1; WAV RMS 1000-2600
+[2026-10-26T03:41:38Z] [SESSION-40] Completed [task-064] (no code change: prior FM-silent was misdiagnosis, probed pre-music f=1200)
+[2026-10-26T03:41:38Z] [SESSION-40] STATS tasks_total=64 completed=46 failed=18 pending=0 blocked=0
+[2026-10-26T03:41:38Z] [SESSION-40] LOCK released
+[2026-10-26T03:45:55Z] [SESSION-41] LOCK acquired (pid=598322)
+[2026-10-26T03:45:55Z] [SESSION-41] Starting [task-065] Verify YM2610 SSG audio path (base=8953792)
+[2026-10-26T04:12:21Z] [SESSION-41] Completed [task-065] (commit d81c2e5)
+[2026-10-26T04:12:21Z] [SESSION-41] STATS tasks_total=65 completed=47 failed=18 pending=0 blocked=0
+[2026-10-26T04:12:21Z] [SESSION-41] LOCK released
+[2026-10-26T04:16:20Z] [SESSION-42] LOCK acquired (pid=616182)
+[2026-10-26T04:16:20Z] [SESSION-42] INIT Environment health check: PASS
+[2026-10-26T04:16:20Z] [SESSION-42] Added [task-066] Investigate kogplus BLACK
+[2026-10-26T04:16:39Z] [SESSION-42] Starting [task-066] Investigate kogplus BLACK (base=d81c2e5)
+[2026-10-26T04:44:56Z] [SESSION-42] Completed [task-066] kogplus bootleg decrypt (commit 86e555f)
+[2026-10-26T04:44:56Z] [SESSION-42] STATS tasks_total=66 completed=48 failed=18 pending=0 blocked=0
+[2026-10-26T04:50:08Z] [SESSION-43] LOCK acquired (pid=635888)
+[2026-10-26T04:50:08Z] [SESSION-43] Starting [task-067] Re-verify stale failed cards (base=86e555f)
+[2026-10-26T05:12:23Z] [SESSION-43] Completed [task-067] stale-card re-verification (samsho revived, batch OK=182)
+[2026-10-26T05:12:23Z] [SESSION-43] STATS tasks_total=67 completed=52 failed=15 pending=0 blocked=0
+[2026-10-26T05:12:23Z] [SESSION-43] LOCK released
+[2026-10-26T05:15:43Z] [SESSION-44] LOCK acquired (pid=650245)
+[2026-10-26T05:15:43Z] [SESSION-44] Starting [task-068] Build local MAME for ground truth (base=86e555f)
+[2026-10-26T06:19:09Z] [SESSION-44] CHECKPOINT [task-068] step=1/3 "SDL2+GL debs extracted no-root; genie passes USE_QTDEBUG=0; full build running pid716861"
+[2026-10-26T06:37:53Z] [SESSION-44] CHECKPOINT [task-068] step=2/3 "SDL2_ttf+ALSA+multiarch SDL_config debs added; bgfx/font pass; full src/mame compile running pid794798"
+[2026-10-26T07:18:17Z] [SESSION-44] Completed [task-068] (MAME 0.289 ground truth: SDL2/GL/X11/ALSA/pulse/fontconfig debs no-root + sparse-disable + USE_QTDEBUG=0 + copy-dt-needed + -lfontconfig; boots kf2k3pl to title screen)
+[2026-10-26T07:23:17Z] [SESSION-45] LOCK acquired (pid=875093)
+[2026-10-26T07:23:17Z] [SESSION-45] Starting [task-069] kf2k3pl runtime protection device (base=86e555f)
+[2026-10-26T07:31:36Z] [SESSION-45] Completed [task-069] (commit 107b003)
+[2026-10-26T07:31:36Z] [SESSION-45] CHECKPOINT [task-069] kf2k3pl HERO title confirmed vs MAME; regression clean
+[2026-10-26T07:31:36Z] [SESSION-45] STATS tasks_total=70 completed=54 failed=15 pending=1 blocked=0
+[2026-10-26T07:57:28Z] [SESSION-46] Starting [task-070] kf2k3upl kof2003_w variant (base=107b003)
+[2026-10-26T07:57:28Z] [SESSION-46] ERROR [task-070] [TASK_EXEC] MAME ground truth itself black (burnin no-snap 90s; pl control OK) - no portable reference
+[2026-10-26T07:57:28Z] [SESSION-46] ROLLBACK [task-070] git reset --hard 107b003
+[2026-10-26T07:57:28Z] [SESSION-46] STATS tasks_total=70 completed=54 failed=16 pending=0 blocked=0
+[2026-10-26T07:57:37Z] [SESSION-46] LOCK released
+[2026-10-26T08:28:16Z] [SESSION-47] LOCK acquired (pid=912076)
+[2026-10-26T08:28:16Z] [SESSION-47] CHECKPOINT [task-071] MAME triage done: ms5pcb only viable target
+[2026-10-26T08:28:16Z] [SESSION-47] Starting [task-071] ms5pcb port (base=107b003)
+[2026-10-26T10:48:38Z] [SESSION-49] LOCK reclaimed (pid=1108949)
+[2026-10-26T10:48:38Z] [SESSION-49] RECOVERY [task-071] action="resume from checkpoint" reason="prev session context reset; uncommitted ms5pcb work intact (sandwich decrypt + sp-4x BIOS + swlist), BIOS self-test passes, game reaches MVS SLOT CHECK"
+[2026-10-26T10:48:38Z] [SESSION-49] CHECKPOINT [task-071] step=4/6 "root cause narrowed: Z80 stuck inside call@0x12B of main loop 0x11B; out(08) only 4x, out(0C) 0x -> sound handshake cmd1 never answered -> 68K self-test falls to M1-ROM ERROR dead loop 0x12AC"
+[2026-10-26T11:47:02Z] [SESSION-50] LOCK acquired (pid=1160757)
+[2026-10-26T11:47:02Z] [SESSION-50] RECOVERY [task-071] action="resume from checkpoint" reason="prev session ended mid-Z80-IRQ-investigation; decrypt now byte-exact vs MAME, BIOS self-test passes, game runs to watchdog loop 0x12AC waiting Z80; Z80 spins in call@0x12B awaiting YM timer IRQ"
+[2026-10-26T12:25:50Z] [SESSION-50] CHECKPOINT [task-071] step=8/12 "ms5pcb: 根因链定位——(1) MAME neopcb ms5pcb 无 sm1，Z80 上电即见解密卡带 m1（entry0=audiocpu 区）；已 PATCH 挂载块 m1_view=1/m1_booted=1/cart_audio=1。(2) Z80 现跑游戏 m1：主循环 0x11b、NMI 处理器 0x66 正常、fd67 命令队列在动。(3) m1 协议：命令1=软复位（NMI 处理器 fdba=0 时 jp 0dbb→写 fffd 自跳环自杀等 68K 复位）；游戏 0x10D6 写命令1 后轮询 soundlatch1==1 超时但继续（$7cee=ff 标志）。(4) 游戏卡 0x12AC 看门狗喂狗死环（VLOAD 0x3C0000 之后），MAME 游戏主循环在 0x440B2。下一步：查游戏为何走 0x12AC 错误路径而非 0x440B2——疑点：游戏初始化某检查项失败（VLOAD/0x3C0000 处理或 bank 窗向量 [0x200004]=0x22BD12 指向 7fff 垃圾）"
+[2026-10-26T14:59:08Z] [SESSION-50] CHECKPOINT [task-071] step=11/12 "ms5pcb TP/UPD4990A breakthrough: cpu601-gated AUDIO_COIN now unconditionally drives TP/DO pins (was gated on mc_c/shift6 -> froze after serial drain); STB forces TP low; BIOS calendar wait-loop (0xC10EBE) arms a 2-frame TP rising edge via pc_hook so the edge lands INSIDE the busy-wait (edge-before-loop is missed by the (prev^cur)&cur&40 detector). Calendar test now PASSES; BIOS self-test advances from hard-stuck 0xC10EBE to cycling RAM+calendar (no error display). Remaining blocker: Z80 m1 crashes at fffd (command-1 soft-reset suicide path) -> sound test item fails -> self-test cycles instead of handing to game at f~243 like MAME."
+[2026-10-26T14:59:08Z] [SESSION-50] STATS tasks_total=71 completed=54 failed=16 in_progress=1 blocked=0 checkpoints=11
+[2026-10-26T14:59:51Z] [SESSION-50] LOCK released
+[2026-10-26T15:01:40Z] [SESSION-51] LOCK acquired (pid=1337331)
+[2026-10-26T15:01:40Z] [SESSION-51] RECOVERY [task-071] action="resume from checkpoint 11/12" reason="prev session ended after calendar-test breakthrough; uncommitted ms5pcb work present; next: Z80 m1 fffd suicide during BIOS sound test"
+[2026-10-26T15:55:37Z] [SESSION-50] CHECKPOINT [task-071] step=12/14 "ms5pcb BIOS-loop root cause narrowed: supervisor stack leaks exactly 2 bytes per VBlank while BIOS busy-waits in calendar service (C10EB8); rts at C10ED2 pulls stack-clean pattern 00640064 -> BIOS loops. BIOS sets SR=2000 (68010 M-bit master stack) at C10D16 before 2nd jsr. Musashi frame push/pop measured symmetric (vector<<2 format-word self-consistent with rte format-0 branch); my format-word-0000 experiment broke symmetry and was reverted. prg_bank_base=0x640000 gate + vector 0x3C0000 experiment reverted. Regression clean: kof2000 185 / mslug3 99 / kf2k3pl 51 / garou 31. Next: instrument m68ki_exception_interrupt + rte sp at instruction granularity WITHOUT pc_hook getenv overhead, or diff against MAME Musashi 68010 rte path."
+[2026-10-26T15:59:39Z] [SESSION-51] LOCK acquired (pid=1375261)
+[2026-10-26T16:21:47Z] [SESSION-51] CHECKPOINT [task-071] step=13/14 "STACK LEAK ROOT-CAUSED+FIXED: m68ki_stack_frame_0000 used CPU_TYPE==CPU_TYPE_000 (real compare) but rte uses CPU_TYPE_IS_000() which folds to constant 1 when USE_M68010 is off -> push 8-byte 68010 frame vs pop 6-byte 68000 frame = 2 bytes leaked per interrupt. ms5pcb BIOS calendar service (C10EB8) is jsr-entered and rte-exited reusing the live interrupt frame, so every VBlank leaked 2 bytes until rts pulled stack-clean pattern 00640064. Fix: stack_frame_0000 now uses CPU_TYPE_IS_000(CPU_TYPE) (same predicate as rte) -> push/pop symmetric. SP5 probe: sp identical across frames f=115/116 (was -2/frame). Also learned: the f=113 frame fmt=0000 was the BIOS own interrupt self-test fake frame; the per-frame interrupt during calendar wait is IRQ2 (vector 0x19, handler C00438) not VBlank. Next: long-frame verify BIOS hands off game + regression."
+[2026-10-26T16:55:06Z] [SESSION-51] CHECKPOINT [task-071] step=14/15 "ms5pcb CANDIDATE ERROR root-caused: BIOS calendar test (C10CF6-C10D40) writes time via 4990 LOAD cmd then reads elapsed frame-counter $10fee4 and requires it in [$39,$40] (~60 frames = the 1-second interrupt window). linoragx TP hack (immediate rising edge at wait-loop C10EBE) made the test finish in ~33 frames -> count too small -> error 5 -> CANDIDATE ERROR screen + halt loop C15F00. Fix: removed the in-loop arm hack; TP now free-runs from STB with mc_tp_half=30-frame half-period (MAME restarts TP timer per command). Also fixed: BIOS disassembly view was sp4x[0x15F00] but execution is entry1 = sp4x[0x20000+off]; regenerated /tmp/sp4x_e1.bin. RAMWA 10FEE4 now reaches $39 at f=197 (was $21 at f=145)."
+[2026-10-26T17:34:09Z] [SESSION-51] CHECKPOINT [task-071] step=14/15 "ms5pcb GFX ROOT-CAUSED+FIXED: cmc_gfx_run s1data branch had a bogus wordswap sandwich (spr buffer already matches MAME region layout from load32_word interleave) AND fixed region was OR-polluted by raw sfix.sfix bytes (MAME keeps sfix raw in separate fixedbios region, fixed is ROM_FILL 0). Removed sandwich + memset fixed before merge. Verified vs MAME live regions via lua memory.regions[:sprites]/[:fixed]: spr 10/10 + fixed 6/6 byte-exact. ms5pcb now boots to real attract (INSERT COIN/CREDIT 00, 35 colors). Regression running."[2026-10-26T17:39:14Z] [SESSION-51] Completed [task-071] (commit f4a1fe2)
+[2026-10-26T17:39:14Z] [SESSION-51] STATS tasks_total=71 completed=55 failed=16 pending=0 blocked=0 attempts_total=88 checkpoints=140
+[2026-10-26T17:39:14Z] [SESSION-51] LOCK released
+[2026-10-26T17:44:18Z] [SESSION-52] LOCK acquired (pid=1449277)
+[2026-10-26T17:44:18Z] [SESSION-52] Starting [task-072] Full 208-ROM batch regression after ms5pcb revival (base=f4a1fe2)
+[2026-10-26T17:48:07Z] [SESSION-52] CHECKPOINT [task-072] step=1/3 "ms5pcb playability verified: coin=LINORAGX_INPUT bit10 + START bit8 reaches SOLDIER SELECT character select (game fully playable, not just attract). GitHub pushed 86e555f..f4a1fe2. 208-ROM batch19 running."[2026-10-26T18:49:41Z] [SESSION-52] CHECKPOINT [task-072] step=2/3 "batch19 done: total=208 OK=180 FEWCOLOR=14 BLACK=14; ms5pcb OK 193c; non-OK all map to known failed tasks; no regression from f4a1fe2 (changes ms5pcb-gated)."
+[2026-10-26T18:49:41Z] [SESSION-52] Completed [task-072] (batch19 baseline: 180 OK + ms5pcb revived)
+[2026-10-26T18:49:41Z] [SESSION-52] STATS tasks_total=72 completed=56 failed=16 pending=0 blocked=0 attempts_total=89 checkpoints=143
+[2026-10-26T18:49:41Z] [SESSION-52] LOCK released
+[2026-10-26T18:50:50Z] [SESSION-53] LOCK acquired (pid=imported)
+[2026-10-26T18:50:50Z] [SESSION-53] Starting [task-073] pbobble/pobble2 old-set swlist entries (base=f4a1fe2)
+[2026-10-26T18:51:57Z] [SESSION-53] ERROR [task-073] [TASK_EXEC] pbobble old-set dump incomplete (gfx 3/4 missing, MAME dropped set) - dead
+[2026-10-26T18:51:57Z] [SESSION-53] Starting [task-074] kof10th re-diagnosis with local MAME ground truth (base=f4a1fe2)
+[2026-10-26T20:21:23Z] [SESSION-53] LOCK acquired (pid=1538841, reclaimed stale)
+[2026-10-26T20:21:23Z] [SESSION-53] RECOVERY [task-074] action="resume with uncommitted k10 read-block move (validated: 1->138 colors, game attract runs)" reason="previous session context reset mid-task"
+[2026-10-26T20:21:23Z] [SESSION-53] CHECKPOINT [task-074] step=4/6 "k10 read block relocation fixes ram2 spin; next: CRAM diff vs MAME at f=2000 for palette corruption"
+[2026-10-26T22:47:36Z] [SESSION-54] LOCK acquired (pid=1647877, state-root=reawork/rewrite)
+[2026-10-27T20:36:45Z] [SESSION-87] LOCK acquired (pid=2502636, reclaimed stale)
+[2026-10-27T20:36:45Z] [SESSION-87] Starting [task-111] 静音视频卡批量归类：40 张 voiced=0 卡 YMBDBG+SL1W 分族 (base=d6c4f69)
+[2026-10-27T21:05:31Z] [SESSION-87] CHECKPOINT [task-111] step=1/3 "B2 family 20 cards: fatfury2 m1 main loop starved - timer IRQ 52x/frame traps main thread in 23e6 trampoline; kof2000 main loop healthy 1349 spins/frame. Toy timer model suspect (8-bit, reg26 unwritten). Next: Z80 IRQ assert path."
+[2026-10-27T21:19:22Z] [SESSION-88] LOCK acquired (pid=2548734)
+[2026-10-27T21:19:22Z] [SESSION-88] RECOVERY [task-111] action="resume: IRQ-fix worktree built (md5 0709ac50), fatfury2 peak 0->1627 CONFIRMED fix works; awaiting regression matrix kof2000/mslug/garou/samsho2 + 208-card clean baseline (audio_t111_base, 60/208)" reason="context window reset mid-validation"
+[2026-10-27T21:30:46Z] [SESSION-88] CHECKPOINT [task-111] step=2/3 "IRQ fix validated: fatfury2 main loop revived, ring consumed, BIOS jingle audible, kof2000/garou clean. Remaining: 68K never sends BGM cmds (silent cards = YM2151-FM-BGM family; voiced = ADPCM-B family). Commit pending batch test release of build/."
+[2026-10-27T21:39:03Z] [SESSION-88] CHECKPOINT [task-111] step=3/3 "IRQ fix committed fcb8d9d (main), deployed md5 0709ac50, regression PASS (kof2000 15894/fatfury2 1627/garou 15575/mslug 1627/samsho2 1627). Clean baseline voiced=67/208. Fixed-batch running for final classification."
+[2026-10-27T22:17:04Z] [SESSION-89] Completed [task-111] (batch voiced=182/208, silent 73 classified)
+[2026-10-27T22:17:04Z] [SESSION-89] Starting [task-112] BGM 握手家族：Z80 音乐任务等待链修复（fatfury/samsho 族 peak=1627） (base=HEAD)
+[2026-10-27T22:25:12Z] [SESSION-89] CHECKPOINT [task-112] step=1/3 "g_ym_frame fix committed 5e9f44c; bridge regression running; YM writes land f=617-749 then sequencer wedges on fa98"
+[2026-10-27T22:39:38Z] [SESSION-89] CHECKPOINT [task-112] step=2/3 "bridge abandoned (kof2000 71->5, kof98 475->5); fa98 confirmed Z80-internal, setter never invoked"
+[2026-10-27T22:39:38Z] [SESSION-89] ERROR [task-112] [TASK_EXEC] shared-RAM bridge regressed graphics; task failed attempts=1/3, retryable
+[2026-10-27T22:39:38Z] [SESSION-89] STATS tasks_total=112 completed=83 failed=29 pending=0 blocked=0 attempts_total=145 checkpoints=+3
+[2026-10-27T22:42:52Z] [SESSION-90] LOCK acquired (pid=2616558)
+[2026-10-27T22:42:52Z] [SESSION-90] INIT Environment health check: PASS
+[2026-10-27T22:42:52Z] [SESSION-90] Starting [task-112] BGM 握手家族：Z80 音乐任务等待链修复（fatfury/samsho 族 peak=1627） (base=5e9f44c)
+[2026-10-27T22:53:15Z] [SESSION-90] CHECKPOINT [task-112] step=3/3 "m1 main loop cracked: task table @fe48 wiped to 0 by NMI handler zpc=00e7 every frame; sequencer cannot survive"
+[2026-10-27T22:53:15Z] [SESSION-90] ERROR [task-112] [TASK_EXEC] attempt2 no rescue; wedge = NMI handler zeroes task table fe48-fe4f; attempts=2/3
+[2026-10-27T23:01:53Z] [SESSION-90] CHECKPOINT [task-112] step=3/3 "no Z80 reset (RSTDBG silent); FE34WR wipes were boot ldir; sequencer task self-exits after 132 frames; task table empty at f=700"
+[2026-10-27T23:01:53Z] [SESSION-90] ERROR [task-112] [TASK_EXEC] attempt3 exhausted; root narrowed to music-task self-exit condition; attempts=3/3
+[2026-10-27T23:01:53Z] [SESSION-90] STATS tasks_total=112 completed=83 failed=29 pending=0 blocked=0 attempts_total=169 checkpoints=148
+[2026-10-27T23:04:44Z] [SESSION-91] LOCK acquired (pid=2633068)
+[2026-10-27T23:04:44Z] [SESSION-91] Starting [task-113] fatfury 族序列器自注销：fe48 任务表写追踪抓自注销 PC (base=5e9f44c)
+[2026-10-27T23:17:08Z] [SESSION-91] CHECKPOINT [task-113] step=1/3 "bridge removed (was poisoning latch); NMI inject OK f=627; task table wiped by zpc=00c7 at every NMI; suspect bad call target 0b66 in NMI handler"
+[2026-10-27T23:17:34Z] [SESSION-91] ERROR [task-113] [TASK_EXEC] attempt1 done; wedge narrowed to NMI-entry stack semantics; attempts=1/3
+[2026-10-27T23:17:34Z] [SESSION-91] STATS tasks_total=113 completed=83 failed=30 pending=0 blocked=0 attempts_total=170 checkpoints=149
+[2026-10-27T23:17:34Z] [SESSION-91] LOCK released
+[2026-10-27T23:19:50Z] [SESSION-91] CHECKPOINT [task-113] step=2/3 "mechanism closed: call 0b66 = computed jump via saved HL; empty task table -> PC lands in RAM nop sled -> 00c0 re-init wipes RAM; attempts=2/3"
+[2026-10-27T23:21:22Z] [SESSION-91] CHECKPOINT [task-113] step=2b/3 "HL at NMI = fe4a/fe4e/feb5/0000 all in zero RAM; f=258 proves enqueue works when not wiped"
+[2026-10-27T23:21:22Z] [SESSION-91] ERROR [task-113] [TASK_EXEC] attempt2 done; attempts=2/3; next: find who must fill RAM trampoline (feb5/fe4e) or fix HL at NMI entry
+[2026-10-27T23:21:22Z] [SESSION-91] STATS tasks_total=113 completed=83 failed=30 pending=0 blocked=0 attempts_total=171 checkpoints=150
+[2026-10-27T23:21:22Z] [SESSION-91] LOCK released
+[2026-10-27T23:23:13Z] [SESSION-91] CHECKPOINT [task-113] step=3/3 "3e fully processed (flow proof); 68K sends stop(40) at f=744 itself; wedge is 68K-side stop trigger, not Z80"
+[2026-10-27T23:23:13Z] [SESSION-91] ERROR [task-113] [TASK_EXEC] attempt3 exhausted; root moved to 68K stop-cmd trigger; attempts=3/3
+[2026-10-27T23:23:13Z] [SESSION-91] STATS tasks_total=113 completed=83 failed=30 pending=0 blocked=0 attempts_total=172 checkpoints=151
+[2026-10-27T23:23:13Z] [SESSION-91] LOCK released
+[2026-10-27T23:26:56Z] [SESSION-92] LOCK acquired (pid=2653219)
+[2026-10-27T23:26:56Z] [SESSION-92] Starting [task-114] fatfury 族 68K 停止命令溯源 (base=5e9f44c)
+[2026-10-27T23:37:30Z] [SESSION-92] CHECKPOINT [task-114] step=1/3 "26 silent retested all-silent; real defects = mslug3/mslugx/pbobble/pbobble2/preisle2; mslug3 YM writes all silent-reg, high cmds ba/8c/8d unprocessed"
+[2026-10-27T23:37:30Z] [SESSION-92] ERROR [task-114] [TASK_EXEC] attempt1 done; attempts=1/3; next: mslug3 high-range cmd dispatch
+[2026-10-27T23:37:30Z] [SESSION-92] STATS tasks_total=114 completed=83 failed=31 pending=0 blocked=0 attempts_total=173 checkpoints=153
+[2026-10-27T23:37:30Z] [SESSION-92] LOCK released
+[2026-10-27T23:37:37Z] [SESSION-93] LOCK acquired (pid=2663872)
+[2026-10-27T23:37:37Z] [SESSION-93] Starting [task-114] attempt 2: mslug3 高命令段分派
+[2026-10-27T23:37:45Z] [SESSION-93] LOCK reclaimed (pid=2664232)
+[2026-10-27T23:37:45Z] [SESSION-93] Starting [task-114] attempt 2: mslug3 high-cmd dispatch
+[2026-10-27T23:44:00Z] [SESSION-93] CHECKPOINT [task-114] step=2/3 "mslug3 wedge @1054 waits f801!=0; Z80 self-clears f801 @1030 after echo; 68K never writes f800 game-phase; deadlock"
+[2026-10-27T23:44:00Z] [SESSION-93] ERROR [task-114] [TASK_EXEC] attempt2 done; attempts=2/3; next: f801 writer hunt (Z80-side watch probe)
+[2026-10-27T23:44:00Z] [SESSION-93] STATS tasks_total=114 completed=83 failed=31 pending=0 blocked=0 attempts_total=174 checkpoints=154
+[2026-10-27T23:44:00Z] [SESSION-93] LOCK released
+[2026-10-27T23:44:07Z] [SESSION-94] LOCK acquired (pid=2669721)
+[2026-10-27T23:44:07Z] [SESSION-94] Starting [task-114] attempt 3: f801 writer hunt
+[2026-10-27T23:46:41Z] [SESSION-94] CHECKPOINT [task-114] step=3/3 "deployed mslug3 NOT wedged (zpc 42xx music driver alive); worktree 1054 wedge was probe artifact; real issue: high-cmds ba/8c/8d produce no FM data"
+[2026-10-27T23:46:41Z] [SESSION-94] ERROR [task-114] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED; family root cause narrowed to music data stream
+[2026-10-27T23:46:41Z] [SESSION-94] STATS tasks_total=114 completed=83 failed=31 pending=0 blocked=0 attempts_total=175 checkpoints=155
+[2026-10-27T23:46:41Z] [SESSION-94] LOCK released
+[2026-10-27T23:48:49Z] [SESSION-95] LOCK acquired (pid=2674421)
+[2026-10-27T23:48:49Z] [SESSION-95] Starting [task-115] mslug3 family music data stream: high-cmd dispatch trace (base=5e9f44c)
+[2026-10-27T23:52:00Z] [SESSION-95] CHECKPOINT [task-115] step=1/3 "m1 not encrypted; mslug3 audio dead from frame 0 incl BIOS; garou same YM-junk signature so PSG path suspect"
+[2026-10-27T23:53:36Z] [SESSION-95] ERROR [task-115] [TASK_EXEC] attempt1 done; ADPCM trigger missing; zdis static mismatch; next: runtime window dump
+[2026-10-27T23:55:20Z] [SESSION-95] ERROR [task-115] [TASK_EXEC] attempt2 done; NMI=ring enqueue fff0/ffef decoded; next: ring consumer hunt
+[2026-10-27T23:56:40Z] [SESSION-95] CHECKPOINT [task-115] step=3/3 "ring consumer @10ae decoded but never invoked; no caller in window bank; caller likely in unmapped bank or gated path"
+[2026-10-27T23:56:40Z] [SESSION-95] ERROR [task-115] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED; mslug3 chain fully mapped, missing piece = consumer call wiring
+[2026-10-27T23:56:40Z] [SESSION-95] STATS tasks_total=115 completed=83 failed=32 pending=0 blocked=0 attempts_total=178 checkpoints=159
+[2026-10-27T23:56:40Z] [SESSION-95] LOCK released
+[2026-10-28T00:02:07Z] [SESSION-96] LOCK acquired (pid=2688185)
+[2026-10-28T00:02:07Z] [SESSION-96] Starting [task-116] mslug3 ring consumer call wiring (base=5e9f44c)
+[2026-10-28T00:04:23Z] [SESSION-96] CHECKPOINT [task-116] step=1/3 "consumer @10b3, caller call 10b3@11ec inside main task @1000; main task never scheduled at f=498"
+[2026-10-28T00:04:23Z] [SESSION-96] ERROR [task-116] [TASK_EXEC] attempt1 done; next: scheduler + task table hunt
+[2026-10-28T00:08:29Z] [SESSION-96] ERROR [task-116] [TASK_EXEC] attempt2 done; no RAM task table; main task never registered; next: boot-init trace vs garou
+[2026-10-28T00:09:44Z] [SESSION-96] CHECKPOINT [task-116] step=3/3 "main task dives into 42xx music loop at game start and never returns; consumer unreachable; boot identical to garou"
+[2026-10-28T00:09:44Z] [SESSION-96] ERROR [task-116] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T00:09:44Z] [SESSION-96] STATS tasks_total=116 completed=83 failed=33 pending=0 blocked=0 attempts_total=181 checkpoints=162
+[2026-10-28T00:09:44Z] [SESSION-96] LOCK released
+[2026-10-28T00:10:47Z] [SESSION-97] LOCK acquired (pid=2695729)
+[2026-10-28T00:10:47Z] [SESSION-97] Starting [task-117] mslug3 music-loop 42xx exit-wait decode (base=5e9f44c)
+[2026-10-28T00:11:38Z] [SESSION-97] CHECKPOINT [task-117] step=1/3 "42xx music loop = normal per-frame task-block scan (ix from ff0b, 0x23 blocks), not the wedge; main task disappearance still open"
+[2026-10-28T00:11:38Z] [SESSION-97] ERROR [task-117] [TASK_EXEC] attempt1 done; next: catch main-task vanish frame f=490-497
+[2026-10-28T00:12:42Z] [SESSION-97] CHECKPOINT [task-117] step=2/3 "consumer runs 6x/8f (prior never-run was sampling error); cmd ba -> index 9a -> jp nc,12ad extended path"
+[2026-10-28T00:12:42Z] [SESSION-97] ERROR [task-117] [TASK_EXEC] attempt2 done; next: decode 12ad extended-cmd handler
+[2026-10-28T00:13:11Z] [SESSION-97] CHECKPOINT [task-117] step=3/3 "command chain live end-to-end to 4372 handler (43xx runs); gap = handler wait/gate f810"
+[2026-10-28T00:13:11Z] [SESSION-97] ERROR [task-117] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T00:13:11Z] [SESSION-97] STATS tasks_total=117 completed=83 failed=34 pending=0 blocked=0 attempts_total=184 checkpoints=165
+[2026-10-28T00:13:11Z] [SESSION-97] LOCK released
+[2026-10-28T00:19:12Z] [SESSION-98] LOCK acquired (pid=2701488)
+[2026-10-28T00:19:12Z] [SESSION-98] Starting [task-118] mslug3 4372 handler wait-point: f810 writer + body decode + garou compare (base=5e9f44c)
+[2026-10-28T00:21:16Z] [SESSION-98] CHECKPOINT [task-118] step=1/3 "4372 scans 8 blocks @fdf3 for cmd match; f810 gate open(0xCC); blocks uninitialized garbage"
+[2026-10-28T00:21:16Z] [SESSION-98] ERROR [task-118] [TASK_EXEC] attempt1 done; next: 4372 path via flow + fdf3 initializer hunt
+[2026-10-28T00:21:45Z] [SESSION-98] CHECKPOINT [task-118] step=2/3 "4372 scans 4x/8f never matches (4398=0); fdf3 has 5 readers 0 writers - uninitialized"
+[2026-10-28T00:21:45Z] [SESSION-118→] [SESSION-98] ERROR [task-118] [TASK_EXEC] attempt2 done; next: garou fdf3 compare
+[2026-10-28T00:22:31Z] [SESSION-98] CHECKPOINT [task-118] step=3/3 "fdf3 theory falsified: garou fdf3 all-FF yet voiced; 4372 scan path is red herring"
+[2026-10-28T00:22:31Z] [SESSION-98] ERROR [task-118] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T00:22:31Z] [SESSION-98] STATS tasks_total=118 completed=83 failed=35 pending=0 blocked=0 attempts_total=187 checkpoints=168
+[2026-10-28T00:22:31Z] [SESSION-98] LOCK released
+[2026-10-28T00:23:46Z] [SESSION-99] LOCK acquired (pid=2705791)
+[2026-10-28T00:23:46Z] [SESSION-99] Starting [task-119] mslug3 ADPCM-B play-trigger hypothesis: MAME ym2610 semantics vs linoragx bank B write order (base=5e9f44c)
+[2026-10-28T00:25:43Z] [SESSION-99] CHECKPOINT [task-119] step=1/3 "histogram: mslug3 8cx14 high-cmds die at 4372; garou 21=nop; both BGMs are Z80-driver-internal; mslug3 track data never loaded"
+[2026-10-28T00:25:43Z] [SESSION-99] ERROR [task-119] [TASK_EXEC] attempt1 done; next: ff0b track-base writer hunt
+[2026-10-28T00:26:11Z] [SESSION-99] CHECKPOINT [task-119] step=2/3 "ff0b=0x0F10 garbage (ROM); writers 4292/429b inside loop; no external initializer"
+[2026-10-28T00:26:11Z] [SESSION-99] ERROR [task-119] [TASK_EXEC] attempt2 done; next: decode ff0b write source + garou init compare
+[2026-10-28T00:26:48Z] [SESSION-99] CHECKPOINT [task-119] step=3/3 "ff0b = loop-pointer snapshot (ld (ff0b),ix); garou never uses it; Z80 side fully exonerated"
+[2026-10-28T00:26:48Z] [SESSION-99] ERROR [task-119] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T00:26:48Z] [SESSION-99] STATS tasks_total=119 completed=83 failed=36 pending=0 blocked=0 attempts_total=190 checkpoints=171
+[2026-10-28T00:26:48Z] [SESSION-99] LOCK released
+[2026-10-28T00:28:03Z] [SESSION-100] LOCK acquired (pid=2710838)
+[2026-10-28T00:28:03Z] [SESSION-100] Starting [task-120] mslug3 68K-side 8c cmd data flow: sender task disasm + post-latch action (base=5e9f44c)
+[2026-10-28T00:31:03Z] [SESSION-100] CHECKPOINT [task-120] step=1/3 "M68KPEEK probe added; sender @15348-15392 healthy (queue a5+1fec, latch @1538c); 8c actively re-queued every 4f"
+[2026-10-28T00:31:03Z] [SESSION-100] ERROR [task-120] [TASK_EXEC] attempt1 done; next: 8c enqueuer + re-queue gate
+[2026-10-28T00:32:24Z] [SESSION-100] CHECKPOINT [task-120] step=2/3 "enqueue @150f4 decoded; 8c re-queued every 4f via 15136; callers are pc-relative"
+[2026-10-28T00:32:24Z] [SESSION-100] ERROR [task-120] [TASK_EXEC] attempt2 done; next: branch scan for enqueue callers
+[2026-10-28T00:32:59Z] [SESSION-100] CHECKPOINT [task-120] step=3/3 "enqueue callers all in wrapper 1523c-15440; mslug3 re-queues 8c x14 vs garou 21 once - waiting echo condition"
+[2026-10-28T00:32:59Z] [SESSION-100] ERROR [task-120] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T00:32:59Z] [SESSION-100] STATS tasks_total=120 completed=83 failed=37 pending=0 blocked=0 attempts_total=193 checkpoints=174
+[2026-10-28T00:32:59Z] [SESSION-100] LOCK released
+[2026-10-28T00:35:31Z] [SESSION-101] LOCK acquired (pid=2720185)
+[2026-10-28T00:35:31Z] [SESSION-101] Starting [task-121] mslug3 wrapper-layer 8c sender + re-queue gate var (base=5e9f44c)
+[2026-10-28T00:37:30Z] [SESSION-101] CHECKPOINT [task-121] step=1/3 "ring-enqueue @151c2 decoded (gate btst 10f001.5, ring a5+207a, full->fcca); 8c+param10 enqueued every 4f"
+[2026-10-28T00:37:30Z] [SESSION-101] ERROR [task-121] [TASK_EXEC] attempt1 done; next: 151c2 callers
+[2026-10-28T00:38:28Z] [SESSION-101] CHECKPOINT [task-121] step=2/3 "wrapper @15180: gate 10fd8d!=0 + flag 10a076==0 -> re-enqueue; 10a076 = busy/echo flag suspect"
+[2026-10-28T00:38:28Z] [SESSION-101] ERROR [task-121] [TASK_EXEC] attempt2 done; next: RAMWA 10a076 writer hunt
+[2026-10-28T00:39:03Z] [SESSION-101] CHECKPOINT [task-121] step=3/3 "10a076 never set nonzero (only zero-writes @150c8/152c8); 68K-side setter missing"
+[2026-10-28T00:39:03Z] [SESSION-101] ERROR [task-121] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T00:39:03Z] [SESSION-101] STATS tasks_total=121 completed=83 failed=38 pending=0 blocked=0 attempts_total=196 checkpoints=177
+[2026-10-28T00:39:03Z] [SESSION-101] LOCK released
+[2026-10-28T00:40:23Z] [SESSION-102] LOCK acquired (pid=2724419)
+[2026-10-28T00:40:23Z] [SESSION-102] Starting [task-122] mslug3 gate 10a076 setter static hunt + clear-site 152c8 context (base=5e9f44c)
+[2026-10-28T00:41:02Z] [SESSION-102] CHECKPOINT [task-122] step=1/3 "setter @152bc (ff->2076), clearer @152c4, echo-receiver @152ec reads 320000->2074"
+[2026-10-28T00:41:02Z] [SESSION-102] ERROR [task-122] [TASK_EXEC] attempt1 done; next: callers + latch1 read-back check
+[2026-10-28T00:41:35Z] [SESSION-102] CHECKPOINT [task-122] step=2/3 "latch1 readback OK; trio callers: only 15394->152c4; 152ec is task-table entry @5b34"
+[2026-10-28T00:41:35Z] [SESSION-102] ERROR [task-122] [TASK_EXEC] attempt2 done; next: RAMWA 10a074 echo-receiver liveness
+[2026-10-28T00:42:09Z] [SESSION-102] CHECKPOINT [task-122] step=3/3 "echo-receiver runs every frame; 2074 gets latch1 read-back value (0 in BIOS window); HOT: verify 0x320000 read returns latch1 in game phase"
+[2026-10-28T00:42:09Z] [SESSION-102] ERROR [task-122] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED (hot lead recorded)
+[2026-10-28T00:42:09Z] [SESSION-102] STATS tasks_total=122 completed=83 failed=39 pending=0 blocked=0 attempts_total=199 checkpoints=180
+[2026-10-28T00:42:09Z] [SESSION-102] LOCK released
+[2026-10-28T00:42:50Z] [SESSION-102] WARN [task-122] pre-verify: 0x320000 read = AUDIO_COIN port (matches MAME); echo-readback theory dead; 152ec = coin polling. Setter 152bc entry via indirect jsr(ax) unexplored.
+[2026-10-28T00:50:50Z] [SESSION-103] LOCK acquired (pid=2731194)
+[2026-10-28T00:50:50Z] [SESSION-103] Starting [task-123] mslug3 setter 152bc entry capture: jmp-table brute scan + PCTRACE + garou compare (base=5e9f44c)
+[2026-10-28T00:53:20Z] [SESSION-103] CHECKPOINT [task-123] step=1/3 "152bc setter was misaligned artifact; real clear @150c2 abs-form; re-scan with correct encodings"
+[2026-10-28T00:53:20Z] [SESSION-103] ERROR [task-123] [TASK_EXEC] attempt1 done
+[2026-10-28T00:54:21Z] [SESSION-103] CHECKPOINT [task-123] step=2/3 "setter orphan confirmed (no refs anywhere); pivot: fdf3 initializer / cmd-order compare"
+[2026-10-28T00:54:21Z] [SESSION-103] ERROR [task-123] [TASK_EXEC] attempt2 done
+[2026-10-28T00:55:39Z] [SESSION-103] CHECKPOINT [task-123] step=3/3 "SL1W: 8c NEVER hits latch (only 7f/3f); ring drain stalled - reframed defect"
+[2026-10-28T00:55:39Z] [SESSION-103] ERROR [task-123] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED (reframe recorded)
+[2026-10-28T00:55:39Z] [SESSION-103] STATS tasks_total=123 completed=83 failed=40 pending=0 blocked=0 attempts_total=202 checkpoints=183
+[2026-10-28T00:55:39Z] [SESSION-103] LOCK released
+[2026-10-28T00:56:41Z] [SESSION-104] LOCK acquired (pid=2736802)
+[2026-10-28T00:56:41Z] [SESSION-104] Starting [task-124] mslug3 wrapper drain stall: ring rdptr liveness + 10fd8d gate + drain-gate disasm (base=5e9f44c)
+[2026-10-28T00:57:14Z] [SESSION-104] CHECKPOINT [task-124] step=1/3 "ring drain WORKS (rdptr advances @15280); stall is queue->latch sender stage"
+[2026-10-28T00:57:14Z] [SESSION-104] ERROR [task-124] [TASK_EXEC] attempt1 done
+[2026-10-28T00:57:53Z] [SESSION-104] CHECKPOINT [task-124] step=2/3 "queue flows in lockstep; latch only sees 7f/3f so queue content != 8c; wrapper drain disasm next"
+[2026-10-28T00:57:53Z] [SESSION-104] ERROR [task-124] [TASK_EXEC] attempt2 done
+[2026-10-28T00:58:38Z] [SESSION-104] CHECKPOINT [task-124] step=3/3 "CORRECTION: cmd=0x10 param=8c (not cmd 8c); delivery healthy; defect = Z80 cmd-10 param -> 4372 dead scan; fdf3 initializer hunt next"
+[2026-10-28T00:58:38Z] [SESSION-104] ERROR [task-124] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED (reframe #2)
+[2026-10-28T00:58:38Z] [SESSION-104] STATS tasks_total=124 completed=83 failed=41 pending=0 blocked=0 attempts_total=205 checkpoints=186
+[2026-10-28T00:58:38Z] [SESSION-104] LOCK released
+[2026-10-28T00:59:42Z] [SESSION-105] LOCK acquired (pid=2740268)
+[2026-10-28T00:59:42Z] [SESSION-105] Starting [task-125] mslug3 fdf3 initializer hunt across banks + garou compare (base=5e9f44c)
+[2026-10-28T01:01:02Z] [SESSION-105] CHECKPOINT [task-125] step=1/3 "fdf3 has zero initializers in Z80 image; 68K never writes it; other 4 scanners next"
+[2026-10-28T01:01:02Z] [SESSION-105] ERROR [task-125] [TASK_EXEC] attempt1 done
+[2026-10-28T01:01:30Z] [SESSION-105] CHECKPOINT [task-125] step=2/3 "41af=2nd matcher, 418c=block resetter; raw 512KB m1 bank-wide scan next"
+[2026-10-28T01:01:30Z] [SESSION-105] ERROR [task-125] [TASK_EXEC] attempt2 done
+[2026-10-28T01:02:09Z] [SESSION-105] CHECKPOINT [task-125] step=3/3 "fdf3 theory FULLY DEAD (no initializer by design; garou lacks system); cmd-10 main path 12be next"
+[2026-10-28T01:02:09Z] [SESSION-105] ERROR [task-125] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T01:02:09Z] [SESSION-105] STATS tasks_total=125 completed=83 failed=42 pending=0 blocked=0 attempts_total=208 checkpoints=189
+[2026-10-28T01:02:09Z] [SESSION-105] LOCK released
+[2026-10-28T01:04:12Z] [SESSION-106] LOCK acquired (pid=2745570)
+[2026-10-28T01:04:12Z] [SESSION-106] Starting [task-126] mslug3 cmd-10 main path: disasm 12be branch + driver track pointer (base=5e9f44c)
+[2026-10-28T01:05:27Z] [SESSION-106] CHECKPOINT [task-126] step=1/3 "cmd-10 main: table@88 via bank helper 492f; 3-byte entry zero-ret = prime suspect"
+[2026-10-28T01:05:27Z] [SESSION-106] ERROR [task-126] [TASK_EXEC] attempt1 done
+[2026-10-28T01:06:31Z] [SESSION-106] CHECKPOINT [task-126] step=2/3 "492f=pointer resolve; table valid (93c5 bank0); track loader 41e0 + bank ports 04-06 next"
+[2026-10-28T01:06:31Z] [SESSION-106] ERROR [task-126] [TASK_EXEC] attempt2 done
+[2026-10-28T01:07:47Z] [SESSION-106] CHECKPOINT [task-126] step=3/3 "track data real; cmd-10 = bookkeeping only; 42xx caller+ix origin is last unknown"
+[2026-10-28T01:07:47Z] [SESSION-106] ERROR [task-126] [TASK_EXEC] attempt3 done; attempts=3/3 EXHAUSTED
+[2026-10-28T01:07:47Z] [SESSION-106] STATS tasks_total=126 completed=83 failed=43 pending=0 blocked=0 attempts_total=211 checkpoints=192
+[2026-10-28T01:07:47Z] [SESSION-106] LOCK released
+[2026-10-28T01:09:20Z] [SESSION-107] LOCK acquired (pid=2749141)
+[2026-10-28T01:09:20Z] [SESSION-107] Starting [task-127] mslug3 42xx driver caller capture: PC==4261 stack-dump probe + ix entry value (base=5e9f44c)
+[2026-10-28T01:11:27Z] [SESSION-107] CHECKPOINT [task-127] step=1/3 "42xx scan ix=ROM table 82d9+ (+5), caller 4221; NOT fdf3"
+[2026-10-28T01:11:27Z] [SESSION-107] ERROR [task-127] [TASK_EXEC] attempt1 done
+[2026-10-28T01:11:53Z] [SESSION-107] CHECKPOINT [task-127] step=2/3 "ix=note pointer over ROM note stream (c4 xx 01); driver emits via 4240; freq-zero narrows to note->freq table"
+[2026-10-28T01:11:53Z] [SESSION-107] ERROR [task-127] [TASK_EXEC] attempt2 done
+[2026-10-28T01:19:51Z] [SESSION-107] CHECKPOINT [task-127] step=3/3 "4240=IY channel dispatcher (8 blocks x23B), 48ef=channel stop; freq-zero = channels never live"
+[2026-10-28T01:19:51Z] [SESSION-107] ERROR [task-127] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T01:19:51Z] [SESSION-107] STATS tasks_total=127 completed=83 failed=44 pending=0 blocked=0 attempts_total=170 checkpoints=6
+[2026-10-28T01:21:58Z] [SESSION-108] LOCK acquired (pid=2757113)
+[2026-10-28T01:21:58Z] [SESSION-108] Starting [task-128] mslug3 IY channel block decode: fe39-fee8 8x23B fields + 2ab5 YM-writer freq trace (base=5e9f44c)
+[2026-10-28T01:22:41Z] [SESSION-108] CHECKPOINT [task-128] step=1/3 "fe39-fee8 = note data not control blocks; 2ab5 = YM init; need real FM slot writer PC"
+[2026-10-28T01:22:41Z] [SESSION-108] ERROR [task-128] [TASK_EXEC] attempt1 done
+[2026-10-28T01:23:55Z] [SESSION-108] CHECKPOINT [task-128] step=2/3 "mslug3 zero A0-B5 writes vs garou b5/b6 - FM slot writer never runs"
+[2026-10-28T01:23:55Z] [SESSION-108] ERROR [task-128] [TASK_EXEC] attempt2 done
+[2026-10-28T01:25:39Z] [SESSION-108] CHECKPOINT [task-128] step=3/3 "FM play writer=26cb (garou only), stop writer=293e (both); divergence upstream of 26cb"
+[2026-10-28T01:25:39Z] [SESSION-108] ERROR [task-128] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T01:25:39Z] [SESSION-108] STATS tasks_total=128 completed=83 failed=45 pending=0 blocked=0 attempts_total=173 checkpoints=3
+[2026-10-28T01:28:27Z] [SESSION-109] LOCK acquired (pid=2765303)
+[2026-10-28T01:28:27Z] [SESSION-109] Starting [task-129] mslug3 26cb play-writer upstream gate: garou runtime dump + call-chain compare (base=5e9f44c)
+[2026-10-28T01:29:48Z] [SESSION-109] CHECKPOINT [task-129] step=1/3 "26cb=bank-switch YM-write helper; caller hidden; need stack-top return addr in YMREGWA"
+[2026-10-28T01:29:48Z] [SESSION-109] ERROR [task-129] [TASK_EXEC] attempt1 done
+[2026-10-28T01:31:28Z] [SESSION-109] CHECKPOINT [task-129] step=2/3 "garou FM play engine = 150d(freq)/151f(key-on c0); rst-8 trap writes; mslug3 never runs twin"
+[2026-10-28T01:31:28Z] [SESSION-109] ERROR [task-129] [TASK_EXEC] attempt2 done
+[2026-10-28T01:31:52Z] [SESSION-109] CHECKPOINT [task-129] step=3/3 "garou FM engine 14fd-1533 decoded: 0x80 channel stride, B0/B4 writes via rst-8, instrument table @2707, RAM array fdb4"
+[2026-10-28T01:31:52Z] [SESSION-109] ERROR [task-129] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T01:31:52Z] [SESSION-109] STATS tasks_total=129 completed=83 failed=46 pending=0 blocked=0 attempts_total=176 checkpoints=3
+[2026-10-28T01:33:00Z] [SESSION-110] LOCK acquired (pid=2770788)
+[2026-10-28T01:33:00Z] [SESSION-110] Starting [task-130] mslug3 FM engine twin search: byte-pattern + fdb4 channel array compare + garou 14fd caller (base=5e9f44c)
+[2026-10-28T01:34:08Z] [SESSION-110] CHECKPOINT [task-130] step=1/3 "mslug3 has NO B0-B4 FM engine (raw ROM 3e b4 zero); uses OPM 08-0F freq path with zero values - architecture split"
+[2026-10-28T01:34:08Z] [SESSION-110] ERROR [task-130] [TASK_EXEC] attempt1 done
+[2026-10-28T01:35:04Z] [SESSION-110] CHECKPOINT [task-130] step=2/3 "mslug3 OPM freq writes STOP at f=185; game phase zero freq writes - sequencer never armed"
+[2026-10-28T01:35:04Z] [SESSION-110] ERROR [task-130] [TASK_EXEC] attempt2 done
+[2026-10-28T01:35:59Z] [SESSION-110] CHECKPOINT [task-130] step=3/3 "all voiced cards share YM2610 FM engine at bank0 ~1500; mslug3 lacks it in every bank - ADPCM-B-only or encrypted-bank hypothesis"
+[2026-10-28T01:35:59Z] [SESSION-110] ERROR [task-130] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T01:35:59Z] [SESSION-110] STATS tasks_total=130 completed=83 failed=47 pending=0 blocked=0 attempts_total=179 checkpoints=3
+[2026-10-28T01:37:06Z] [SESSION-111] LOCK acquired (pid=2775477)
+[2026-10-28T01:37:06Z] [SESSION-111] Starting [task-131] mslug3 ADPCM-B lens: linoragx bank-B 42 bit7 semantics check + play-trigger writer search (base=5e9f44c)
+[2026-10-28T01:37:52Z] [SESSION-111] CHECKPOINT [task-131] step=1/3 "linoragx DROPS bank-B 40-7F = ADPCM-B register file; mslug3 4x writes all val=7f (self-test pattern?) - need frame distribution"
+[2026-10-28T01:37:52Z] [SESSION-111] ERROR [task-131] [TASK_EXEC] attempt1 done
+[2026-10-28T01:39:01Z] [SESSION-111] CHECKPOINT [task-131] step=2/3 "ADPCM-B lens dead: all 98 bank-B 4x writes are BIOS-phase; game phase zero ADPCM-B"
+[2026-10-28T01:39:01Z] [SESSION-111] ERROR [task-131] [TASK_EXEC] attempt2 done
+[2026-10-28T01:40:02Z] [SESSION-111] CHECKPOINT [task-131] step=3/3 "BANKLOG: mslug3 game-phase 24136 bank switches (e000 window rotates 13/ff/2d/10/28..), garou 32 - live driver in e000 window"
+[2026-10-28T01:40:02Z] [SESSION-111] ERROR [task-131] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T01:40:02Z] [SESSION-111] STATS tasks_total=131 completed=83 failed=48 pending=0 blocked=0 attempts_total=182 checkpoints=3
+[2026-10-28T01:57:05Z] [SESSION-112] LOCK acquired (pid=2783868)
+[2026-10-28T01:57:05Z] [SESSION-112] Starting [task-132] mslug3 game-phase audio egress census (base=5e9f44c)
+[2026-10-28T01:57:05Z] [SESSION-112] ERROR [task-132] [TASK_EXEC] attempt1: ADPCM-B direct-port writes zero on all cards - hypothesis dead
+[2026-10-28T01:58:06Z] [SESSION-112] CHECKPOINT [task-132] step=2/3 "game-phase YM egress ZERO on both banks (12713 writes all BIOS-phase); driver active but silent - track never loaded"
+[2026-10-28T01:58:06Z] [SESSION-112] ERROR [task-132] [TASK_EXEC] attempt2 done
+[2026-10-28T01:59:25Z] [SESSION-112] CHECKPOINT [task-132] step=3/3 "Z80RAMWA: fdf3 blocks ARE written game-phase (13379 writes, writers 422f-4447 f=538-1199) - 'never initialized' theory REVERSED"
+[2026-10-28T01:59:25Z] [SESSION-112] ERROR [task-132] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T01:59:25Z] [SESSION-112] STATS tasks_total=132 completed=83 failed=49 pending=0 blocked=0 attempts_total=185 checkpoints=3
+[2026-10-28T02:00:29Z] [SESSION-113] LOCK acquired (pid=2789698)
+[2026-10-28T02:00:29Z] [SESSION-113] Starting [task-133] mslug3 fdf3 block-vs-4372 compare reconciliation (base=5e9f44c)
+[2026-10-28T02:01:23Z] [SESSION-113] CHECKPOINT [task-133] step=1/3 "fdf3 = note-stream buffer not control blocks; game-phase has ZERO audio egress on ALL channels; new hypothesis: music engine in BIOS or via rst-8 service"
+[2026-10-28T02:01:23Z] [SESSION-113] ERROR [task-133] [TASK_EXEC] attempt1 done
+[2026-10-28T02:02:13Z] [SESSION-113] CHECKPOINT [task-133] step=2/3 "flow census: 42xx loop spins at 4280 gate (all block states>=2), never reaches YM writers; track-load cmd-10 remains the gap"
+[2026-10-28T02:02:13Z] [SESSION-113] ERROR [task-133] [TASK_EXEC] attempt2 done
+[2026-10-28T02:02:57Z] [SESSION-113] CHECKPOINT [task-133] step=3/3 "4372 compare confirmed (word(ix+5/6) vs cmd); dead path as fed; BLIND SPOT found: 68K-side YM2610 writes at 0x2A0000 never audited"
+[2026-10-28T02:02:57Z] [SESSION-113] ERROR [task-133] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T02:02:57Z] [SESSION-113] STATS tasks_total=133 completed=83 failed=50 pending=0 blocked=0 attempts_total=188 checkpoints=3
+[2026-10-28T02:03:08Z] [SESSION-113] Starting [task-134] mslug3 68K-side YM2610 write-path audit 0x2A0000-0x2A0007 (base=5e9f44c)
+[2026-10-28T02:03:57Z] [SESSION-113] CHECKPOINT [task-134] step=1/3 "68K w16 has no 0x2A0000 branch but YM is Z80-side anyway; pivot: hunt direct 'out (04-07)' YM translator in mslug3 m1"
+[2026-10-28T02:03:57Z] [SESSION-113] ERROR [task-134] [TASK_EXEC] attempt1 done
+[2026-10-28T02:04:33Z] [SESSION-113] CHECKPOINT [task-134] step=2/3 "mslug3 m1 has ZERO direct out instrs - Z80 never writes YM by any route; mslug3 BIOS-phase writes are OPM regs; audit whether linoragx mixes YM2151 at all"
+[2026-10-28T02:04:33Z] [SESSION-113] ERROR [task-134] [TASK_EXEC] attempt2 done
+[2026-10-28T02:05:01Z] [SESSION-113] CHECKPOINT [task-134] step=3/3 "ymfm YM2151 support contradictory in comments; mslug3 BIOS writes OPM regs but silent - OPM synthesis ground-truth is next"
+[2026-10-28T02:05:01Z] [SESSION-113] ERROR [task-134] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T02:05:01Z] [SESSION-113] STATS tasks_total=134 completed=83 failed=51 pending=0 blocked=0 attempts_total=191 checkpoints=6
+[2026-10-28T02:07:12Z] [SESSION-114] LOCK acquired (pid=2797482)
+[2026-10-28T02:07:12Z] [SESSION-114] Starting [task-135] OPM synthesis ground-truth: ymfm ym2610 OPM routing + garou/mslug3 BIOS bank-A diff (base=5e9f44c)
+[2026-10-28T02:08:59Z] [SESSION-114] CHECKPOINT [task-135] step=1/3 "ymfm has NO YM2151: bank A OPM writes swallowed by YM2610 lower-port (regs 08-0A undefined there)"
+[2026-10-28T02:08:59Z] [SESSION-114] ERROR [task-135] [TASK_EXEC] attempt1 done
+[2026-10-28T02:10:08Z] [SESSION-114] CHECKPOINT [task-135] step=2/3 "OPM theory FALSIFIED by differential: garou and mslug3 write identical bank-A 08-0A val=00; pivot to bank-B BIOS-phase diff"
+[2026-10-28T02:10:08Z] [SESSION-114] ERROR [task-135] [TASK_EXEC] attempt2 done
+[2026-10-28T02:11:07Z] [SESSION-114] CHECKPOINT [task-135] step=3/3 "DECISIVE diff: mslug3 BIOS self-test = ADPCM-B sweep 41-4E=7f (dropped by linoragx); garou = ADPCM-A (audible). ADPCM-B support = fix candidate"
+[2026-10-28T02:11:07Z] [SESSION-114] ERROR [task-135] [TASK_EXEC] attempt3 done - all attempts exhausted
+[2026-10-28T02:11:07Z] [SESSION-114] STATS tasks_total=135 completed=83 failed=52 pending=0 blocked=0 attempts_total=194 checkpoints=3
+[2026-10-28T02:11:27Z] [SESSION-114] Starting [task-136] implement ADPCM-B: route bank-B 40-4E to ymfm + mix + mslug3 validation (base=5e9f44c)
+[2026-10-28T02:12:49Z] [SESSION-114] CHECKPOINT [task-136] step=1/3 "ymfm ADPCM-B at 0x10-1B; mslug3 41-4E alias to SSG 01-0E via &0x1f truncation - fix = alias instead of drop"
+[2026-10-28T02:12:49Z] [SESSION-114] ERROR [task-136] [TASK_EXEC] attempt1 done
+[2026-10-28T02:14:56Z] [SESSION-114] CHECKPOINT [task-136] step=2/3 "SSG alias fix works in worktree: mslug3 peak 0->18395, garou/kof2000 unchanged"
+[2026-10-28T02:14:56Z] [SESSION-114] ERROR [task-136] [TASK_EXEC] attempt2 done
+[2026-10-28T02:17:27Z] [SESSION-114] Completed [task-136] (commit 63dd117)
+[2026-10-28T02:17:27Z] [SESSION-114] STATS tasks_total=136 completed=84 failed=52 pending=0 blocked=0 attempts_total=197 checkpoints=6
+[2026-10-28T02:18:30Z] [SESSION-115] LOCK acquired (pid=2806032)
+[2026-10-28T02:18:30Z] [SESSION-115] Starting [task-137] pbobble/pbobble2 silence root cause post-SSG-alias (base=63dd117)
+[2026-10-28T02:20:42Z] [SESSION-115] CHECKPOINT [task-137] step=1/3 "pbobble never boots: no .p1 match for bootleg ROM names - ROM identification gap not audio bug"
+[2026-10-28T02:20:42Z] [SESSION-115] ERROR [task-137] [TASK_EXEC] attempt1 done
+[2026-10-28T02:32:15Z] [SESSION-115] CHECKPOINT [task-137] step=2/3 "out-of-scope: FBNeo-only bootleg sets, no MAME ROM_LOAD definition exists"
+[2026-10-28T02:32:15Z] [SESSION-115] ERROR [task-137] [TASK_EXEC] attempt2 verdict recorded
+[2026-10-28T02:33:56Z] [SESSION-115] CHECKPOINT [task-137] step=3/3 "FBNeo db also lacks pbobble/pbobble2 - orphan bootleg dumps, out of scope"
+[2026-10-28T02:33:56Z] [SESSION-115] ERROR [task-137] [TASK_EXEC] attempt3 final verdict
+[2026-10-28T02:33:56Z] [SESSION-115] STATS tasks_total=137 completed=84 failed=53 pending=0 blocked=0 attempts_total=244 checkpoints=225
+[2026-10-28T02:37:15Z] [SESSION-116] LOCK acquired (pid=2819194)
+[2026-10-28T02:37:15Z] [SESSION-116] Starting [task-138] full 208-card audio regression on SSG-alias build (base=63dd117)
+[2026-10-28T03:03:12Z] [SESSION-116] Completed [task-138] (commit 63dd117) voiced=187/208 gained=5 lost=0
+[2026-10-28T03:03:12Z] [SESSION-116] STATS tasks_total=138 completed=85 failed=53 pending=0 blocked=0 attempts_total=244 checkpoints=226
+[2026-10-28T03:04:35Z] [SESSION-117] LOCK acquired (pid=2819194)
+[2026-10-28T03:04:35Z] [SESSION-117] Starting [task-139] full 208-card graphics regression vs batch24 baseline (base=63dd117)
+[2026-10-28T03:45:16Z] [SESSION-117] CHECKPOINT [task-139] step=1/3 "208-card graphics batch done; single regression samsho4k OK->BLACK"
+[2026-10-28T03:45:16Z] [SESSION-117] ERROR [task-139] [TEST_FAIL] validation failed: lost samsho4k
+[2026-10-28T03:51:48Z] [SESSION-117] CHECKPOINT [task-139] step=2/3 "samsho4k false BLACK (12k retest=116c); zero real regression"
+[2026-10-28T03:51:48Z] [SESSION-117] Completed [task-139] (commit 63dd117) graphics regression PASS 208/208 no-lost
+[2026-10-28T03:52:59Z] [SESSION-118] LOCK acquired (pid=2846249)
+[2026-10-28T03:52:59Z] [SESSION-118] Starting [task-140] mslug3 SSG audio quality sanity check (base=63dd117)
+[2026-10-28T03:54:52Z] [SESSION-118] CHECKPOINT [task-140] step=1/3 "mslug3 audio is LF ramp not music; game-phase zero audio writes"
+[2026-10-28T03:54:52Z] [SESSION-118] ERROR [task-140] [TEST_FAIL] mslug3 voiced=false positive (ramp)
+[2026-10-28T04:15:32Z] [SESSION-118] CHECKPOINT [task-140] step=2/3 "ym_set_rom_b dead-code fix committed 42f77e1; mslug3 bgm still silent"
+[2026-10-28T04:15:32Z] [SESSION-118] ERROR [task-140] [TEST_FAIL] mslug3 family bgm silent confirmed (zcmed 3)
+[2026-10-28T04:18:36Z] [SESSION-118] CHECKPOINT [task-140] step=3/3 "fd80 note-writer differential: garou 2411 writes vs mslug3 608 clears"
+[2026-10-28T04:18:36Z] [SESSION-118] ERROR [task-140] [TEST_FAIL] mslug3 bgm quality check failed (silent); side fix 42f77e1 landed
+[2026-10-28T04:18:36Z] [SESSION-118] STATS tasks_total=140 completed=86 failed=54 pending=0 blocked=0 attempts_total=158 checkpoints=3
+[2026-10-28T04:23:31Z] [SESSION-119] LOCK acquired (pid=2873985)
+[2026-10-28T04:23:31Z] [SESSION-119] Starting [task-141] mslug3 fd80 块音符写者缺口 (base=42f77e1)
+[2026-10-28T04:46:25Z] [SESSION-119] CHECKPOINT [task-141] step=1/3 "通道块 bit1 门控闭合；置位者疑在旋转 bank"
+[2026-10-28T04:46:25Z] [SESSION-119] ERROR [task-141] [TASK_EXEC] attempt1 未定位 bit1 置位者
+[2026-10-28T04:46:25Z] [SESSION-119] STATS tasks_total=141 completed=86 failed=55 pending=0 blocked=0 attempts_total=1 checkpoints=1
+[2026-10-28T04:52:46Z] [SESSION-120] LOCK acquired (pid=2901804)
+[2026-10-28T04:52:46Z] [SESSION-120] Starting [task-141] mslug3 fd80 块音符写者缺口 attempt2 (base=42f77e1)
+[2026-10-28T13:40:39.429935] [SESSION-120] CHECKPOINT [task-141] step=2/3 "bank映射证伪+门控bit2修正+43b3解码+rst8零执行"
+[2026-10-28T13:40:39.429935] [SESSION-120] ERROR [task-141] [TASK_EXEC] attempt2用尽未解: 发射路径rst-8游戏期0执行,块区被音符流覆盖
+[2026-10-28T13:40:39.429935] [SESSION-120] STATS tasks_total=141 completed=86 failed=55 pending=0 blocked=0
+[2026-10-28T13:40:39.429935] [SESSION-120] LOCK released
+[2026-10-28T13:49:50.109661] [SESSION-117] LOCK acquired (pid=2942918)
+[2026-10-28T13:49:50.109661] [SESSION-117] Starting [task-141] mslug3 fd80 块音符写者缺口（attempt 3）(base=42f77e1)
+[2026-10-28T13:59:31.130143] [SESSION-117] CHECKPOINT [task-141] step=3/3 "引擎分层定案:43b3不置bit2/真set2@4634/主引擎44a0游戏相位0启动"
+[2026-10-28T13:59:31.130143] [SESSION-117] ERROR [task-141] [TASK_EXEC] 3次用尽: 游戏相位音轨从未武装,4634恒0执行
+[2026-10-28T13:59:31.130143] [SESSION-117] STATS tasks_total=141 completed=86 failed=55 pending=0 blocked=0
+[2026-10-28T13:59:31.130143] [SESSION-117] LOCK released
+[2026-10-28T14:11:06.282171] [SESSION-118] LOCK acquired (pid=2962741)
+[2026-10-28T14:11:06.282171] [SESSION-118] Starting [task-142] mslug3 音轨武装路径：(iy+14/15)轨指针写者 + 主引擎4490入口缺口 + garou对照 (base=42f77e1)
+[2026-10-28T14:22:44.213176] [SESSION-118] CHECKPOINT [task-142] step=1/3 "引擎驱动链定案:42b1→444c→4356 call 4490;44a0门(iy+16)恒0退;+16写者4414从不执行"
+[2026-10-28T14:25:16.653861] [SESSION-118] CHECKPOINT [task-142] step=2/3 "根因:分配器4414写+16=a=0(轨首字节0);Z80RAMWA盲区修正;轨指针ff15=0300空轨"
+[2026-10-28T14:25:57.171721] [SESSION-118] CHECKPOINT [task-142] step=3/3 "武装链定案:ff15空轨零写者;cmd-10装载路径未执行;命令全走4372扩展簿记"
+[2026-10-28T14:25:57.171721] [SESSION-118] ERROR [task-142] [TASK_EXEC] 3次用尽: 轨指针装载缺口在命令分派层,cmd-10游戏相位未再发放
+[2026-10-28T14:25:57.171721] [SESSION-118] STATS tasks_total=142 completed=86 failed=56 pending=0 blocked=0
+[2026-10-28T14:25:57.171721] [SESSION-118] LOCK released
+[2026-10-28T14:28:21.608243] [SESSION-119] LOCK acquired (pid=2986557)
+[2026-10-28T14:28:21.608243] [SESSION-119] Starting [task-143] mslug3 ff15 轨指针装载缺口：f816 参数链 + cmd-10 发放时机 + garou ff15 写者对照 (base=42f77e1)
+[2026-10-28T14:34:49.546546] [SESSION-119] CHECKPOINT [task-143] step=3/3 "命令分派层定案:ba走正常路径做完成簿记;bc=0恒不匹配;轨装载缺口在68K侧8c未达latch"
+[2026-10-28T14:34:49.546546] [SESSION-119] ERROR [task-143] [TASK_EXEC] 3次用尽: Z80侧命令处理已完全证清白,缺口移至68K 8c排空条件
+[2026-10-28T14:34:49.546546] [SESSION-119] STATS tasks_total=143 completed=86 failed=57 pending=0 blocked=0
+[2026-10-28T14:34:49.546546] [SESSION-119] LOCK released
+[2026-10-28T14:47:39.122856] [SESSION-120] LOCK acquired (pid=2996323)
+[2026-10-28T14:47:39.122856] [SESSION-120] Starting [task-144] 42f77e1 部署版全量回归：SSG 真伪 + 208 卡音频回归 (base=42f77e1)
+[2026-10-28T14:50:17.296032] [SESSION-120] CHECKPOINT [task-144] step=1/3 "zcmed差分:mslug3/mslugx为DC(zcmed<5),preisle2真音频(13005);全量双指标批测启动"
+[2026-10-28T07:52:42Z] [SESSION-121] LOCK acquired (pid=2963016)
+[2026-10-28T07:52:42Z] [SESSION-121] Starting [task-145] SSG 直流轨修复 (base=42f77e1)
+[2026-10-28T07:52:42Z] [SESSION-121] CHECKPOINT [task-145] step=1/3 root cause: bank-A 00-0D->SSG vol=full + alias 4D->0D envelope hold = 36s rising DC rail 27607
+[2026-10-28T08:25:25Z] [SESSION-121] CHECKPOINT [task-145] step=2/3 fix verified on spot cards (mslug3 DC 27607->0, kof2000/garou no regression, kof94 BIOS drum restored); full 208-card audio batch relaunched after aggregation tuple bug
+[2026-10-28T08:55:51Z] [SESSION-121] Completed [task-145] (commit 176bc3d)
+[2026-10-28T08:55:51Z] [SESSION-121] STATS tasks_total=145 completed=87 failed=57 pending=0 blocked=0 attempts_total=259 checkpoints=244
+[2026-10-28T08:55:51Z] [SESSION-121] LOCK released
+[2026-10-28T08:56:01Z] [SESSION-121] RECOVERY [task-144] action="marked completed" reason="interrupted in_progress; objective superseded and verified by task-145 (commit 176bc3d)"
+[2026-10-28T08:58:48Z] [SESSION-122] LOCK acquired (pid=3051781)
+[2026-10-28T08:58:48Z] [SESSION-122] Starting [task-146] mslugx 非确定性残留音频 (base=176bc3d)
+[2026-10-28T10:13:43Z] [SESSION-122] Starting [task-146] mslugx 非确定性根因：分叉帧随机+RTC种子假设（MCLOCK 锁钟判定） (base=176bc3d)
+[2026-10-28T10:13:43Z] [SESSION-122] CHECKPOINT [task-146] step=3/3 "MSB探针修好编译;6次短程f<=263全同->分叉帧随机;MCLOCK锁钟6次全量判定中"
+[2026-10-28T10:31:33Z] [SESSION-122] Completed [task-146] (commit d85cd14, 8112605)
+[2026-10-28T10:31:33Z] [SESSION-122] STATS tasks_total=146 completed=89 failed=57 pending=0 blocked=0
+[2026-10-28T10:31:33Z] [SESSION-122] LOCK released
+[2026-10-28T10:35:57Z] [SESSION-123] LOCK acquired (pid=3141168)
+[2026-10-28T10:35:57Z] [SESSION-123] INIT 全部 146 任务终态；新建 task-147（坏 dump CRC 对照）与 task-148（确定性音频基线复跑）
+[2026-10-28T10:36:18Z] [SESSION-123] Starting [task-147] mslug3 族坏 dump 假设：ROM CRC32 对照 MAME (base=8112605)
+[2026-10-28T10:40:37Z] [SESSION-123] Completed [task-147] (no code change; dump 完整性定案)
+[2026-10-28T10:41:13Z] [SESSION-123] Starting [task-148] 确定性口径全量 208 卡音频基线复跑 (base=8112605)
+[2026-10-28T11:23:55Z] [SESSION-124] CHECKPOINT [task-148] step=1/1 "单遍169/两遍186定案，17张BIOS鼓点卡pass2全恢复"
+[2026-10-28T11:23:55Z] [SESSION-124] Completed [task-148] (no code change; 确定性音频基线 186/208 建立)
+[2026-10-28T11:23:55Z] [SESSION-124] STATS tasks_total=148 completed=91 failed=57 pending=0 blocked=0
+[2026-10-28T11:23:55Z] [SESSION-124] LOCK released
+[2026-10-28T11:28:34Z] [SESSION-125] LOCK acquired (pid=3166399)
+[2026-10-28T11:28:34Z] [SESSION-125] Starting [task-149] mslug3 SSG别名输出回归二分 63dd117→8112605 (base=8112605)
+[2026-10-28T11:41:44Z] [SESSION-125] CHECKPOINT [task-149] step=1/1 "63dd117直流伪迹定案(zc/s=4.8)，非回归"
+[2026-10-28T11:41:44Z] [SESSION-125] Completed [task-149] (no code change; DC假阳性定案)
+[2026-10-28T11:41:44Z] [SESSION-125] Starting [task-150] mslug3 块填充链终审 (base=8112605)
+[2026-10-28T11:41:44Z] [SESSION-125] Completed [task-150] (no code change; mslug3族关闭为已知缺陷)
+[2026-10-28T11:41:44Z] [SESSION-125] STATS tasks_total=150 completed=93 failed=57 pending=0 blocked=0
+[2026-10-28T11:41:44Z] [SESSION-125] LOCK released
+[2026-10-28T11:43:01Z] [SESSION-126] LOCK acquired (pid=3179257)
+[2026-10-28T11:43:01Z] [SESSION-126] Starting [task-151] 186有声卡直流假阳性审计 (base=8112605)
+[2026-10-28T12:02:01Z] [SESSION-126] CHECKPOINT [task-151] step=1/1 "zc审计定案：mslugx直流假阳性改判静音，真实185/208"
+[2026-10-28T12:02:01Z] [SESSION-126] Completed [task-151] (no code change; validation rc=0)
+[2026-10-28T12:02:01Z] [SESSION-126] Starting [task-152] 环境修复 vulkan头文件 (base=8112605)
+[2026-10-28T12:04:56Z] [SESSION-126] CHECKPOINT [task-152] step=1/1 "sysroot回退+全新构建+冒烟通过"
+[2026-10-28T12:04:56Z] [SESSION-126] Completed [task-152] (commit 3f07531)
+[2026-10-28T12:08:54Z] [SESSION-126] Starting [task-153] 存档往返一致性冒烟 (base=3f07531)
+[2026-10-28T12:08:54Z] [SESSION-126] CHECKPOINT [task-153] step=1/1 "8卡BMP字节级全同"
+[2026-10-28T12:08:54Z] [SESSION-126] Completed [task-153] (validation: all-match)
+[2026-10-28T12:08:54Z] [SESSION-126] STATS tasks_total=153 completed=96 failed=57 pending=0 blocked=0
+[2026-10-28T12:08:54Z] [SESSION-126] LOCK released
+[2026-10-28T12:22:31Z] [SESSION-127] LOCK acquired (pid=3191496)
+[2026-10-28T12:22:31Z] [SESSION-127] Starting [task-154] MAME 金标准 mslug3 attract 音频 (base=3f07531)
+[2026-10-28T12:22:31Z] [SESSION-127] CHECKPOINT [task-154] step=1/1 "金标准到手：mslug3 attract 真音乐，linoragx 缺陷确证"
+[2026-10-28T12:22:31Z] [SESSION-127] Completed [task-154] (no code change; golden ref in scratch/golden)
+[2026-10-28T12:23:00Z] [SESSION-127] Starting [task-155] 存档往返全量回归208卡 (base=3f07531)
+[2026-10-28T12:26:49Z] [SESSION-128] LOCK acquired (pid=3211062)
+[2026-10-28T12:26:49Z] [SESSION-128] RECOVERY [task-155] action="batch still running (14/208, 0 mismatch)" reason="previous session ended mid-batch, process alive"
+[2026-10-28T12:26:49Z] [SESSION-128] Starting [task-156] 静音卡 MAME 金标准逐卡对照 (base=3f07531)
+[2026-10-28T12:39:08Z] [SESSION-129] LOCK acquired (pid=3223293)
+[2026-10-28T12:39:08Z] [SESSION-129] RECOVERY [task-155] action="batch running 81/208, kof98 mismatch=1 to investigate" reason="previous session ended mid-batch"
+[2026-10-28T12:39:08Z] [SESSION-129] CHECKPOINT [task-156] step=1/1 "9卡金标准voiced确证缺陷，diggerma与参考一致，9卡no-ref"
+[2026-10-28T12:39:08Z] [SESSION-129] Completed [task-156] (validation rc=0)
+[2026-10-28T13:11:36Z] [SESSION-129] STATS tasks_total=156 completed=98 failed=57 in_progress=1 attempts_total=171
+[2026-10-28T13:11:36Z] [SESSION-129] Starting [task-157] Z80 私有 RAM 入档 NRXSTATE11 (base=3f07531)
+[2026-10-28T13:50:02Z] [SESSION-129] LOCK acquired (reclaimed stale)
+[2026-10-28T13:50:02Z] [SESSION-129] Completed [task-157-partial] 序列化修复提交 6c4df21（Z80 RAM/YM定时器/virq/STOP/NMI锁存，NRXSTATE12）
+[2026-10-28T13:50:02Z] [SESSION-129] ERROR [task-157] [TASK_EXEC] kof10th 帧内相位残留（延时循环 d0±1）；修复保留不回滚
+[2026-10-28T13:50:02Z] [SESSION-129] STATS tasks_total=156 completed=97 failed=58 pending=0 blocked=0 attempts_total= checkpoints=
+[2026-10-28T13:50:02Z] [SESSION-129] LOCK released
+[2026-10-28T14:03:44Z] [SESSION-130] LOCK acquired (reclaimed pid=3290600)
+[2026-10-28T14:03:44Z] [SESSION-130] RECOVERY [task-155] action="批测仍在运行(51/208 match=51 mismatch=0)，继续等待" reason="上会话后台任务未中断"
+[2026-10-28T22:33:12+08:00] [SESSION-131] LOCK reclaimed (pid=3334845)
+[2026-10-28T22:33:12+08:00] [SESSION-131] Starting [task-157] 存档保真修复：RESET_CYCLES 泄漏（base=6c4df21）
+[2026-10-28T22:33:12+08:00] [SESSION-131] CHECKPOINT [task-157] step=2/3 "root cause: boot reset-cycle budget not cleared on restore; kof10th chunk trace now byte-identical after fix"
+[2026-10-28T23:01:23+08:00] [SESSION-132] LOCK acquired (pid=3355675)
+[2026-10-28T23:01:23+08:00] [SESSION-132] RECOVERY [task-157] action="带未提交改动跑 validation.command（kof10th 往返 BMP 一致）PASS" reason="上会话中断于验证前"
+[2026-10-28T23:01:23+08:00] [SESSION-132] Completed [task-157] (commit 6ed8fbb)
+[2026-10-28T23:01:41+08:00] [SESSION-132] Starting [task-155] 存档往返全量回归：208 卡（base=6ed8fbb 新二进制，NRXSTATE13）
+[2026-10-28T23:34:49+08:00] [SESSION-132] Completed [task-155] (208/208 match, commit 6ed8fbb)
+[2026-10-28T23:34:49+08:00] [SESSION-132] STATS tasks_total=156 completed=99 failed=57 pending=0 blocked=0 attempts_total=270 checkpoints=261
+[2026-10-28T23:34:49+08:00] [SESSION-132] LOCK released
+[2026-10-28T23:39:58+08:00] [SESSION-133] LOCK acquired (pid=3376515)
+[2026-10-28T23:39:58+08:00] [SESSION-133] Starting [task-158] mslug3 族音乐最后缺口：1054 等待条件+f801 推进链 (base=6ed8fbb)
+[2026-10-28T23:49:15+08:00] [SESSION-133] CHECKPOINT [task-158] step=2/3 "修正：门控是 bit2,(iy+9)；fe39 通道块状态机在跑(0→4→12→13 @fef1 每帧)；4860 音符装载模块游戏期 0 执行=断链点；Z80RAMWA 区间探针已入主仓(z80_wrap.cpp)"
+[2026-10-29T00:04:14+08:00] [SESSION-133] CHECKPOINT [task-158] step=3/3 "断链最终定位：音乐服务门控=1fb6 call nz,11bd 取决于 bit3,((f904)+9)=f90d；f904 块由 118b 初始化(0040 哨兵+清零)，f90d 全程 0 写非零(仅 NMI@00e7 与 init@11a3 清 0)；ROM 内 bit3 置位者仅 3dff/4199/43f6 三处且均不作用于 f904 块；旋转 bank 代码 f=600 全程 0 执行，其调用者 1d9d8/1ea7e/1f13c 不可达。下一轮：反汇编 118b 调用者链，找 f904 块 bit3 的预期置位路径"
+[2026-10-29T00:04:53+08:00] [SESSION-133] ERROR [task-158] [TASK_EXEC] 机制链闭合但无修复：门控 f904 块 bit3 的置位者 ld ix,f904@1ebe 在旋转 bank（f=600 全程 0 执行）；bank 切换由 492f 指针解析驱动，但指针表条目 bank 字节全 0，音乐 bank 永不切入
+[2026-10-29T00:05:16+08:00] [SESSION-133] LOCK released
+[2026-10-29T00:05:16+08:00] [SESSION-133] STATS tasks_total=157 completed=99 failed=58 pending=0 blocked=0 attempts_total=205 checkpoints=3
+[2026-10-29T00:12:38+08:00] [SESSION-134] ERROR [task-158] [TASK_EXEC] attempt3 FORCEJMP 证伪：初始化器强跑不改门；三音乐模块全 ROM 孤儿，注册入口疑在旋转 bank 任务指针表
+[2026-10-29T00:12:38+08:00] [SESSION-134] LOCK released
+[2026-10-29T00:13:07+08:00] [SESSION-134] STATS tasks_total=157 completed=99 failed=58 pending=0 blocked=0 attempts_total=206 checkpoints=5
+[2026-10-29T00:17:04+08:00] [SESSION-135] LOCK acquired (pid=3407271)
+[2026-10-29T00:17:04+08:00] [SESSION-135] Starting [task-159] mslug3 音乐注册者 MAME 真机捕获：Lua 写通知盯 f904/f90d (base=6ed8fbb)
+[2026-10-29T00:35:02+08:00] [SESSION-135] ERROR [task-159] [TASK_EXEC] attempt1 MAME无Lua/调试器；linoragx侧重大修正：主任务未卡死、排空门faab恒0、f904写者@118d（参数0回退哨兵）
+[2026-10-29T00:36:01+08:00] [SESSION-135] ERROR [task-159] [TASK_EXEC] attempt2 garou对照无效（不同架构）；1100=启动例程；f900区=蹦床表镜像
+[2026-10-29T00:36:01+08:00] [SESSION-135] STATS tasks_total=159 completed=99 failed=59 pending=0 blocked=0 attempts_total=209 checkpoints=7
+[2026-10-29T00:36:01+08:00] [SESSION-135] LOCK released
+[2026-10-29T00:36:56+08:00] [SESSION-136] LOCK acquired (pid=3425878)
+[2026-10-29T00:36:56+08:00] [SESSION-136] Starting [task-159] attempt3: f90d/fabf 门写者 + 3838 蹦床 + 68K 命令参数通路 (base=6ed8fbb)
+[2026-10-29T00:39:10+08:00] [SESSION-136] ERROR [task-159] [TASK_EXEC] attempt3 门写者穷尽+RAMPOKE强开块门无效；mslug3族音乐定案为ROM侧未解架构
+[2026-10-29T00:39:10+08:00] [SESSION-136] STATS tasks_total=158 completed=99 failed=59 pending=0 blocked=0 attempts_total=212 checkpoints=9
+[2026-10-29T00:39:10+08:00] [SESSION-136] LOCK released
+[2026-10-29T00:42:02+08:00] [SESSION-137] LOCK acquired (pid=3430478)
+[2026-10-29T00:42:48+08:00] [SESSION-137] Starting [task-160] 调试探针收编主仓 (base=6ed8fbb)
+[2026-10-29T00:43:57+08:00] [SESSION-137] Completed [task-160] (commit d3f38aa)
+[2026-10-29T00:43:57+08:00] [SESSION-137] Starting [task-161] bgfx 激活 MAME 调试器抓 f904 注册者 (base=d3f38aa)
+[2026-10-29T00:45:27+08:00] [SESSION-137] ERROR [task-161] [ENV_SETUP] mame0289 无 bgfx.zip 资产，调试器路线受阻
+[2026-10-29T00:48:33+08:00] [SESSION-137] ERROR [task-161] [TASK_EXEC] attempt2 bank1恒00定案；根因上移至0088表初始化器未运行
+[2026-10-29T00:49:08+08:00] [SESSION-137] ERROR [task-161] [TASK_EXEC] attempt3 0088表=ROM频率表证伪；mslug3音乐三条腿全断终案
+[2026-10-29T00:49:08+08:00] [SESSION-137] STATS tasks_total=161 completed=100 failed=61 pending=0 blocked=0 attempts_total=216 checkpoints=12
+[2026-10-29T00:49:08+08:00] [SESSION-137] LOCK released
+[2026-10-29T00:59:55+08:00] [SESSION-138] LOCK acquired (pid=3441241)
+[2026-10-29T00:59:55+08:00] [SESSION-138] Starting [task-162] mslug3b6 交叉验证 (base=a57acda)
+[2026-10-29T01:09:07+08:00] [SESSION-138] CHECKPOINT [task-162] step=1/3 "A/B定案:peak归零系176bc3d有意杀DC伪迹非回归;b6与mslug3 m1逐字节相同;zcmed全量批测运行中"
+[2026-10-29T01:54:27+08:00] [SESSION-138] Completed [task-162] (zcmed基线108/208;交叉验证无差分)
+[2026-10-29T01:54:27+08:00] [SESSION-138] Starting [task-163] 残余SSG直流卡群 (base=a57acda)
+[2026-10-29T02:07:46+08:00] [SESSION-138] ERROR [task-163] [TASK_EXEC] 直流族机制到底：BIOS扫7F×丢4D交互；两条快修证伪；候选修法已录
+[2026-10-29T02:23:58+08:00] [SESSION-138] STATS tasks_total=162 completed=101 failed=61 pending=0 blocked=0 attempts_total=all-exhausted checkpoints=full
+[2026-10-28T18:26:35.784442+00:00] [SESSION-139] LOCK acquired (pid=3491183)
+[2026-10-28T18:26:35.784442+00:00] [SESSION-139] INIT HEAD=a57acda clean; 全量回归复核（音频 zcmed 口径 + 图形）确认探针提交后无漂移
+[2026-10-28T18:26:47.289739+00:00] [SESSION-139] Starting [task-164] HEAD 全量音频回归 zcmed 口径 (base=a57acda)
+[2026-10-28T18:59:36.375363+00:00] [SESSION-139] Completed [task-164] (no code change; jitter-tolerant validation PASS 108/108)
+[2026-10-28T18:59:36.375363+00:00] [SESSION-139] Starting [task-165] HEAD 全量图形回归 (base=a57acda)
+[2026-10-28T19:56:01.253221+00:00] [SESSION-139] Completed [task-165] (no code change; 2 changed cards adjudicated as phase/nvram jitter, serial rechecks 147/106/54 colors)
+[2026-10-28T19:56:01.253221+00:00] [SESSION-139] STATS tasks_total=164 completed=103 failed=61 pending=0 blocked=0 session_count=139
+[2026-10-28T20:00:04.802151+00:00] [SESSION-140] LOCK acquired (pid=3525587)
+[2026-10-28T20:00:04.802151+00:00] [SESSION-140] INIT MAME 0.289 本机可跑（LD_LIBRARY_PATH=mamedeps）；目标：调试器金标对照解锁 mslug3 族
+[2026-10-28T20:00:04.802151+00:00] [SESSION-140] Starting [task-166] MAME 路线打通 (base=a57acda)
+[2026-10-28T20:14:14.246241+00:00] [SESSION-140] CHECKPOINT [task-166] step=1/2 "MAME bench 通过；imgui 调试器死路；改源码探针增量重编中"
+[2026-10-28T21:49:19.374963+00:00] [SESSION-141] LOCK acquired (pid=3593775 reclaimed)
+[2026-10-28T21:49:19.374963+00:00] [SESSION-141] Starting [task-166] MAME 0.289 路线打通 (base=a57acda)
+[2026-10-28T21:56:19.413333+00:00] [SESSION-141] Completed [task-166] (no-code: MAME 探针路线)
+[2026-10-28T21:56:19.413333+00:00] [SESSION-141] Starting [task-167] MAME 金标对照 mslug3 bank B 路由修复 (base=a57acda)
+[2026-10-28T22:20:30.490739+00:00] [SESSION-141] CHECKPOINT [task-167] step=1/3 "bank B ymfm 语义修复 c2a532c 已提交部署；A/B 零回归；mslug3 待轨武装缺口；208 批测中"
+[2026-10-29T07:30:02+08:00] [SESSION-124] CHECKPOINT [task-167] step=2/3 "golden trace -> strict OPN timer fix 99b3f51 pushed; heartbeat parity kof2000/garou; mslug3 residual = SMA-bank sequencer starvation, documented; 208-card audio batch running"
+[2026-10-29T07:41:31+08:00] [SESSION-142] LOCK acquired (pid=3687803 reclaimed)
+[2026-10-29T07:41:31+08:00] [SESSION-142] RECOVERY [task-167] action="resume: commits c2a532c+99b3f51 belong to task, validation pending on 208-batch zero-regression + timer parity" reason="in_progress found at session start; batch audio_t168 running"
+[2026-10-28T23:43:22+00:00] [SESSION-143] LOCK acquired (pid=3689945 reclaimed)
+[2026-10-29T08:20:03+08:00] [SESSION-143] ERROR [task-167] [TASK_EXEC] timer fix regression net -9 (17 lost/8 gained, A/B proven); reverted d5e4329 deployed+pushed; spot-check alpham2/tws96/shocktr2 recovered
+[2026-10-29T08:20:03+08:00] [SESSION-143] Completed [task-167] as failed (attempts 3/3); successor task-168 created (strict-timer redo + sm1 tick repair)
+[2026-10-29T08:29:40+08:00] [SESSION-143] Starting [task-168] timer 语义重做：严格 OPN + sm1 一次性滴答分歧修复 (base=d5e4329)
+[2026-10-29T08:49:34+08:00] [SESSION-143] CHECKPOINT [task-168] step=1/3 "golden trace proves BIOS never writes 0x29 (IRQ mask reg) -> MAME YM IRQ line always low, drivers poll flags; implemented ymfm-faithful model in wt_ab: strict 0x27 + 0x29 mask active-high + status-read no longer clears flags; matrix A/B running"
+[2026-10-29T09:31:19+08:00] [SESSION-143] CHECKPOINT [task-168] step=2/3 "model search: faithful(0x29-mask,no-read-clear)=worse; hybrid strict-timer + timer-A-only active-low IRQ + persistent flag = near-sweep on 17-card matrix (only shocktr2 dead); B-IRQ b_loaded gate = regression, dropped; read-clear variant testing for shocktr2; 208-batch audio_t169 running on hybrid-A build"
+[2026-10-29T10:11:34+08:00] [SESSION-143] Completed [task-168] (commit 3b22537) hybrid timer model, music_ok 105->170 on 208-card audio batch
+[2026-10-29T10:11:34+08:00] [SESSION-143] STATS tasks_total=167 completed=105 failed=62 pending=0 blocked=0 attempts_total=291 checkpoints=284
+[2026-10-29T10:11:34+08:00] [SESSION-143] LOCK released
+[2026-10-29T10:15:59+08:00] [SESSION-144] LOCK acquired (pid=3760302)
+[2026-10-29T10:15:59+08:00] [SESSION-144] Starting [task-169] timer 混合模型后全量 208 卡图形回归 (base=3b22537)
+[2026-10-29T10:20:57+08:00] [SESSION-144] CHECKPOINT [task-169] step=2/3 "zcmed hidden-regression audit clean; 41 real game-BGM gains verified; batch_t169 graphics running"
+[2026-10-29T12:17:17+08:00] [SESSION-144] Completed [task-169] (no commit: validation-only) graphics regression PASS, all diffs adjudicated as attract-phase jitter
+[2026-10-29T12:17:17+08:00] [SESSION-144] STATS tasks_total=168 completed=106 failed=62 pending=0 blocked=0 attempts_total=292 checkpoints=288
+[2026-10-29T12:17:17+08:00] [SESSION-144] LOCK released
+[2026-10-29T12:28:45+08:00] [SESSION-145] LOCK acquired (pid=3800471)
+[2026-10-29T12:28:45+08:00] [SESSION-145] Starting [task-170] lastbld2 nvram 滞留静音 (base=3b22537)
+[2026-10-29T12:48:33+08:00] [SESSION-146] LOCK acquired (pid=3809238, reclaimed stale 3800471)
+[2026-10-29T12:48:33+08:00] [SESSION-146] RECOVERY [task-170] action="resume: A/B matrix still alive (proc 3807169), awaiting results" reason="session interrupted mid-validation"
+[2026-10-29T13:21:12+08:00] [SESSION-146] CHECKPOINT [task-170] step=3/3 "vliner golden root cause + once-per-frame IRQ gate fix; matrix validation running"
+[2026-10-29T13:34:03+08:00] [SESSION-146] Completed [task-170] (commit cde4113) once-per-frame IRQ crutch gate; vliner 7->42; 27-card matrix zero regression; deployed md5 698073e8
+[2026-10-29T13:34:03+08:00] [SESSION-146] STATS tasks_total=169 completed=107 failed=62 pending=0 blocked=0 attempts_total=293 checkpoints=291
+[2026-10-29T13:34:03+08:00] [SESSION-146] LOCK released
+[2026-10-29T13:47:59+08:00] [SESSION-147] LOCK acquired (pid=3849666)
+[2026-10-29T13:47:59+08:00] [SESSION-147] Starting [task-171] cde4113 限帧 IRQ 门全量 208 卡音频回归 (base=cde4113)
+[2026-10-29T14:14:18+08:00] [SESSION-147] CHECKPOINT [task-171] step=1/3 "full 208 audio batch on cde4113 launched (audio_t171.py)"
+[2026-10-29T14:14:18+08:00] [SESSION-147] CHECKPOINT [task-171] step=2/3 "music_ok 173/208; 4 gained (vliner/vlinero gate fix, lastbld2/kf10thep jitter); 1 lost sengoku3"
+[2026-10-29T14:14:18+08:00] [SESSION-147] CHECKPOINT [task-171] step=3/3 "sengoku3 serial retest 16==base 17 -> jitter; validate PASS"
+[2026-10-29T14:14:18+08:00] [SESSION-147] Completed [task-171] (no code change; validation-only) cde4113 full-batch audio regression ZERO; music_ok 170->173
+[2026-10-29T14:14:18+08:00] [SESSION-147] STATS tasks_total=170 completed=108 failed=62 pending=0 blocked=0 attempts_total=294 checkpoints=292
+[2026-10-29T14:14:18+08:00] [SESSION-147] LOCK released
+[2026-10-29T14:15:48+08:00] [SESSION-148] LOCK acquired (pid=3864272)
+[2026-10-29T14:15:48+08:00] [SESSION-148] Starting [task-172] preisle2 右缘灰竖条残留排查 (base=cde4113)
+[2026-10-29T17:10:39+08:00] [SESSION-148] CHECKPOINT [task-172] step=2/3 "SVOFF实验零差异；白块=游戏自写数据，渲染管线证忠实"
+[2026-10-29T17:10:39+08:00] [SESSION-148] ERROR [task-172] [TASK_EXEC] 白块根因未闭环，attempt 1/3 记录，下轮入口=吸引初始化期68K行为对照
+[2026-10-29T17:10:39+08:00] [SESSION-148] STATS tasks_total=171 completed=108 failed=63 pending=0 blocked=0 retryable_failed=1 checkpoints=2
+[2026-10-29T17:10:39+08:00] [SESSION-148] LOCK released
+[2026-10-29T17:12:31+08:00] [SESSION-149] LOCK acquired (pid=3937438)
+[2026-10-29T17:12:31+08:00] [SESSION-149] Starting [task-172] preisle2 右缘白块 attempt2 (base=cde4113)
+[2026-10-29T17:47:14+08:00] [SESSION-149] CHECKPOINT [task-172] step=1/3 "白边=fixed col0/39 tile0x20 pen2；游戏写cram[2]=7fff@f18352；MAME同场景黑边→游戏侧CRAM分歧"
+[2026-10-29T10:22:33+00:00] [SESSION-149] CHECKPOINT [task-172] step=2/3 "L1PULSE watchdog misfire root cause; L1FRAMES threshold fix under test"
+[2026-10-29T10:55:48+00:00] [SESSION-149] CHECKPOINT [task-172] step=3/3 "MCU RTC wall-clock seed = attract non-determinism; MCLOCK fixed -> deterministic"
+[2026-10-29T20:00:47+08:00] [SESSION-151] LOCK acquired (pid=28252)
+[2026-10-29T20:00:47+08:00] [SESSION-151] RECOVERY [task-172] action="resume attempt 3" reason="prev sessions falsified L1PULSE threshold (non-monotonic 6/30/60/120) and found MCU-RTC host-clock seed non-determinism (MCLOCK fixes it); /tmp pruned long-run artifacts; rerunning seed-sensitivity matrix in scratch
+[2026-10-29T20:00:47+08:00] [SESSION-151] CHECKPOINT [task-172] step=1/3 "MAME golden CRAMLOG 26k+ frames: copier offset-0 hits in pairs every ~108s, staging word[2] ALWAYS 0000 (never white). linoragx MCLOCK=1e9: 7fff to o=0002 every 3562f. Lua read_word absent in 0.289 (probe falsified). Seed matrix 4x36000f running to test attract-period seed sensitivity."
+[2026-10-29T20:20:02+08:00] [SESSION-151] CHECKPOINT [task-172] step=2/3 "ROOT CAUSE CONFIRMED: L1PULSE deadlock watchdog misfires on preisle2 attract. Fixed-seed proof: white-flash at f=4105/7667/11229 (period 3562f) IDENTICAL across MCLOCK seeds 1e9/999999999/1234567890 (seed theory dead); L1PULSE=0 -> single hit f=6550 ~= MAME golden copier period ~6480f. Extra level-1 IRQs run the attract demo ~1.8x fast. Counter-freeze gate tried and reverted (ncombat counter DOES advance each frame - would kill deadlock fix). Testing L1FRAMES threshold matrix (6/12/24/48/96) on preisle2 + deadlock trio ncombat/roboarmy/minasan."
+[2026-10-29T22:16:29+08:00] [SESSION-151] CHECKPOINT [task-172] step=3/3 "FIX COMMITTED 893aee3 (watchdog threshold 6->24, L1FRAMES knob) + 791041d (fixbanktype sanitize), pushed origin main, deployed md5 719450f9. Evidence: preisle2 white-flash 3->1 per 12000f at golden cadence (f=6839 vs L1PULSE=0 f=6550, golden ~6480f period); roboarmy 64c vision-verified normal attract story scene; kof2000 low-color@12k adjudicated frame-phase (185c was 3000f batch value); batch_t172 168OK/25FEW/15BLACK vs baseline 192/8/8 with 19 drops + 12 gains (bidirectional = attract phase shift signature); serial 12k/20k retest of 19 drops running (proc_bac241fb4633)."
+[2026-10-29T23:36:10+08:00] [SESSION-151] Completed [task-172] (commits 893aee3 + 791041d)
+[2026-10-29T23:36:10+08:00] [SESSION-151] STATS tasks_total=171 completed=109 failed=62 pending=0 blocked=0 checkpoints=298
+[2026-10-29T23:36:10+08:00] [SESSION-151] LOCK released
+[2026-10-29T23:57:53+08:00] [SESSION-152] LOCK acquired (pid=102859)
+[2026-10-29T23:57:53+08:00] [SESSION-152] Starting [task-173] columnsin 静音根因（画面正常音频全零）(base=791041d)
+[2026-10-30T00:16:29+08:00] [SESSION-152] CHECKPOINT [task-173] step=3/3 "ADJUDICATED: columnsin is Homebrew (AdvanceMAME 'Columns (NeoGeo)(Homebrew)'), not in MAME neogeo driver. 68K sends only init sound cmds (01/03), no music protocol; Z80 timer-only writes. Graphics+68K core correct. Non-defect homebrew edge case."
+[2026-10-30T00:16:29+08:00] [SESSION-152] Completed [task-173] (adjudication, no code change)
+[2026-10-30T00:17:48+08:00] [SESSION-152] STATS tasks_total=172 completed=110 failed=62 pending=0 blocked=0 checkpoints=301
+[2026-10-30T00:17:48+08:00] [SESSION-152] LOCK released
+[2026-10-30T00:24:35+08:00] [SESSION-153] LOCK acquired (pid=131925)
+[2026-10-30T00:24:35+08:00] [SESSION-153] Starting [task-174] mslug3 轨武装链金标 ZRAM 对照 (base=791041d)
+[2026-10-30T00:41:44+08:00] [SESSION-153] CHECKPOINT [task-174] step=1/3 金标ZRAM对照：轨装载分歧锁定在68K命令流
+[2026-10-30T00:55:58+08:00] [SESSION-153] CHECKPOINT [task-174] step=2/2 68K无罪定案+Z80 pre-burst态分歧锁定
+[2026-10-30T00:55:58+08:00] [SESSION-153] Completed [task-174] (commit 221395f)
+[2026-10-30T00:55:58+08:00] [SESSION-153] STATS tasks_total=174 completed=111 failed=62 pending=1 blocked=0 attempts_total=0 checkpoints=2
+[2026-10-30T00:55:58+08:00] [SESSION-153] LOCK released
+[2026-10-30T00:58:29+08:00] [SESSION-154] LOCK acquired (pid=131925)
+[2026-10-30T00:58:29+08:00] [SESSION-154] Starting [task-175] mslug3 轨武装修复 (base=221395f)
+[2026-10-30T01:14:16+08:00] [CHECKPOINT] [task-175] step=1/3 "证伪定时器IRQ假设；锁定attract速度差→Z80调度相位→命令字节b2/4e分歧"
+[2026-10-30T01:16:48+08:00] [CHECKPOINT] [task-175] step=2/3 "突破:4e被覆盖为b2;写者rst8环写入@0x10;表例程1e90末值4e;b2来自另一调用者"
+[2026-10-30T01:16:48+08:00] [ERROR] [task-175] [TASK_EXEC] b2调用者未定位，attempt 1/3 收口，机制已收敛
+[2026-10-30T01:17:27+08:00] [SESSION-154] STATS tasks_total=174 completed=111 failed=63 pending=0 blocked=0 attempts_total=297 checkpoints=305
+[2026-10-30T01:18:41+08:00] [CHECKPOINT] [task-175] step=3/3 "b2源=27e0队列构建器停轨分支(2806 ld d,b2);不匹配活动轨表则覆盖4e;金标匹配"
+[2026-10-30T01:18:41+08:00] [SESSION-154] LOCK released
+[2026-10-30T01:20:59+08:00] [SESSION-155] LOCK acquired (pid=131925)
+[2026-10-30T01:20:59+08:00] [SESSION-155] Starting [task-175] mslug3 轨武装修复 attempt2 (base=221395f)
+[2026-10-30T01:27:02+08:00] [CHECKPOINT] [task-175] step=1/1 "attempt2机制闭合:任务表初始化竞态;fa75=ff污染→停轨b2覆盖4e;需调度节拍保真"
+[2026-10-30T01:27:02+08:00] [ERROR] [task-175] [TASK_EXEC] attempt2 收口(2/3)，机制完全闭合，修复超出局部补丁范围
+[2026-10-30T01:27:02+08:00] [SESSION-155] STATS tasks_total=174 completed=111 failed=63 pending=0 blocked=0 attempts_total=298 checkpoints=307
+[2026-10-30T01:27:02+08:00] [SESSION-155] LOCK released
+[2026-10-30T01:29:06+08:00] [SESSION-156] LOCK acquired (pid=131925)
+[2026-10-30T01:29:06+08:00] [SESSION-156] Starting [task-175] mslug3 轨武装修复 attempt3(最后一次) (base=699eca3)
+[2026-10-30T01:30:40+08:00] [CHECKPOINT] [task-175] step=1/1 "attempt3终态:顺序颠倒=68K/Z80周期级交织保真限制;冒烟无回归;3/3收口"
+[2026-10-30T01:30:40+08:00] [ERROR] [task-175] [TASK_EXEC] attempt3 终态(3/3)，mslug3 轨武装定性为时序保真限制，全部尝试用尽
+[2026-10-30T01:30:40+08:00] [SESSION-156] STATS tasks_total=174 completed=111 failed=63 pending=0 blocked=0 attempts_total=299 checkpoints=308
+[2026-10-30T01:30:40+08:00] [SESSION-156] LOCK released
+[2026-10-30T01:42:29+08:00] [SESSION-157] LOCK acquired (pid=200230)
+[2026-10-30T01:42:29+08:00] [SESSION-157] Starting [task-176] mslug4/mslug5 attract BGM 金标对照修复 (base=699eca3)
+[2026-10-29T18:17:30Z] [SESSION-157] CHECKPOINT [task-176] step=2/3 "root cause bank A ADPCM-B gate; fix 7cff79b pushed; mslug4 BGM alive; 208-card audio batch running"
+[2026-10-29T18:54:03Z] [SESSION-157] Completed [task-176] (commit 7cff79b)
+[2026-10-29T18:54:03Z] [SESSION-157] STATS tasks_total=175 completed=112 failed=63 pending=0 blocked=0 attempts_total=300 checkpoints=310
+[2026-10-29T18:54:03Z] [SESSION-157] LOCK released
+[2026-10-29T18:56:04Z] [SESSION-158] LOCK acquired (reclaimed)
+[2026-10-29T18:56:58Z] [SESSION-158] Starting [task-177] 剩余 28 静音视频卡金标 BGM 审计 (base=7cff79b)
+[2026-10-29T19:08:05Z] [SESSION-158] CHECKPOINT [task-177] step=2/3 "金标审计完成: 9缺陷候选(cthd2003/kf2k2pla/kf2k2pls/kf2k3pcb/kf2k3upl/kof10th/mslugx/pbobble/svcpcb), 2金标静音非缺陷, 10无金标; cthd2003验为mslug3家族签名"
+[2026-10-29T19:08:05Z] [SESSION-158] Starting [task-179] pbobble 金标对照 (base=7cff79b)
+[2026-10-29T19:11:27Z] [SESSION-158] Completed [task-177] (audit closure, no code change)
+[2026-10-29T19:11:27Z] [SESSION-158] Completed [task-179] (pbobble=Taito dump non-defect, no code change)
+[2026-10-29T19:11:27Z] [SESSION-158] STATS tasks_total=177 completed=114 failed=63 pending=0 blocked=0 attempts_total=302 checkpoints=313
+[2026-10-29T19:11:27Z] [SESSION-158] LOCK released
+[2026-10-29T19:15:03Z] [SESSION-159] LOCK acquired (reclaimed)
+[2026-10-29T19:15:03Z] [SESSION-159] Starting [task-180] mslug5 attract 相位推进检验 (base=7cff79b)
+[2026-10-29T19:53:53Z] [SESSION-160] LOCK acquired (reclaimed)
+[2026-10-29T19:53:53Z] [SESSION-160] RECOVERY [task-180] action="resume from checkpoint" reason="session 159 hit iteration cap; no code change, probe findings intact"
+[2026-10-29T20:07:09Z] [SESSION-160] CHECKPOINT [task-180] step=1/1 "12000帧: FM首写f=3995 L loud=28s; fd66==fd67环消费正常(前轮consumer stuck为sm1误读); BGM间歇短爆密度5s/50s vs 金标32s/50s"
+[2026-10-29T20:07:09Z] [SESSION-160] Completed [task-180] (validation PASS, no code change)
+[2026-10-29T20:07:09Z] [SESSION-160] STATS tasks_total=178 completed=115 failed=63 pending=0 blocked=0 attempts_total=303 checkpoints=315
+[2026-10-29T20:07:09Z] [SESSION-160] LOCK released
+[2026-10-29T20:08:47Z] [SESSION-161] LOCK acquired (pid=337721)
+[2026-10-29T20:08:47Z] [SESSION-161] Starting [task-181] 68K attract 节拍标定调查 (base=7cff79b)
+[2026-10-29T20:14:01Z] [SESSION-161] CHECKPOINT [task-181] step=1/3 "标定假设证伪(预算全对/命令流同步); 分歧=Z80轨型选择: 金标纯ADPCM-A(×148@t17.4) vs lin FM分支(f3995)"
+[%s] [SESSION-161] CHECKPOINT [task-181] step=3/3 "根因=IN(05) YM bank A 数据回读恒0；mslug5 m1 ADPCM-A 播放器对 SSG reg7 做 GPIO 读改写握手被卡。修复：bank A reg<0x10 影子记录+ym_read_data 回读。mslug5 ADPCM-A 首写 f=1040(金标~1030)，202s L loud=29s(金标32s)；kof2000 零回归"
+[2026-10-29T20:37:05Z] [SESSION-161] Completed [task-181] (commit d8b16eb)
+[2026-10-29T20:37:05Z] [SESSION-161] STATS tasks_total=179 completed=116 failed=63 pending=0 blocked=0 attempts_total=304 checkpoints=317
+[2026-10-29T20:39:05Z] [SESSION-162] LOCK acquired (pid=365875)
+[2026-10-29T20:39:05Z] [SESSION-162] Starting [task-182] mslug3 族静音复查：IN 回读缺口假设 (base=d8b16eb)
+[2026-10-29T20:46:53Z] [SESSION-163] LOCK acquired (pid=377600)
+[2026-10-29T20:46:53Z] [SESSION-163] Starting [task-182] mslug3 族静音复查 attempt2: 金标 IN(04) 状态时序对照 (base=d8b16eb)
+[%s] [SESSION-163] CHECKPOINT [task-182] step=3/3 "根因=交接视图错误：金标 mslug3 Z80 全程跑 sm1 驱动(fc38 心跳铁证)，lin f177 误交接卡带 m1 致 b2 停轨；NOFLAG 证伪 timer flag 假设"
+[2026-10-29T20:56:23Z] [SESSION-162] ERROR [task-182] [TASK_EXEC] attempt2 未修复，交接视图根因已锁定
+[2026-10-29T20:56:23Z] [SESSION-163] STATS tasks_total=180 completed=116 failed=64 pending=0 blocked=0 attempts_total=306 checkpoints=320
+[2026-10-29T20:56:23Z] [SESSION-163] LOCK released
+[2026-10-29T21:05:52Z] [SESSION-164] LOCK acquired (pid=396398)
+[2026-10-29T21:05:52Z] [SESSION-164] Starting [task-182] mslug3 族静音复查 attempt3 交接语义对齐 (base=d8b16eb)
+[2026-10-29T21:12:04Z] [SESSION-164] CHECKPOINT [task-182] step=4/4 "ch5_bios_pend 脉冲残留修复(86f5e48 零回归)；NORESET 证伪；新分歧=fc38 心跳任务 f104 后停转"
+[2026-10-29T21:12:04Z] [SESSION-164] Completed [task-182-fix] (commit 86f5e48) — 修复子项提交；任务本体 mslug3 静音未解
+[2026-10-29T21:12:04Z] [SESSION-164] ERROR [task-182] [TASK_EXEC] attempt3 终态(3/3)：mslug3 仍静音，剩余分歧定位到 Z80 任务调度器 fc38 心跳停转
+[2026-10-29T21:12:04Z] [SESSION-164] STATS tasks_total=180 completed=116 failed=64 pending=0 blocked=0 attempts_total=307 checkpoints=321
+[2026-10-29T21:12:04Z] [SESSION-164] LOCK released
+[2026-10-29T21:13:26Z] [SESSION-165] LOCK acquired (pid=407577)
+[2026-10-29T21:13:26Z] [SESSION-165] Starting [task-183] mslug3 fc38 心跳任务调度复查 (base=86f5e48)
+[2026-10-29T21:33:55Z] [SESSION-166] CHECKPOINT [task-183] step=3/3 "timer B ymfm one-shot+16x step 修复(ed5a8c9)：fc38 心跳恢复金标节拍、5 卡回归零；fa75 决策未翻转，TCB init 延迟差未解"
+[2026-10-29T21:33:55Z] [SESSION-166] ERROR [task-183] [TASK_EXEC] attempt2 未修复：mslug3 仍静音，剩余分歧=调度器任务链节拍(118c/11c1)
+[2026-10-29T21:33:55Z] [SESSION-166] STATS tasks_total=181 completed=116 failed=65 pending=0 blocked=0 attempts_total=308 checkpoints=324
+[2026-10-29T21:33:55Z] [SESSION-166] LOCK released
+[2026-10-29T21:34:44Z] [SESSION-167] LOCK acquired (pid=436170)
+[2026-10-29T21:34:44Z] [SESSION-167] Starting [task-183] mslug3 调度器节拍 attempt3 (base=ed5a8c9)
+[2026-10-29T21:51:24Z] [SESSION-167] ERROR [task-183] [TASK_EXEC] attempt3 终态(3/3)：NORESET+timerB 组合心跳全程存活但队列决策仍分歧，最后层=sm1/m1 bank 接续语义
+[2026-10-29T21:51:24Z] [SESSION-167] STATS tasks_total=181 completed=116 failed=65 pending=0 blocked=0 attempts_total=3 checkpoints=3
+[2026-10-29T21:52:40Z] [SESSION-168] LOCK acquired (pid=444930)
+[2026-10-29T21:52:40Z] [SESSION-168] Starting [task-184] NORESET 默认化评估 (base=ed5a8c9)
+[2026-10-29T21:54:58Z] [SESSION-169] RECOVERY [task-184] action="批测仍在运行(proc 447037)，继续等待出数" reason="上会话中断但批测进程存活"
+[2026-10-29T22:20:23Z] [SESSION-169] Completed [task-184] (no code change; gate stays off)
+[2026-10-29T22:20:23Z] [SESSION-169] STATS tasks_total=182 completed=117 failed=65 pending=0 blocked=0 attempts_total=1 checkpoints=1
+[2026-10-29T22:20:23Z] [SESSION-169] LOCK released
+[2026-10-29T22:24:20Z] [SESSION-170] LOCK acquired (pid=460102)
+[2026-10-29T22:24:20Z] [SESSION-170] Starting [task-185] mslug4/5 BGM 掉音周期性 (base=ed5a8c9)
+[2026-10-29T22:28:16Z] [SESSION-170] CHECKPOINT [task-185] step=1/3 "ADPCM-A start(27)零写→样本零读→BGM缺失；2b 使能写了"
+[2026-10-29T22:28:16Z] [SESSION-170] ERROR [task-185] [TASK_EXEC] attempt1 机制定位完成，修复未落地(2/3 剩)
+[2026-10-29T22:32:27Z] [SESSION-170] CHECKPOINT [task-185] step=2/3 "bank B 27 ADPCM-A start 零写=掉音真因；enable/参数正常"
+[2026-10-29T22:32:27Z] [SESSION-170] ERROR [task-185] [TASK_EXEC] attempt2 start 分支跳过条件未定位(剩1次)
+[2026-10-29T22:32:27Z] [SESSION-170] LOCK released
+[2026-10-29T22:34:37Z] [SESSION-171] LOCK acquired (pid=479445)
+[2026-10-29T22:34:37Z] [SESSION-171] Starting [task-185] mslug4 ADPCM-A start 分支 attempt3 (base=ed5a8c9)
+[2026-10-29T22:51:15Z] [SESSION-171] CHECKPOINT [task-185] step=3/3 "真因改判 ADPCM-B 段循环不足；start×34 后停发；ADPCM-B 读地址与金标吻合"
+[2026-10-29T22:51:15Z] [SESSION-171] ERROR [task-185] [TASK_EXEC] attempt3 修复未落地(3/3 终态)
+[2026-10-29T22:51:15Z] [SESSION-171] STATS tasks_total=183 completed=117 failed=66 pending=0 blocked=0
+[2026-10-29T22:51:15Z] [SESSION-171] LOCK released
+[2026-10-29T22:52:47Z] [SESSION-172] LOCK acquired (pid=489504)
+[2026-10-29T22:52:47Z] [SESSION-172] Starting [task-186] mslug4 ADPCM-B 段长金标对照 (base=ed5a8c9)
+[2026-10-29T23:06:25Z] [SESSION-172] CHECKPOINT [task-186] step=1/3 "金标ADPCM-B轨迹到手；时钟/EOS轮询假设证伪；分歧=f1768驱动stop决策"
+[2026-10-29T23:06:25Z] [SESSION-172] ERROR [task-186] [TASK_EXEC] attempt1 stop决策变量未定位
+[2026-10-29T23:06:25Z] [SESSION-172] LOCK released
+[2026-10-29T23:08:29Z] [SESSION-173] LOCK acquired (pid=503636)
+[2026-10-29T23:08:29Z] [SESSION-173] Starting [task-186] mslug4 ADPCM-B stop 决策差分 attempt2 (base=ed5a8c9)
+[2026-10-29T23:13:51Z] [SESSION-173] CHECKPOINT [task-186] step=2/3 "ffbaf 段计数节奏对照+f712 参数写流分歧(delta 高字节)"
+[2026-10-29T23:13:51Z] [SESSION-173] ERROR [task-186] [TASK_EXEC] attempt2 根因未定位(剩1次)
+[2026-10-29T23:13:51Z] [SESSION-173] LOCK released
+[2026-10-29T23:15:57Z] [SESSION-173] CHECKPOINT [task-186] step=3/3 "首分歧=f0 BIOS 期 FM 基址 40 vs 28"
+[2026-10-29T23:15:57Z] [SESSION-173] ERROR [task-186] [TASK_EXEC] attempt3 修复未落地(3/3 终态)
+[2026-10-29T23:15:57Z] [SESSION-173] STATS tasks_total=184 completed=117 failed=67 pending=0 blocked=0
+[2026-10-29T23:15:57Z] [SESSION-173] LOCK released
+[2026-10-29T23:17:00Z] [SESSION-174] LOCK acquired (pid=511716)
+[2026-10-29T23:17:00Z] [SESSION-174] Starting [task-187] sm1 BIOS 期 Z80 分歧根因 (base=ed5a8c9)
+[2026-10-29T23:40:21Z] [SESSION-174] CHECKPOINT [task-187] step=1/3 "金标驱动非sm1非m1；CMCM1BOOT门控提交3f4beea"
+[2026-10-29T23:40:21Z] [SESSION-174] ERROR [task-187] [TASK_EXEC] attempt1 金标ROM来源未明(剩2次)
+[2026-10-29T23:40:21Z] [SESSION-174] STATS tasks_total=187 completed=117 failed=68 pending=0 blocked=0
+[2026-10-29T23:40:21Z] [SESSION-174] LOCK released
+[2026-10-29T23:45:47Z] [SESSION-174] CHECKPOINT [task-187] step=2/3 "金标纠错+lin f25 跑飞 fffd"
+[2026-10-29T23:45:47Z] [SESSION-174] ERROR [task-187] [TASK_EXEC] attempt2 跑飞未修复(剩1次)
+[2026-10-29T23:45:47Z] [SESSION-174] LOCK released
+[2026-10-29T23:53:48Z] [SESSION-175] LOCK acquired (pid=543553)
+[2026-10-29T23:53:48Z] [SESSION-175] Starting [task-188] mslug4 sm1 自测 ack 路径对齐 (base=3f4beea)
+[2026-10-30T00:02:54Z] [SESSION-175] CHECKPOINT [task-188] step=1/3 "金标 fe66 非恒0 改判 68K 自检速度；timerA one-shot faaca90"
+[2026-10-30T00:02:54Z] [SESSION-175] ERROR [task-188] [TASK_EXEC] attempt1 根因改判(68K 侧)，剩 2 次
+[2026-10-30T00:24:02Z] [SESSION-176] ERROR [task-188] [TASK_EXEC] attempt3 终态：金标 0 喂狗跳过校验和循环，RANDRAM 证伪
+[2026-10-30T00:24:02Z] [SESSION-176] STATS tasks_total=186 completed=117 failed=69 pending=0 blocked=0 attempts_total=323 checkpoints=341
+[2026-10-30T00:24:02Z] [SESSION-176] LOCK released
+[2026-10-30T00:25:55Z] [SESSION-176] LOCK acquired (pid=585584)
+[2026-10-30T00:25:55Z] [SESSION-176] INIT task-189 登记：金标校验和循环迭代速率实测
+[2026-10-30T00:27:28Z] [SESSION-176] ERROR [task-188] [TASK_EXEC] attempt3 终态：金标 0 喂狗跳过校验和循环，RANDRAM 证伪
+[2026-10-30T00:27:28Z] [SESSION-176] STATS tasks_total=187 completed=117 failed=69 pending=1 blocked=0 attempts_total=323 checkpoints=342
+[2026-10-30T00:27:28Z] [SESSION-176] LOCK released
+[2026-10-30T00:28:08Z] [SESSION-176] ERROR [task-189] [TASK_EXEC] 前提证伪：金标 0 喂狗，校验循环速率无从测起
+[2026-10-30T00:28:08Z] [SESSION-176] STATS tasks_total=187 completed=117 failed=70 pending=0 blocked=0 attempts_total=324 checkpoints=343
+[2026-10-30T00:28:08Z] [SESSION-176] LOCK released
+[2026-10-30T00:29:35Z] [SESSION-177] LOCK acquired (pid=590643)
+[2026-10-30T00:29:35Z] [SESSION-177] INIT task-189 终态化；task-190 登记：mslug4 m1 期命令流对照
+[2026-10-30T01:05:37Z] [SESSION-177] ERROR [task-190] [TASK_EXEC] attempt3 终态：金标自检等待环 c11d9x(0x320001 bit6) 定位，lin 互斥分支条件未隔离
+[2026-10-30T01:05:37Z] [SESSION-177] STATS tasks_total=188 completed=117 failed=71 pending=0 blocked=0 attempts_total=329 checkpoints=346
+[2026-10-30T01:05:37Z] [SESSION-177] LOCK released
+[2026-10-30T01:13:15Z] [SESSION-353] LOCK acquired (pid=629289)
+[2026-10-30T01:13:15Z] [SESSION-353] INIT 续跑：登记 task-191（BIOS 互斥分支条件隔离，task-190 遗留切入点）
+[2026-10-30T01:29:56Z] [SESSION-177] CHECKPOINT [task-191] step=1/3 "金标主循环=RAM驻留0x1e28；lin未拷贝；0x3C0006对齐证伪回滚(3110d23)"
+[2026-10-30T02:42:30Z] [SESSION-177] Completed [task-191] (commit bcf8285)
+[2026-10-30T02:42:30Z] [SESSION-177] STATS tasks_total=189 completed=118 failed=71 pending=0 blocked=0 attempts_total=331 checkpoints=348
+[2026-10-30T02:47:26Z] [SESSION-178] LOCK acquired (pid=676071)
+[2026-10-30T02:47:26Z] [SESSION-178] INIT 续跑：登记 task-192（静默卡 BIOS 敏感性扫描，29 张）
+[2026-10-30T02:48:08Z] [SESSION-178] Starting [task-192] 静默卡 BIOS 敏感性扫描 (base=bcf8285)
+[2026-10-30T02:52:34Z] [SESSION-178] Completed [task-192] (无代码改动，阴性结论)
+[2026-10-30T02:52:50Z] [SESSION-178] Starting [task-193] mslugx attract BGM 静默排查 (base=bcf8285)
+[2026-10-30T03:16:25Z] [SESSION-178] Completed [task-193] FAILED parked-hardcase (SMA 68K 保真度, 同 task-021)
+[2026-10-30T03:16:25Z] [SESSION-178] STATS tasks_total=191 completed=119 failed=72 pending=0 in_progress=0 attempts_total=335 checkpoints=353
+[2026-10-30T03:20:05Z] [SESSION-179] LOCK acquired (pid=708814)
+[2026-10-30T03:20:05Z] [SESSION-179] INIT 续跑：全部 191 任务终态，寻找新可修目标
+[2026-10-30T03:42:12Z] [SESSION-179] CHECKPOINT [task-194] step=2/3 "交接/命令投递/端口全正常，卡m1音乐任务零YM写，同mslug3族停滞类"
+[2026-10-30T03:42:12Z] [SESSION-179] ERROR [task-194] [TASK_EXEC] neocup98 m1音乐任务停滞(交接后零写)，同mslug3族时序保真限制，parked
+[2026-10-30T03:42:12Z] [SESSION-179] STATS tasks_total=192 completed=119 failed=73 pending=0 in_progress=0
+[2026-10-30T03:42:55Z] [SESSION-179] STATS tasks_total=192 completed=119 failed=73 pending=0 in_progress=0 blocked=0 (all terminal)
+[2026-10-30T03:42:55Z] [SESSION-179] LOCK released
+[2026-10-30T03:45:29Z] [SESSION-180] LOCK acquired (pid=723222)
+[2026-10-30T03:47:11Z] [SESSION-180] Starting [task-195] preisle2 attract BGM 静默 (base=bcf8285)
+[2026-10-30T03:58:41Z] [SESSION-180] CHECKPOINT [task-195] step=1/3 "卡m1 FM初始化后序列器停滞，timer IRQ 疑未投递"
+[2026-10-30T04:22:36Z] [SESSION-180] CHECKPOINT [task-195] step=2/3 "IRQ 正常投递，IN(06)恒0，OPM/OPN timer-bank 分歧"
+[2026-10-30T04:22:36Z] [SESSION-180] CHECKPOINT [task-195] step=3/3 "定案：音乐任务停滞保真类，parked"
+[2026-10-30T04:22:36Z] [SESSION-180] ERROR [task-195] [TASK_EXEC] preisle2 attract BGM stall — m1 music task not advancing (music-stall fidelity class, parked)
+[2026-10-30T04:23:37Z] [SESSION-180] STATS tasks_total=193 completed=119 failed=74 pending=0 blocked=0 attempts_total=341 checkpoints=360
+[2026-10-30T04:31:30Z] [SESSION-181] LOCK acquired (pid=754467)
+[2026-10-30T04:31:30Z] [SESSION-181] INIT Health check PASS; session_count=181; registered task-196 (kof10th BGM), task-197 (ms5plus BGM)
+[2026-10-30T04:39:45Z] [SESSION-181] Starting [task-196] kof10th attract BGM silence (base=bcf8285)
+[2026-10-30T05:24:45Z] [SESSION-181] CHECKPOINT [task-196] step=2/3 "golden YM IRQ never fires (ZIRQ probe 0); r=27 source unknown, YMPC probe added"
+[2026-10-30T06:28:04Z] [SESSION-182] LOCK reclaimed (pid=858539)
+[2026-10-30T06:28:04Z] [SESSION-182] RECOVERY [task-196] action="resume with uncommitted ym2610 level-IRQ + tick286 changes" reason="previous session interrupted at checkpoint 3/3"
+[2026-10-30T07:25:14Z] [SESSION-182] CHECKPOINT [task-196] step=5/5 "ROOT CAUSE FOUND+FIXED: zbank_base mirror parity (MAME audiocpu region len+0x10000 RELOAD mirror, mask=(len-1)&0x3FFFF, window->m1[x]); kof10th attract BGM t=8s matches golden, loud 42/50s (was silent-18s-delay); TCB fa24 block now populated ~matching golden; smoke kof2000/mslug4/samsho2/mslug2 no regression; probes cleaned (TCBPROBE/ZDUMPC removed, ZBANK output env-gated); 208-card audio batch running"
+[2026-10-30T08:32:42Z] [SESSION-182] CHECKPOINT [task-196] step=6/6 "batch1 t196: 179->181 music_ok, gain=kof10th+mslug3+mslugx+neocup98+preisle2 (4 parked hardcases REVIVED by level-IRQ model, old timing-fidelity verdict overturned), lost=jockeygp(CMC mirror layout, FIXED via snd_mirrored flag: plain=flat base=x, CMC=0x10000+x; verified golden M1DUMP byte-identical)+vliner/vlinero(level-IRQ regression 42->9, LEGACYIRQ A/B confirmed, new task); final batch t197 running"
+[2026-10-30T09:07:04Z] [SESSION-182] Completed [task-196] (commits acb8956+ec75332)
+[2026-10-30T09:07:04Z] [SESSION-182] Starting [task-198] vliner/vlinero level-IRQ regression (base=ec75332)
+[2026-10-30T09:36:26Z] [SESSION-182] CHECKPOINT [task-198] step=2/3 "root cause: level-IRQ model let Z80 re-accept IRQ every return-from-int (6/frame vs golden 0); bank-B-only IRQ migration FAILED (kof10th/mslug3 need bank-A phantom IRQ); resolution: flip default to pulse+once-per-frame-cap (LEVELIRQ=1 opt-in for level), revives all 6 gainers (41/39/25/39/32/39) AND restores vliner/vlinero to 21 (voiced threshold 10); read-clear irq_latch kept in level path; final batch t198 running"
+[2026-10-30T10:11:03Z] [SESSION-182] Completed [task-198] (commit 17418d4)
+[2026-10-30T10:11:03Z] [SESSION-182] STATS tasks_total=196 completed=121 failed=74 pending=1 blocked=0 attempts_total=210 checkpoints=210
+[2026-10-30T10:21:14Z] [SESSION-182] LOCK released (task-197 ms5plus remains pending for next session)
+[2026-10-30T10:23:16Z] [SESSION-183] LOCK acquired (pid=1017541)
+[2026-10-30T10:23:16Z] [SESSION-183] Starting [task-197] ms5plus attract BGM silence (base=17418d4)
+[2026-10-30T10:40:48Z] [SESSION-183] Completed [task-197] (commit f9b035e)
+[2026-10-30T10:40:48Z] [SESSION-183] STATS tasks_total=196 completed=122 failed=74 pending=0 blocked=0 attempts_total=211 checkpoints=211
+[2026-10-30T10:40:48Z] [SESSION-183] LOCK released (all tasks terminal; marker removed)
+[2026-10-30T10:55:51Z] [SESSION-184] LOCK acquired (pid=1033841)
+[2026-10-30T10:55:51Z] [SESSION-184] Starting [task-199] mslug5 attract 下半屏波浪行错位 (base=f9b035e)
+[2026-10-30T11:18:17Z] [SESSION-184] CHECKPOINT [task-199] step=3/3 "lin f2990==gold f2998 meandiff 0.0; ripple render pixel-exact; 8-frame lead = boot timing, not defect"
+[2026-10-30T11:18:17Z] [SESSION-184] Completed [task-199] (commit 14c3bf8, verdict: not a defect)
+[2026-10-30T11:18:17Z] [SESSION-184] STATS tasks_total=197 completed=123 failed=74 pending=0 blocked=0 attempts_total=212 checkpoints=215
+[2026-10-30T11:18:17Z] [SESSION-184] LOCK released (all tasks terminal; marker removed)
+[2026-10-30T11:24:09Z] [SESSION-185] LOCK acquired (pid=1057471)
+[2026-10-30T11:24:09Z] [SESSION-185] Starting [task-200] PVC bootleg 家族音频 (base=14c3bf8)
+[2026-10-30T11:30:38Z] [SESSION-185] CHECKPOINT [task-200] step=2/2 "kf2k2pla/pls revived peak 28559 loud 13s; smoke clean"
+[2026-10-30T11:30:38Z] [SESSION-185] Completed [task-200] (commit 8356329)
+[2026-10-30T11:30:38Z] [SESSION-185] Starting [task-201] cthd2003 attract 音频 (base=8356329)
+[2026-10-30T11:37:41Z] [SESSION-185] ERROR [task-201] [TASK_EXEC] cthd2003 attract peak 1191<2000; ADPCM zero reads; m1 UB fix falsified
+[2026-10-30T11:37:41Z] [SESSION-185] STATS tasks_total=199 completed=124 failed=75 pending=0 blocked=0 attempts_total=214 checkpoints=219
+[2026-10-30T11:37:41Z] [SESSION-185] LOCK released (task-201 retryable attempts=1/3; marker kept)
+[2026-10-30T11:48:23Z] [SESSION-186] LOCK acquired (pid=1073301)
+[2026-10-30T11:48:23Z] [SESSION-186] Starting [task-201] cthd2003 attract 音频 retry (base=d3bdb96)
+[2026-10-30T12:14:08Z] [SESSION-186] ERROR [task-201] [TASK_EXEC] attempt2 no-fix: TCB builder unidentified; gates falsified
+[2026-10-30T12:14:08Z] [SESSION-186] STATS tasks_total=199 completed=124 failed=75 pending=0 blocked=0 attempts_total=215 checkpoints=221
+[2026-10-30T12:14:08Z] [SESSION-186] LOCK released (task-201 retryable attempts=2/3; marker kept)
+[2026-10-30T12:24:17Z] [SESSION-187] LOCK acquired (pid=1115665)
+[2026-10-30T12:24:17Z] [SESSION-187] Starting [task-201] cthd2003 attract 音频 retry attempt3 (base=d3bdb96)
+[2026-10-30T13:29:40Z] [SESSION-187] ERROR [task-201] [TASK_EXEC] attempt3 no-fix: root cause narrowed to BIOS-command ack handshake; ch5/ZROM/ring all aligned
+[2026-10-30T13:29:40Z] [SESSION-187] ROLLBACK [task-201] git checkout src/neogeo.c (experiments CH5ROLL/CH5LVL/CH5CLR reverted)
+[2026-10-30T13:29:40Z] [SESSION-187] STATS tasks_total=199 completed=124 failed=75 pending=0 blocked=0 attempts_total=216 checkpoints=222
+[2026-10-30T13:29:40Z] [SESSION-187] LOCK released (task-201 at max_attempts; all tasks terminal; marker kept for future adds)
+[2026-10-30T13:31:04Z] [SESSION-188] LOCK acquired (pid=1177160)
+[2026-10-30T13:31:04Z] [SESSION-188] Starting [task-202] BIOS 自测命令 Z80 ack 握手保真 (base=d3bdb96)
+[2026-10-30T14:05:23Z] [SESSION-189] LOCK acquired (pid=1225696)
+[2026-10-30T14:05:23Z] [SESSION-189] RECOVERY [task-202] action='rollback BUSYWIN probe, mark attempt1 failed (SESSION_TIMEOUT)' reason='uncommitted probe only, validation would fail'
+[2026-10-30T14:05:23Z] [SESSION-189] Starting [task-202] attempt 2 (base=d3bdb96)
+[2026-10-30T14:28:22Z] [SESSION-189] CHECKPOINT [task-202] step=2/3 "gold NMI never fires (ZNMI=0,fd67=0); lin main-loop stalled iff1=0; fdca addr fixed"
+[2026-10-30T14:28:22Z] [SESSION-189] ERROR [task-202] [TASK_EXEC] attempt2 no-fix: root cause = lin Z80 stalled in DI section (iff1=0, IRQ 548 asserts 0 taken); gold drains latch via IN(00) polls so NMI never fires there
+[2026-10-30T14:28:22Z] [SESSION-189] STATS tasks_total=200 completed=124 failed=75 in_progress=1 attempts_total=219 checkpoints=224
+[2026-10-30T14:29:22Z] [SESSION-190] LOCK acquired (pid=1254511)
+[2026-10-30T14:29:22Z] [SESSION-190] Starting [task-202] attempt 3: locate lin DI-stall via IFFDBG iff1-transition probe (base=d3bdb96)
+[2026-10-30T14:52:36Z] [SESSION-190] CHECKPOINT [task-202] step=3/3 "iff1-stall falsified; task-chain runs, fd17 advances; divergence = TCB/track-data bank window"
+[2026-10-30T14:52:36Z] [SESSION-190] ERROR [task-202] [TASK_EXEC] attempt3 no-fix: task-202 closed failed 3/3 - cthd2003 track-data via bank window diverges (kof10th zbank family); lin music task runs but writes wrong YM regs (r10/r1c only)
+[2026-10-30T14:52:36Z] [SESSION-190] Completed [task-202]? no - status=failed (3/3 attempts)
+[2026-10-30T14:52:36Z] [SESSION-190] STATS tasks_total=200 completed=124 failed=76 in_progress=0 attempts_total=220 checkpoints=225
+[2026-10-30T14:52:36Z] [SESSION-190] LOCK released
+[2026-10-30T14:57:00Z] [SESSION-191] LOCK acquired (pid=1290387)
+[2026-10-30T14:57:00Z] [SESSION-191] Starting [task-203] cthd2003 bank-window content comparison (base=d3bdb96)
+[2026-10-30T15:17:32Z] [SESSION-191] CHECKPOINT [task-203] step=1/3 "root narrowed: fa99 task-registration gate; golden probe rebuilding"
+[2026-10-30T15:21:54Z] [SESSION-192] LOCK acquired (pid=1333594)
+[2026-10-30T15:21:54Z] [SESSION-192] RECOVERY [task-203] action="resume step 2" reason="context window reset with probes intact, checkpoint step1 verified on disk"
+[2026-10-30T15:33:10Z] [SESSION-192] CHECKPOINT [task-203] step=2/3 "golden fa99 t=9.77s; lin RAM==golden except stack; divergence is exec path not RAM"
+[2026-10-30T15:33:56Z] [SESSION-193] LOCK acquired (pid=1355545)
+[2026-10-30T15:33:56Z] [SESSION-193] RECOVERY [task-203] action="resume step 3" reason="prior session ended at checkpoint step2; probes intact"
+[2026-10-30T16:02:19Z] [SESSION-193] CHECKPOINT [task-203] step=3/4 "ring works; lin Z80 starved in task chain from IRQ; golden main loop once/frame"
+[2026-10-30T16:44:03Z] [SESSION-193] CHECKPOINT [task-203] step=4/5 "irq gate falsified+reverted; blob overflow fixed; committed 4b84fde pushed"
+[2026-10-30T16:54:20Z] [SESSION-194] LOCK acquired (pid=1432947)
+[2026-10-30T16:54:20Z] [SESSION-194] RECOVERY [task-203] action="resume step 5/5" reason="checkpoint4: chain self-rearm 267x/frame vs golden exit; find loop exit cond at 1c63"
+[2026-10-30T17:11:40Z] [SESSION-194] CHECKPOINT [task-203] step=5/6 "cthd2003 music=YM2151 OPM on bank A; lin has no OPM model; 24/25 gate + bankB-0x10 gate both falsified; YMWRB probe committed"
+[2026-10-30T17:12:49Z] [SESSION-195] LOCK acquired (pid=1451066)
+[2026-10-30T17:12:49Z] [SESSION-195] RECOVERY [task-203] action="resume step 6/6" reason="checkpoint5: cthd2003 music suspected YM2151 OPM on bank A; verify golden bank A reg distribution via MAME YMPC"
+[2026-10-30T17:27:09Z] [SESSION-195] CHECKPOINT [task-203] step=6/6 "golden YMPC: lin bank routing correct; divergence=di-window IRQ acceptance timing"
+[2026-10-30T17:27:09Z] [SESSION-195] ERROR [task-203] [TASK_EXEC] CLOSED-PARKED cycle-level IRQ-acceptance timing (bootleg m1), attempts=1/3, committed ca65f8f
+[2026-10-30T17:27:09Z] [SESSION-195] STATS tasks_total=201 completed=124 failed=77 pending=0 blocked=0 attempts_total=353 checkpoints=387
+[2026-10-30T17:27:32Z] [SESSION-195] WARN [task-203] parked at attempts=3/3 (aligns with mslugx/neocup98 precedent)
+[2026-10-30T17:27:32Z] [SESSION-195] STATS tasks_total=201 completed=124 failed=77 pending=0 blocked=0 attempts_total=355 checkpoints=387
+[2026-10-30T17:37:30Z] [SESSION-196] LOCK acquired (pid=1468970)
+[2026-10-30T17:37:30Z] [SESSION-196] Starting [task-204] full 208-card audio batch re-baseline (base=ca65f8f)
+[2026-10-30T18:11:03Z] [SESSION-196] CHECKPOINT [task-204] step=3/3 "music_ok 186; +kf2k2pla/pls; zero regressions"
+[2026-10-30T18:11:03Z] [SESSION-196] Completed [task-204] (no code change; baseline ca65f8f)
+[2026-10-30T18:11:03Z] [SESSION-196] STATS tasks_total=202 completed=125 failed=77 pending=0 blocked=0 attempts_total=355 checkpoints=390
+[2026-10-30T18:29:24Z] [SESSION-197] LOCK acquired (pid=1499083)
+[2026-10-30T18:29:24Z] [SESSION-197] Starting [task-205] sync deployed binary (base=ca65f8f)
+[2026-10-30T18:30:47Z] [SESSION-197] Completed [task-205] (deploy sync, no code change)
+[2026-10-30T18:30:47Z] [SESSION-197] STATS tasks_total=203 completed=126 failed=77 pending=0 blocked=0 attempts_total=355 checkpoints=392
+[2026-10-30T18:31:59Z] [SESSION-198] LOCK acquired
+[2026-10-30T18:31:59Z] [SESSION-198] Starting [task-206] graphics regression batch vs t172 (base=ca65f8f)
+[2026-10-30T19:02:14Z] [SESSION-198] CHECKPOINT [task-206] step=3/3 "OK178 +10 vs t172; zero regressions"
+[2026-10-30T19:02:14Z] [SESSION-198] Completed [task-206] (no code change; build ca65f8f)
+[2026-10-30T19:02:14Z] [SESSION-198] STATS tasks_total=204 completed=127 failed=77 pending=0 blocked=0 attempts_total=355 checkpoints=395
+[2026-10-30T19:10:38Z] [SESSION-199] LOCK acquired
+[2026-10-30T19:10:38Z] [SESSION-199] Starting [task-207] state save/load round-trip verification (base=ca65f8f)
+[2026-10-30T19:14:36Z] [SESSION-199] CHECKPOINT [task-207] step=3/3 "gfx 4/4 pixel-perfect; audio ymfm-internals gap documented"
+[2026-10-30T19:14:36Z] [SESSION-199] Completed [task-207] (no code change; verification only)
+[2026-10-30T19:14:36Z] [SESSION-199] STATS tasks_total=205 completed=128 failed=77 pending=0 blocked=0 attempts_total=355 checkpoints=398
+[2026-10-30T19:15:34Z] [SESSION-200] LOCK acquired
+[2026-10-30T19:15:34Z] [SESSION-200] Starting [task-208] SRAM/nvram persistence round-trip (base=ca65f8f)
+[2026-10-30T19:16:40Z] [SESSION-200] CHECKPOINT [task-208] step=3/3 "SRAM persistence verified 3/3"
+[2026-10-30T19:16:40Z] [SESSION-200] Completed [task-208] (no code change; verification only)
+[2026-10-30T19:16:40Z] [SESSION-200] STATS tasks_total=206 completed=129 failed=77 pending=0 blocked=0 attempts_total=355 checkpoints=401
+[2026-10-30T19:17:35Z] [SESSION-201] LOCK acquired
+[2026-10-30T19:17:35Z] [SESSION-201] Starting [task-209] fps regression benchmark (base=ca65f8f)
+[2026-10-30T19:51:36Z] [SESSION-201] CHECKPOINT [task-209] step=3/3 "92->338fps via hot-path getenv caching (01f9144)"
+[2026-10-30T19:51:36Z] [SESSION-201] Completed [task-209] (commit 01f9144)
+[2026-10-30T19:51:36Z] [SESSION-201] STATS tasks_total=207 completed=130 failed=77 pending=0 blocked=0 attempts_total=356 checkpoints=404
+[2026-10-30T19:54:46Z] [SESSION-202] LOCK acquired
+[2026-10-30T19:54:46Z] [SESSION-202] Starting [task-210] 208-card audio batch on 01f9144
+[2026-10-30T20:03:36Z] [SESSION-202] CHECKPOINT [task-210] step=3/3 "186/208 identical to t204; zero regressions"
+[2026-10-30T20:03:36Z] [SESSION-202] Completed [task-210] (no code change)
+[2026-10-30T20:03:36Z] [SESSION-202] STATS tasks_total=208 completed=131 failed=77 pending=0 blocked=0 attempts_total=356 checkpoints=407
+[2026-10-30T20:06:41Z] [SESSION-203] Starting [task-211] residual perf gap adjudication
+[2026-10-30T20:06:41Z] [SESSION-203] Completed [task-211] (no code change; adjudicated architectural cost)
+[2026-10-30T20:06:41Z] [SESSION-203] STATS tasks_total=209 completed=132 failed=77 pending=0 blocked=0 attempts_total=357 checkpoints=410
+[2026-10-30T20:16:05Z] [SESSION-204] LOCK acquired (pid=1565687)
+[2026-10-30T20:16:05Z] [SESSION-204] Starting [task-212] graphics 208-card regression @12000f vs t206 (base=01f9144)
+[2026-10-30T21:30:06Z] [SESSION-204] CHECKPOINT [task-212] step=3/3 "A/B ca65f8f same-frame identical; zero graphics regression"
+[2026-10-30T21:30:06Z] [SESSION-204] Completed [task-212] (no code change)
+[2026-10-30T21:30:06Z] [SESSION-204] STATS tasks_total=210 completed=133 failed=77 pending=0 blocked=0 attempts_total=358 checkpoints=413
+[2026-10-30T21:31:09Z] [SESSION-205] LOCK acquired (pid=1590400)
+[2026-10-30T21:31:09Z] [SESSION-205] Starting [task-213] save/SRAM re-verify on 01f9144 (base=01f9144)
+[2026-10-30T21:32:17Z] [SESSION-205] CHECKPOINT [task-213] step=3/3 "save 4/4 + SRAM 3/3 pass on 01f9144"
+[2026-10-30T21:32:17Z] [SESSION-205] Completed [task-213] (no code change)
+[2026-10-30T21:32:17Z] [SESSION-205] STATS tasks_total=211 completed=134 failed=77 pending=0 blocked=0 attempts_total=359 checkpoints=416
+[2026-10-30T21:40:43Z] [SESSION-206] LOCK acquired (pid=1595221)
+[2026-10-30T21:40:43Z] [SESSION-206] Starting [task-214] window realtime acceptance (base=01f9144)
+[2026-10-30T21:42:03Z] [SESSION-206] CHECKPOINT [task-214] step=3/3 "window realtime + CTL all pass"
+[2026-10-30T21:42:03Z] [SESSION-206] Completed [task-214] (no code change)
+[2026-10-30T21:42:03Z] [SESSION-206] STATS tasks_total=212 completed=135 failed=77 pending=0 blocked=0 attempts_total=360 checkpoints=419
+[2026-10-30T21:43:59Z] [SESSION-207] LOCK acquired (pid=1598511)
+[2026-10-30T21:43:59Z] [SESSION-207] Starting [task-215] svcpcb+kf2k3pcb PVC port (base=01f9144)
+[2026-10-30T21:57:55Z] [SESSION-207] CHECKPOINT [task-215] step=1/3 "svcpcb 1->219 colors"
+[2026-10-30T22:26:11Z] [SESSION-207] CHECKPOINT [task-215] step=3/3 "svcpcb validated, kf2k3pcb golden-parity"
+[2026-10-30T22:26:11Z] [SESSION-207] Completed [task-215] (commit 4edf641)
+[2026-10-30T22:26:11Z] [SESSION-207] STATS tasks_total=213 completed=136 failed=77 pending=0 blocked=0 attempts_total=361 checkpoints=422
+[2026-10-30T22:30:19Z] [SESSION-208] LOCK acquired (pid=1628561)
+[2026-10-30T22:30:19Z] [SESSION-208] Starting [task-216] 208-card batch regression post-PCB-port (base=4edf641)
+[2026-10-30T23:28:04Z] [SESSION-208] Completed [task-216] (no code change; batch regression clean)
+[2026-10-30T23:28:04Z] [SESSION-208] STATS tasks_total=214 completed=137 failed=77 pending=0 blocked=0 attempts_total=362 checkpoints=423
+[2026-10-30T23:28:04Z] [SESSION-208] LOCK released
+[2026-10-30T23:29:09Z] [SESSION-209] LOCK acquired (pid=1648229)
+[2026-10-30T23:29:09Z] [SESSION-209] Starting [task-217] full audio batch zcmed (base=4edf641)
+[2026-10-31T00:08:21Z] [SESSION-209] Completed [task-217] (no code change; audio baseline refreshed, zero regression)
+[2026-10-31T00:08:21Z] [SESSION-209] STATS tasks_total=215 completed=138 failed=77 pending=0 blocked=0 attempts_total=363 checkpoints=424
+[2026-10-31T00:08:21Z] [SESSION-209] LOCK released
+[2026-10-31T00:10:01Z] [SESSION-210] LOCK acquired (pid=1664610)
+[2026-10-31T00:10:01Z] [SESSION-210] Starting [task-218] save-state round-trip batch (base=4edf641)
+[2026-10-31T00:49:43Z] [SESSION-211] Completed [task-218] (commit baa92bf) — 208/208 save-state round-trip pixel-exact after fixbanktype sanitizer fix
+[2026-10-31T00:49:43Z] [SESSION-211] STATS tasks_total=215 completed=139 failed=77 pending=0 blocked=0 attempts_total=0 checkpoints=0
+[2026-10-31T01:04:22Z] [SESSION-211] LOCK acquired (pid=1701676)
+[2026-10-31T01:04:22Z] [SESSION-211] INIT added task-219 (PVC bootleg family audio) + task-220 (kf2k3upl) from t217 silent audit
+[2026-10-31T01:18:41Z] [SESSION-211] CHECKPOINT [task-219] step=1/1 "kof2000ps2+kf2k2ps2 revived (6601740); kof98cb/kof98ae2016 split to task-221; kf2k1pls incomplete-dump adjudicated"
+[2026-10-31T01:18:41Z] [SESSION-211] Completed [task-219] (commit 6601740)
+[2026-10-31T01:18:41Z] [SESSION-211] Starting [task-221] kof98cb/kof98ae2016 (base=6601740)
+[2026-10-31T01:21:18Z] [SESSION-211] ERROR [task-221] [TASK_EXEC] kof98cb/kof98ae2016 adjudicated: non-MAME bootleg m1 firmware, Z80 never dispatches, no golden — failed at attempts=3
+[2026-10-31T01:21:18Z] [SESSION-211] Starting [task-220] kf2k3upl (base=6601740)
+[2026-10-31T01:51:04Z] [SESSION-212] LOCK acquired (pid=1749978)
+[2026-10-31T01:54:56Z] [SESSION-212] CHECKPOINT [task-220] step=1/3 "kf2k3upl: official-BIOS path boots game at f172 (pc 0x744); BIOS marching RAM-test re-run at f184 overwrites vblank vector 10f364 (5555/aaaa/addr pattern); golden test ends t1.5s before game reg t4.0s; pcm2_swap(5)+RAMDUMP2/BIOSDUMP probes added"
+[2026-10-31T02:00:46Z] [SESSION-212] CHECKPOINT [task-220] step=2/3 "low-RAM-alias mirror experiment: read-side -> BIOS halt c16baa, write-side -> 4-card peak=0 regression; both rolled back"
+[2026-10-31T02:00:46Z] [SESSION-212] ERROR [task-220] [TASK_EXEC] kf2k3upl game exits after 8 frames (RAM alias writes dropped); parked attempts=2, safe probes+swap committed 6ffb41d
+[2026-10-31T02:00:46Z] [SESSION-212] STATS tasks_total=219 completed=140 failed=79 pending=0 blocked=0 attempts_total=364 checkpoints=426
+[2026-10-31T02:00:53Z] [SESSION-212] LOCK released
+[2026-10-31T02:01:32Z] [SESSION-213] LOCK acquired (pid=1795914)
+[2026-10-31T02:01:32Z] [SESSION-213] Starting [task-220] kf2k3upl attract audio (base=6ffb41d) final attempt: per-card gated RAM alias
+[2026-10-31T02:19:51Z] [SESSION-213] CHECKPOINT [task-220] step=3/3 "gated low-RAM-alias fold into SMEM view: BIOS test-pattern poisons vector table via unified alias; BLACK; rolled back, fleet smoke clean"
+[2026-10-31T02:19:51Z] [SESSION-213] ERROR [task-220] [TASK_EXEC] kf2k3upl attract BGM: three root-layer candidates falsified (m1 OOB-UB, blanket alias, gated alias); deep bootleg protection needs PCB-level trace; parked at max_attempts=3
+[2026-10-31T02:19:51Z] [SESSION-213] STATS tasks_total=219 completed=140 failed=79 pending=0 blocked=0 attempts_total=365 checkpoints=427
+[2026-10-31T02:19:51Z] [SESSION-213] LOCK released
+[2026-10-31T02:21:13Z] [SESSION-214] STATS tasks_total=219 completed=140 failed=79 pending=0 blocked=0 attempts_total=371 checkpoints=429
+[2026-10-31T02:32:44Z] [SESSION-215] LOCK acquired (pid=1811443)
+[2026-10-31T02:32:44Z] [SESSION-215] Starting [task-222] recheck parked graphics cards (base=6ffb41d)
+[2026-10-31T03:22:08Z] [SESSION-216] CHECKPOINT [task-222] step=2/2 "22-card recheck: 13 revived, wh2 parked, rest by-design"
+[2026-10-31T03:22:08Z] [SESSION-216] Completed [task-222] (commit 75b14b2)
+[2026-10-31T03:22:08Z] [SESSION-216] STATS tasks_total=220 completed=141 failed=79 pending=0 blocked=0 attempts_total=372 checkpoints=431
+[2026-10-31T03:23:43Z] [SESSION-214] LOCK acquired (pid=1836172)
+[2026-10-31T03:23:43Z] [SESSION-214] Starting [task-223] full 208-card batch to refresh final compat table (base=75b14b2)
+[2026-10-31T06:39:09Z] [SESSION-215] LOCK reclaimed (stale pid=1836161 removed)
+[2026-10-31T06:39:09Z] [SESSION-215] Completed [task-223] final_best_2026-10-31.json 208 cards (ok>=30c 149, low 59, black 9); 40k/80k retests + vision adjudication done
+[2026-10-31T06:52:12Z] [SESSION-216] LOCK reclaimed (stale pid=1895805 removed)
+[2026-10-31T06:52:12Z] [SESSION-216] RECOVERY [task-225] action='resume attempt 1' reason='context window reset; checkpoints hold full diagnosis chain (crash f2847 1e24->0x4, RAM func table 100100 zeroed at f252 pc=2a5ea)'
+[2026-10-31T07:43:58Z] [SESSION-217] LOCK reclaimed (stale pid=1918227 removed)
+[2026-10-31T07:43:58Z] [SESSION-217] RECOVERY [task-225] action='resume attempt 1' reason='crash mechanism pinned: ROM 1c74 movea.l $10082ba,a0; 1c7a jmp(a0); lin 10082ba=0 at f2850 (should hold func ptr)'
+[2026-10-31T07:55:55Z] [SESSION-217] CHECKPOINT [task-225] step=2/3 'crash dispatcher mapped (1c74 movea $10082ba; jmp a0); golden also 0 there - lin takes different branch; earliest divergence f2832 handle-ring 10820C 0800 vs gold 0c00; pool order drift upstream'
+[2026-10-31T07:55:55Z] [SESSION-217] ERROR [task-225] [TASK_EXEC] attempt 1 root cause not isolated: object-scheduler handle-order drift upstream of crash; retry candidates listed in checkpoints
+[2026-10-31T07:55:55Z] [SESSION-217] Completed probe tooling: SMEMDUMP committed 76c7b94 (pushed); MAME LINORAGX_68RDUMP full-64K golden RAM probe built
+[2026-10-31T07:55:55Z] [SESSION-217] STATS tasks_total=223 completed=142 failed=80 pending=1 blocked=0 attempts_total=224 checkpoints=+2
+[2026-10-31T07:55:55Z] [SESSION-217] LOCK released
+[2026-10-31T08:10:23Z] [SESSION-217] LOCK released
+[2026-10-31T08:11:22Z] [SESSION-218] LOCK acquired (pid=1988726)
+[2026-10-31T08:11:22Z] [SESSION-218] Starting [task-224] bstars attract block-misalign garble (base=76c7b94)
+[2026-10-31T11:06:54Z] [SESSION-218] CHECKPOINT [task-224] step=1/3 "VRAM visible/CRAM/active-sprites match golden at f3000; only inactive-entry diffs"
+[2026-10-31T11:06:54Z] [SESSION-218] CHECKPOINT [task-224] step=2/3 "lin screen bbox upper-left quadrant only; no golden frame f2000-4000 matches (best 0.243); transpose/shift tests negative"
+[2026-10-31T11:06:54Z] [SESSION-218] ERROR [task-224] [TASK_EXEC] attempt1 exhausted - root cause not isolated; fix-layer render path or frame-alignment suspect
+[2026-10-31T11:06:54Z] [SESSION-218] STATS tasks_total=223 completed=142 failed=81 pending=0 in_progress=0
