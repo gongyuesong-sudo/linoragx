@@ -3863,10 +3863,31 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                     {"pcb_svc\"",50,0x57,1,1,1},
                                     {"pcb_k3p3\"",50,0x9d,1,1,2},
                                     {"boot_ms5plus\"",50,0x19,1,1},
+                                    /* decrypted bootleg sets: swlist carries no protection slot
+                                       feature, but the m1 is byte-identical to the ENCRYPTED retail
+                                       one (md5-checked) — decrypt m1 only, gfx/ADPCM already plain.
+                                       sf=2 sentinel = skip cmc_gfx_run. MUST stay LAST in ctab:
+                                       the match string also hits the entry's earlier <sharedrom>
+                                       refs, and m1 decrypt must run only after ADPCM regions are
+                                       loaded so the family pcm2_swap below still applies. */
+                                    {"kof2000ps2\"",50,0x00,2,1},
+                                    {"kf2k2ps2\"",50,0xec,2,1},
                                 };
                                 for (unsigned ci = 0; ci < sizeof ctab / sizeof ctab[0]; ci++) {
                                     if (!sw_has(sw, swend, ctab[ci].f)) continue;
-                                    if (ctab[ci].m1 && ng->acrypt && ng->acrypt_size >= 0x10000) {
+                                    if (ctab[ci].m1 && ctab[ci].sf == 2 && !ng->acrypt
+                                        && ng->snd && ng->snd_size >= 0x10000) {
+                                        /* decrypted-bootleg layout: the still-encrypted m1 sits in the
+                                           plain audiocpu area (already loaded as ng->snd), no
+                                           audiocrypt dataarea exists in the swlist entry. */
+                                        uint8_t *raw = ng->snd; size_t rsz = ng->snd_size;
+                                        ng->snd = calloc(0x90000, 1); ng->snd_size = 0x90000;
+                                        ng->snd_mirrored = 1;
+                                        cmc50_m1_decrypt(raw, rsz, ng->snd);
+                                        free(raw);
+                                        { const char *ds = getenv("DUMPSND"); if (ds && ng->snd) { FILE *f = fopen(ds, "wb"); if (f) { fwrite(ng->snd, 1, 0x80000, f); fclose(f); } } }
+                                        if (f_cmctr()) fprintf(stderr, "M1DEC-AUDIOCPU sw=%s snd[0..7]=%02x %02x %02x %02x\n", ctab[ci].f, ng->snd[0],ng->snd[1],ng->snd[2],ng->snd[3]);
+                                    } else if (ctab[ci].m1 && ng->acrypt && ng->acrypt_size >= 0x10000) {
                                         if (ng->snd) free(ng->snd);
                                         ng->snd = calloc(0x90000, 1); ng->snd_size = 0x90000;
                                         ng->snd_mirrored = 1;
@@ -3877,7 +3898,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                         { const char *ds = getenv("DUMPSND"); if (ds && ng->snd) { FILE *f = fopen(ds, "wb"); if (f) { fwrite(ng->snd, 1, 0x80000, f); fclose(f); } } }
                                         if (f_cmctr()) fprintf(stderr, "M1DEC sw=%s acsz=%x snd[0..7]=%02x %02x %02x %02x %02x %02x %02x %02x\n", ctab[ci].f, ng->acrypt_size, ng->snd[0],ng->snd[1],ng->snd[2],ng->snd[3],ng->snd[4],ng->snd[5],ng->snd[6],ng->snd[7]);
                                     }
-                                    if (!getenv("LINORAGX_NOCMC"))
+                                    if (!getenv("LINORAGX_NOCMC") && ctab[ci].sf != 2)
                                         cmc_gfx_run(ng, ctab[ci].chip == 50, ctab[ci].key, ctab[ci].sf, ctab[ci].s1);
                                     if (!strcmp(ctab[ci].f, "boot_kf2k3pl\"")) ng->k3bl_px = 1;
                                     else if (!strcmp(ctab[ci].f, "boot_kf2k3upl\"")) ng->k3bl_px = 2;
@@ -3887,7 +3908,8 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 }
                             }
                             /* MAME kof2002 cart: pcm2 swap(ym,0) on the ADPCM sample region */
-                            if ((sw_has(sw, swend, "k2k2_kof2k2\"") || sw_has(sw, swend, "k2k2_kf2k2p\"")) && ng->adpcm && ng->adpcm_size >= 0x1000000)
+                            if ((sw_has(sw, swend, "k2k2_kof2k2\"") || sw_has(sw, swend, "k2k2_kf2k2p\"")
+                                 || sw_has(sw, swend, "kf2k2ps2\"")) && ng->adpcm && ng->adpcm_size >= 0x1000000)
                                 pcm2_swap(ng->adpcm, 0);
                             /* MAME samsh5sp cart: pcm2 swap(ym,6) */
                             if (sw_has(sw, swend, "k2k2_sams5s\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
