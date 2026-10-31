@@ -4,7 +4,7 @@
   "session_config": {
     "concurrency_mode": "exclusive",
     "max_tasks_per_session": 20,
-    "max_sessions": 200
+    "max_sessions": 500
   },
   "tasks": [
     {
@@ -7751,10 +7751,10 @@
     {
       "id": "task-227",
       "title": "wh2 (World Heroes 2, official) stuck BLACK 1c at 20000f+coin: game never writes CRAM, polls a flag that never arrives (old samsho/ganryu BIOS-callback family; samsho since revived - recheck under new toolchain)",
-      "status": "in_progress",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
       "started_at_commit": "a12737d",
       "validation": {
@@ -7765,7 +7765,8 @@
         "cleanup": null
       },
       "error_log": [
-        "[TASK_EXEC] attempt1 exhausted: demo-scene palette staging empty at engine time despite synced RAM; intra-frame ordering divergence unresolved"
+        "[TASK_EXEC] attempt1 exhausted: demo-scene palette staging empty at engine time despite synced RAM; intra-frame ordering divergence unresolved",
+        "[TASK_EXEC] attempt 3: fade chain decoded (counters 0x10c530 fade-out / 0x10c51e fade-in, scene-script SM via 0x4(a5) handler ptr); attract stall = fade-in request applies fade-out ramp table (level 0f->00), scene token stream divergence not isolated"
       ],
       "checkpoints": [
         {
@@ -7844,6 +7845,6 @@
       "completed_at": null
     }
   ],
-  "session_count": 227,
-  "last_session": "2026-10-31T13:58:24Z"
+  "session_count": 228,
+  "last_session": "2026-11-01T00:00:00Z"
 }
