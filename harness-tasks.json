@@ -7708,8 +7708,47 @@
       ],
       "completed_at": null,
       "claimed_by": "session-215"
+    },
+    {
+      "id": "task-226",
+      "title": "bstars: BIOS early-boot branch divergence - lin parks 68K at c1df06 f60-f240 while golden runs c13xxx self-test loop until t=7.37s; zoom table written by that BIOS path",
+      "status": "completed",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "d0fc54a",
+      "validation": {
+        "command": "cd /home/gill/linoragx && VRAMBIN=/tmp/bsv_t226.bin VRAMD2F=100 ./reawork/bin/linoragx --rom roms/bstars.zip --bios . --frames 101 --headless --no-audio >/dev/null 2>&1; python3 -c \"import struct; v=open('/tmp/bsv_t226.bin','rb').read(); nz=sum(1 for i in range(0x8000,0x8200) if struct.unpack_from('<H',v,i*2)[0] not in (0,0x0fff)); print('zoom-nondefault',nz); exit(0 if nz>0 else 1)\"",
+        "timeout_seconds": 120
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "root cause: BIOS selection. uni-bios fast-boot skips stock c13xxx self-test that initialises zoom table + state bstars attract needs. lin reset-vector/BIOS-entry chain verified correct (c00402->c11002); earlier runaway-into-data claim was word_swap misread - c1df06 is legit dbf delay loop. golden f1 already in c1314a self-test loop; nvram removal no effect; bstars is OFFICIAL MAME game (no protection device).",
+          "timestamp": "2026-10-31T13:44:22Z"
+        },
+        {
+          "step": 2,
+          "total": 3,
+          "description": "fix: per-card BIOS pref bstars/bstarsh -> NEO-GEO.ROM (neogeo.c, same mechanism as mslug4). Verified: f1 c13144 loop == golden c1314a; f100 zoom-nondefault 511/511 == golden f100; f3000 48c full-screen bbox x8..311 y8..215, two-window baseball split layout structurally == golden same-frame. CORRECTION: golden f3000 zoom table is ALSO 0 (game clears BIOS self-test residue) - old zoom@f3000 criterion was wrong; correct criterion zoom@f100.",
+          "timestamp": "2026-10-31T13:44:22Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "regression smoke: kof2000 51c, mslug4 67c, b2b 188c all normal. Validation (zoom@f100>0) exit 0.",
+          "timestamp": "2026-10-31T13:44:22Z"
+        }
+      ],
+      "completed_at": "2026-10-31T13:44:33Z"
     }
   ],
-  "session_count": 221,
-  "last_session": "2026-10-31T12:55:52Z"
+  "session_count": 222,
+  "last_session": "2026-10-31T13:44:33Z"
 }
