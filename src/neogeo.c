@@ -392,6 +392,13 @@ static uint8_t z_read(uint32_t a, void *c)
        (audio_c000/audio_f000 banks), NOT shared RAM. Shared RAM lives on the
        68K side (0x100000-0x10FFFF). Hard-mapping smem here clobbered the m1
        driver's ROM view (dragonsh boot). Fall through to banked ROM below. */
+    if (a >= 0x7000 && a < 0x8000) {
+        /* MAME parity: Z80 0x7000-0x7FFF is the shared work-RAM window
+           (68K 0x108000-0x10FFFF). wh2's m1 acks the 68K scene task by
+           writing 0x7206 -> 68K byte 0x108206; dropping it left the 68K
+           scene dispatcher parked forever (black attract). */
+        return ng->smem[0x8000 + (a - 0x7000)];
+    }
     if (a < 0x8000) {
         return (r && a < sz) ? r[a] : 0xFF;
     }
@@ -436,6 +443,17 @@ static void z_write(uint32_t a, uint8_t v, void *c)
     /* Z80 RAM is 0xF800-0xFFFF (2K). The stack starts at 0xFFFC (SP=0xFFFF at
        reset, first push writes 0xFFFB/0xFFFC): the high bytes are still RAM —
        dropping them corrupts NMI return addresses (crash to 0xFFFD). */
+    if (a >= 0x7000 && a < 0x8000) {
+        /* MAME parity: Z80 0x7000-0x7FFF shared work-RAM window
+           (68K 0x108000-0x10FFFF); wh2 m1 acks via 0x7206. */
+        uint32_t so = 0x8000 + (a - 0x7000);
+        ng->smem[so] = v;
+        ng->smem_dirty[so >> 3] |= 1u << (so & 7);
+        { static int zsh = -2; if (zsh == -2) zsh = getenv("ZSHR") ? 1 : 0;
+          if (zsh) fprintf(stderr, "ZSHR f=%llu a=%04x v=%02x zpc=%04x\n",
+              (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
+        return;
+    }
     if (a >= 0xC000 && a < 0xF800) {
         if (zwr_tr&2) { static long swz = 0;
             if (swz++ < 200) fprintf(stderr, "SMEMWRZ f=%llu a=%04x v=%02x zpc=%04x\n",
@@ -1458,7 +1476,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                     uint32_t o = ng->vram_offset;
                     if ((o & 0xFE00u) != 0x8000u && (o>>8) != 0) {}
                     if ((o|0u) == (0x8000u|(unsigned)vwrn) || (o|0u) == (0x8200u|(unsigned)vwrn) || (o|0u) == (0x8400u|(unsigned)vwrn) ||
-                        (o|0u) == (unsigned)vwrn || (o|0u) == (0x200u|(unsigned)vwrn) || (o|0u) == (0x400u|(unsigned)vwrn))
+                        (o|0u) == (unsigned)vwrn || (o|0u) == (0x200u|(unsigned)vwrn) || (o|0u) == (0x400u|(unsigned)vwrn) ||
+                        (vwrn <= 3 && o <= 3))
                         fprintf(stderr, "VWRN f=%lu off=%04x val=%04x pc=%08x\n", ng->frame, o, d, m68k_get_reg(NULL,M68K_REG_PC));
                 }
             }
@@ -1579,6 +1598,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
     if (a >= 0x900000 && a < 0x940000) {   /* MAME videoram share R/W window (BIOS VRAM test uses it) */
         uint32_t o = (a & 0x1FFFF) >> 1;
         if (o < 0x10000) {
+            if (getenv("VWIN") && o < 4)
+                fprintf(stderr, "VWIN f=%lu o=%u d=%04x pc=%08x\n", ng->frame, o, d, m68k_get_reg(NULL,M68K_REG_PC));
             if (mem_mask & 0xFF00) ng->vram[o] = (ng->vram[o]&0x00FF)|(d&0xFF00);
             if (mem_mask & 0x00FF) ng->vram[o] = (ng->vram[o]&0xFF00)|(d&0x00FF);
         }
@@ -4428,8 +4449,18 @@ void ng_run_frame(neogeo *ng)
                   char *tok = strtok(buf, ","); int k = 0;
                   while (tok && k < 4) { pch[k++] = (int)strtol(tok, 0, 16); tok = strtok(0, ","); } } }
           if (hinit == 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
-              for (int k = 0; k < 4 && pch[k]; k++) if (pc == (unsigned)pch[k] && hcnt[k]++ < 5)
-                  fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld\n", ng->frame, pc, hcnt[k]); } }
+              for (int k = 0; k < 4 && pch[k]; k++) if (pc == (unsigned)pch[k]) {
+                  long c = hcnt[k]++;
+                  if (c < 5 || c % 500 == 0)
+                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld\n", ng->frame, pc, c); } } }
+        { static int fdbg = -2; static long fcnt;
+          if (fdbg == -2) fdbg = getenv("FADEDBG") ? 1 : 0;
+          if (fdbg && ng->frame >= 5000 && m68k_get_reg(NULL,M68K_REG_PC) == 0x20483a && fcnt++ < 60) {
+              extern uint32_t m68k_read_memory_16(uint32_t);
+              uint32_t a4 = (uint32_t)m68k_get_reg(NULL,M68K_REG_A4);
+              fprintf(stderr, "FADEDBG f=%d a4=%08x arg0=%04x arg1=%04x arg2=%04x\n", ng->frame,
+                  a4, (unsigned)m68k_read_memory_16(a4),
+                  (unsigned)m68k_read_memory_16(a4+2), (unsigned)m68k_read_memory_16(a4+4)); } }
         { static int regat = -2; static unsigned long regn;
           if (regat == -2) { const char *e = getenv("REGAT"); regat = e ? (int)strtol(e, 0, 16) : -1; }
           { const char *pp = getenv("PCF"); static int pf_last = -1;
