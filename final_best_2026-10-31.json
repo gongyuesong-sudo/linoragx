@@ -1,0 +1,626 @@
+{
+ "2020bb": {
+  "colors": 12
+ },
+ "3countb": {
+  "colors": 196
+ },
+ "alpham2": {
+  "colors": 111
+ },
+ "androdun": {
+  "colors": 2
+ },
+ "aodk": {
+  "colors": 40
+ },
+ "aof": {
+  "colors": 183
+ },
+ "aof2": {
+  "colors": 129
+ },
+ "aof3": {
+  "colors": 200
+ },
+ "b2b": {
+  "colors": 13
+ },
+ "badapple": {
+  "colors": 31
+ },
+ "bakatono": {
+  "colors": 57
+ },
+ "bangbead": {
+  "colors": 49
+ },
+ "bjourney": {
+  "colors": 128
+ },
+ "blazstar": {
+  "colors": 5
+ },
+ "breakers": {
+  "colors": 275
+ },
+ "breakrev": {
+  "colors": 136
+ },
+ "bstars": {
+  "colors": 6
+ },
+ "bstars2": {
+  "colors": 54
+ },
+ "burningf": {
+  "colors": 77
+ },
+ "cnbe": {
+  "colors": 15
+ },
+ "cndi": {
+  "colors": 5
+ },
+ "columnsn": {
+  "colors": 42
+ },
+ "cphd": {
+  "colors": 12
+ },
+ "crswd2bl": {
+  "colors": 190
+ },
+ "crsword": {
+  "colors": 86
+ },
+ "cthd2003": {
+  "colors": 1
+ },
+ "ctomaday": {
+  "colors": 52
+ },
+ "cyberlip": {
+  "colors": 82
+ },
+ "diggerma": {
+  "colors": 63
+ },
+ "doubledr": {
+  "colors": 12
+ },
+ "dragonsh": {
+  "colors": 3
+ },
+ "eightman": {
+  "colors": 7
+ },
+ "fatfursp": {
+  "colors": 198
+ },
+ "fatfury1": {
+  "colors": 5
+ },
+ "fatfury2": {
+  "colors": 43
+ },
+ "fatfury3": {
+  "colors": 51
+ },
+ "fbfrenzy": {
+  "colors": 47
+ },
+ "fightfev": {
+  "colors": 68
+ },
+ "flipshot": {
+  "colors": 57
+ },
+ "froman2b": {
+  "colors": 65
+ },
+ "fswords": {
+  "colors": 203
+ },
+ "galaxyfg": {
+  "colors": 26
+ },
+ "ganryu": {
+  "colors": 45
+ },
+ "garou": {
+  "colors": 216
+ },
+ "ghostlop": {
+  "colors": 6
+ },
+ "goalx3": {
+  "colors": 100
+ },
+ "gowcaizr": {
+  "colors": 40
+ },
+ "gpilots": {
+  "colors": 11
+ },
+ "gururin": {
+  "colors": 133
+ },
+ "ironclad": {
+  "colors": 150
+ },
+ "irrmaze": {
+  "colors": 66
+ },
+ "janshin": {
+  "colors": 44
+ },
+ "jockeygp": {
+  "colors": 186
+ },
+ "joyjoy": {
+  "colors": 64
+ },
+ "kabukikl": {
+  "colors": 38
+ },
+ "karnovr": {
+  "colors": 212
+ },
+ "kf10thep": {
+  "colors": 8
+ },
+ "kf2k1pls": {
+  "colors": 1
+ },
+ "kf2k2pla": {
+  "colors": 210
+ },
+ "kf2k2pls": {
+  "colors": 75
+ },
+ "kf2k2ps2": {
+  "colors": 176
+ },
+ "kf2k3pcb": {
+  "colors": 1
+ },
+ "kf2k3pl": {
+  "colors": 44
+ },
+ "kf2k3upl": {
+  "colors": 8
+ },
+ "kizuna": {
+  "colors": 226
+ },
+ "kof10th": {
+  "colors": 145
+ },
+ "kof2000": {
+  "colors": 43
+ },
+ "kof2000ps2": {
+  "colors": 51
+ },
+ "kof2001": {
+  "colors": 172
+ },
+ "kof2002": {
+  "colors": 217
+ },
+ "kof2003": {
+  "colors": 104
+ },
+ "kof94": {
+  "colors": 76
+ },
+ "kof95": {
+  "colors": 51
+ },
+ "kof96": {
+  "colors": 369
+ },
+ "kof96ae": {
+  "colors": 93
+ },
+ "kof96ae20": {
+  "colors": 92
+ },
+ "kof96cn": {
+  "colors": 459
+ },
+ "kof97": {
+  "colors": 12
+ },
+ "kof97cn": {
+  "colors": 66
+ },
+ "kof97oro": {
+  "colors": 93
+ },
+ "kof98": {
+  "colors": 15
+ },
+ "kof98ae": {
+  "colors": 254
+ },
+ "kof98ae2016": {
+  "colors": 228
+ },
+ "kof98cb": {
+  "colors": 246
+ },
+ "kof99": {
+  "colors": 415
+ },
+ "kof99ae": {
+  "colors": 451
+ },
+ "kogplus": {
+  "colors": 78
+ },
+ "kotm": {
+  "colors": 238
+ },
+ "kotm2": {
+  "colors": 142
+ },
+ "kotmh": {
+  "colors": 207
+ },
+ "lastblad": {
+  "colors": 196
+ },
+ "lastbld2": {
+  "colors": 8
+ },
+ "lasthope": {
+  "colors": 93
+ },
+ "lb2b": {
+  "colors": 1
+ },
+ "lbowling": {
+  "colors": 136
+ },
+ "legendos": {
+  "colors": 9
+ },
+ "lhcdb": {
+  "colors": 308
+ },
+ "lresort": {
+  "colors": 18
+ },
+ "ltorb": {
+  "colors": 5
+ },
+ "magdrop2": {
+  "colors": 19
+ },
+ "magdrop3": {
+  "colors": 162
+ },
+ "maglord": {
+  "colors": 208
+ },
+ "mahretsu": {
+  "colors": 28
+ },
+ "matrim": {
+  "colors": 272
+ },
+ "miexchng": {
+  "colors": 29
+ },
+ "minasan": {
+  "colors": 111
+ },
+ "moshougi": {
+  "colors": 68
+ },
+ "ms4plus": {
+  "colors": 158
+ },
+ "ms5pcb": {
+  "colors": 19
+ },
+ "ms5plus": {
+  "colors": 217
+ },
+ "mslug": {
+  "colors": 29
+ },
+ "mslug2": {
+  "colors": 134
+ },
+ "mslug3": {
+  "colors": 135
+ },
+ "mslug3b6": {
+  "colors": 157
+ },
+ "mslug4": {
+  "colors": 136
+ },
+ "mslug5": {
+  "colors": 13
+ },
+ "mslugx": {
+  "colors": 14
+ },
+ "mutnat": {
+  "colors": 103
+ },
+ "nam1975": {
+  "colors": 25
+ },
+ "ncombat": {
+  "colors": 12
+ },
+ "ncommand": {
+  "colors": 114
+ },
+ "neobombe": {
+  "colors": 51
+ },
+ "neocup98": {
+  "colors": 39
+ },
+ "neodrift": {
+  "colors": 66
+ },
+ "neogeo": {
+  "colors": 1
+ },
+ "neomrdo": {
+  "colors": 184
+ },
+ "neonopon": {
+  "colors": 22
+ },
+ "neopong": {
+  "colors": 57
+ },
+ "neotet": {
+  "colors": 16
+ },
+ "neothndr": {
+  "colors": 7
+ },
+ "ngem2k": {
+  "colors": 9
+ },
+ "ngfrog": {
+  "colors": 23
+ },
+ "ninjamas": {
+  "colors": 29
+ },
+ "nitd": {
+  "colors": 31
+ },
+ "overtop": {
+  "colors": 97
+ },
+ "panicbom": {
+  "colors": 85
+ },
+ "pbobbl2n": {
+  "colors": 13
+ },
+ "pbobble": {
+  "colors": 1
+ },
+ "pbobble2": {
+  "colors": 1
+ },
+ "pbobblen": {
+  "colors": 13
+ },
+ "pgoal": {
+  "colors": 148
+ },
+ "pnyaa": {
+  "colors": 7
+ },
+ "popbounc": {
+  "colors": 186
+ },
+ "preisle2": {
+  "colors": 147
+ },
+ "pspikes2": {
+  "colors": 40
+ },
+ "pulstar": {
+  "colors": 171
+ },
+ "puzzledp": {
+  "colors": 40
+ },
+ "quizdai2": {
+  "colors": 95
+ },
+ "quizdais": {
+  "colors": 116
+ },
+ "ragnagrd": {
+  "colors": 273
+ },
+ "rbff1": {
+  "colors": 237
+ },
+ "rbff1a": {
+  "colors": 212
+ },
+ "rbff2": {
+  "colors": 4
+ },
+ "rbffspec": {
+  "colors": 7
+ },
+ "ridhero": {
+  "colors": 73
+ },
+ "roboarmy": {
+  "colors": 64
+ },
+ "rotd": {
+  "colors": 221
+ },
+ "s1945p": {
+  "colors": 200
+ },
+ "samsh5sp": {
+  "colors": 81
+ },
+ "samsho": {
+  "colors": 57
+ },
+ "samsho2": {
+  "colors": 38
+ },
+ "samsho3": {
+  "colors": 129
+ },
+ "samsho4": {
+  "colors": 148
+ },
+ "samsho4k": {
+  "colors": 217
+ },
+ "samsho5": {
+  "colors": 124
+ },
+ "samsho5x": {
+  "colors": 125
+ },
+ "savagere": {
+  "colors": 135
+ },
+ "sdodgeb": {
+  "colors": 293
+ },
+ "sengoku": {
+  "colors": 93
+ },
+ "sengoku2": {
+  "colors": 91
+ },
+ "sengoku3": {
+  "colors": 120
+ },
+ "shocktr2": {
+  "colors": 43
+ },
+ "shocktro": {
+  "colors": 124
+ },
+ "socbrawl": {
+  "colors": 110
+ },
+ "sonicwi2": {
+  "colors": 37
+ },
+ "sonicwi3": {
+  "colors": 17
+ },
+ "spinmast": {
+  "colors": 142
+ },
+ "ssideki": {
+  "colors": 109
+ },
+ "ssideki2": {
+  "colors": 134
+ },
+ "ssideki3": {
+  "colors": 100
+ },
+ "ssideki4": {
+  "colors": 31
+ },
+ "stakwin": {
+  "colors": 72
+ },
+ "stakwin2": {
+  "colors": 51
+ },
+ "strhoop": {
+  "colors": 43
+ },
+ "superspy": {
+  "colors": 114
+ },
+ "svc": {
+  "colors": 17
+ },
+ "svcpcb": {
+  "colors": 28
+ },
+ "svcsplus": {
+  "colors": 18
+ },
+ "tophuntr": {
+  "colors": 42
+ },
+ "totc": {
+  "colors": 225
+ },
+ "tpgolf": {
+  "colors": 48
+ },
+ "trally": {
+  "colors": 1
+ },
+ "turfmast": {
+  "colors": 193
+ },
+ "twinspri": {
+  "colors": 176
+ },
+ "tws96": {
+  "colors": 82
+ },
+ "viewpoin": {
+  "colors": 99
+ },
+ "vliner": {
+  "colors": 22
+ },
+ "vlinero": {
+  "colors": 22
+ },
+ "wakuwak7": {
+  "colors": 182
+ },
+ "wh1": {
+  "colors": 21
+ },
+ "wh2": {
+  "colors": 1
+ },
+ "wh2j": {
+  "colors": 176
+ },
+ "whp": {
+  "colors": 66
+ },
+ "wjammers": {
+  "colors": 73
+ },
+ "zedblade": {
+  "colors": 91
+ },
+ "zintrckb": {
+  "colors": 208
+ },
+ "zintrkcd": {
+  "colors": 210
+ },
+ "zupapa": {
+  "colors": 91
+ }
+}
