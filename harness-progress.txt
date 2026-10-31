@@ -1276,3 +1276,6 @@
 [2026-10-31T12:51:38Z] [SESSION-223] CHECKPOINT [task-225] step=3/3 "causal chain f293 over-dispatch -> f359 allocator -> f2847 crash; endianness misread corrected; BIOS hypothesis falsified"
 [2026-10-31T12:51:38Z] [SESSION-223] ERROR [task-225] [TASK_EXEC] attempt3: bootleg scheduler dispatch-state divergence upstream of f293 not isolated; task at max_attempts
 [2026-10-31T12:51:38Z] [SESSION-223] Starting [task-224] bstars zoom-table game-init divergence attempt3 (base=da66db1)
+[2026-10-31T12:55:52Z] [SESSION-223] CHECKPOINT [task-224] step=3/3 "BIOS boot-path divergence: golden c13xxx self-test writes zoom table, lin parks at c1df06 fast-boot branch"
+[2026-10-31T12:55:52Z] [SESSION-223] ERROR [task-224] [TASK_EXEC] attempt3: bootleg BIOS read-back gate not isolated; task at max_attempts
+[2026-10-31T12:55:52Z] [SESSION-223] STATS tasks_total=223 completed=142 failed=81 pending=0 in_progress=0

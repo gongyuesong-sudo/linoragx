@@ -7570,7 +7570,7 @@
     {
       "id": "task-224",
       "title": "bstars attract 块错位花屏（80k 帧仍 38c，sprite/层错位）",
-      "status": "in_progress",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
       "attempts": 3,
@@ -7585,7 +7585,8 @@
       },
       "error_log": [
         "[TASK_EXEC] attempt1 exhausted: VRAM visible region/CRAM/active sprites all match golden at f3000, yet lin screen != golden screen at ANY frame f2000-4000 (best difffrac 0.243). Transpose/half-shift tests negative. Divergence is in fix-layer RENDERING path or frame-count misalignment between lin BMP dump and golden lua screenshot.",
-        "[TASK_EXEC] attempt2: zoom-table writer not isolated. Falsified: BIOS-selection hypothesis (golden with uni-bios ALSO writes 511 zoom entries at f100); ROM absolute-0x910xxx scan (only 2 data-table coincidences - game uses address register + offset writes); MAME lua memory API (spaces/programs nil in this build). lin game never writes zoom table f100..f20000 while golden writes 511 entries by f100 - game init divergence, writer PC unknown."
+        "[TASK_EXEC] attempt2: zoom-table writer not isolated. Falsified: BIOS-selection hypothesis (golden with uni-bios ALSO writes 511 zoom entries at f100); ROM absolute-0x910xxx scan (only 2 data-table coincidences - game uses address register + offset writes); MAME lua memory API (spaces/programs nil in this build). lin game never writes zoom table f100..f20000 while golden writes 511 entries by f100 - game init divergence, writer PC unknown.",
+        "[TASK_EXEC] attempt3: root class pinned - BIOS boot-path divergence. Golden 68K stays in BIOS c13xxx self-test/checksum loop (0x5555/0xaaaa pattern write-read at c13140) until t=7.37s then hands to game; lin BIOS parks at c1df06 from f60-f240 and hands off at f~250. The zoom table (511 entries at golden f100) is written by the BIOS c13xxx init path that lin never reaches - same signature as mslugx task-021/193 (c1df06 park). Upstream gate: some hardware read-back during early BIOS (f0-f60) diverges, sending uni-bios down the fast branch. Bootleg protection read-back fidelity gap."
       ],
       "checkpoints": [
         {
@@ -7635,6 +7636,12 @@
           "total": 3,
           "description": "attempt3 next moves (ranked): (1) diff golden-vs-lin 68K work RAM at f100 (tools ready: MAME LINORAGX_68RDUMP=100 LINORAGX_ZRAM=1 + lin RAMDUMP2F=100 SMEMDUMP) - game state-machine divergence should show which init task stalled; (2) find MAME VRAM write handler: grep -n \"address_map\" src/mame/snk/neogeo_spr.cpp, or search neogeo.cpp for install_write_bank/VIDEO map (0x900000 window not found by simple grep - likely in device add_address_map with symbolic constant); add PC probe there env LINORAGX_VWPC=1; (3) lin PCTRACE f25-f100 PC histogram vs golden once writer PC known. NOTE: do NOT retry MAME lua memory reads (broken build) and do NOT scan ROM for 0x0091 absolutes (game uses An+disp).",
           "timestamp": "2026-10-31T12:27:59Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "if reopened: instrument lin 68K reads f0-f60 (PCTRACE f0-f59 + trace memory reads in c13xxx-vs-c1df06 branch decision); compare against MAME golden same window. Candidates: protection reg read-back on bootleg gfx bank area, or 0x3C0006-class dynamic read (see task-191 lesson: confirm lin has equivalent dynamic refresh source before aligning MAME read semantics). MAME 68KPC probe writes /tmp/mame_68kpc.log (env LINORAGX_68KPC=1 + LINORAGX_ZRAM=1).",
+          "timestamp": "2026-10-31T12:55:52Z"
         }
       ],
       "completed_at": null
@@ -7704,5 +7711,5 @@
     }
   ],
   "session_count": 221,
-  "last_session": "2026-10-31T07:55:47Z"
+  "last_session": "2026-10-31T12:55:52Z"
 }
