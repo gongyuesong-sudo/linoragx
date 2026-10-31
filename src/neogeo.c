@@ -4461,6 +4461,24 @@ void ng_run_frame(neogeo *ng)
               fprintf(stderr, "FADEDBG f=%d a4=%08x arg0=%04x arg1=%04x arg2=%04x\n", ng->frame,
                   a4, (unsigned)m68k_read_memory_16(a4),
                   (unsigned)m68k_read_memory_16(a4+2), (unsigned)m68k_read_memory_16(a4+4)); } }
+        { static int fdc = -2; static long fdcn;
+          if (fdc == -2) fdc = getenv("FADECALL") ? 1 : 0;
+          if (fdc && m68k_get_reg(NULL,M68K_REG_PC) == 0x204822 && fdcn++ < 6000) {              extern uint32_t m68k_read_memory_16(uint32_t);
+              uint32_t sp = (uint32_t)m68k_get_reg(NULL, M68K_REG_A7);
+              uint32_t ret = (m68k_read_memory_16(sp) << 16) | m68k_read_memory_16(sp+2);
+              uint32_t a4 = (m68k_read_memory_16(sp+4) << 16) | m68k_read_memory_16(sp+6);
+              fprintf(stderr, "FADECALL f=%d ret=%08x d0=%08x a6=%08x a4=%08x w0=%04x\n", ng->frame, ret,
+                  (unsigned)m68k_get_reg(NULL, M68K_REG_D0),
+                  (unsigned)m68k_get_reg(NULL, M68K_REG_A6), a4,
+                  (unsigned)m68k_read_memory_16(a4)); } }
+        { static int fwr = -2; static long fwcn;
+          if (fwr == -2) { const char *e = getenv("FADEWR"); fwr = e ? (int)strtol(e, 0, 0) : -1; }
+          if (fwr >= 0 && ng->frame >= fwr && m68k_get_reg(NULL,M68K_REG_PC) == 0x204b6e && fwcn++ < 20) {
+              extern uint32_t m68k_read_memory_16(uint32_t);
+              uint32_t a3 = (uint32_t)m68k_get_reg(NULL, M68K_REG_A3);
+              uint32_t a0 = (uint32_t)m68k_get_reg(NULL, M68K_REG_A0);
+              fprintf(stderr, "FADEWR f=%d a3=%08x a0=%08x src=%04x\n", ng->frame, a3, a0,
+                  (unsigned)m68k_read_memory_16(a0)); } }
         { static int regat = -2; static unsigned long regn;
           if (regat == -2) { const char *e = getenv("REGAT"); regat = e ? (int)strtol(e, 0, 16) : -1; }
           { const char *pp = getenv("PCF"); static int pf_last = -1;
