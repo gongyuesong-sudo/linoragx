@@ -1287,3 +1287,17 @@
 [2026-10-31T13:44:22Z] [SESSION-224] CHECKPOINT [task-226] step=3/3 "regression smoke kof2000/mslug4/b2b normal; validation exit 0"
 [2026-10-31T13:44:33Z] [SESSION-224] Completed [task-226] (commit daad804)
 [2026-10-31T13:44:33Z] [SESSION-224] STATS tasks_total=224 completed=143 failed=81 pending=0 blocked=0 attempts_total=380 checkpoints=450
+[2026-10-31T13:58:24Z] [SESSION-225] LOCK acquired (pid=2200033)
+[2026-10-31T13:58:24Z] [SESSION-225] INIT resume; all 224 tasks terminal; scanning residual defects for new tasks
+[2026-10-31T14:01:43Z] [SESSION-225] Starting [task-227] wh2 BLACK 1c official card recheck+fix (base=a12737d)
+[2026-10-31T23:16:00+08:00] [SESSION-225] CHECKPOINT [task-227] step=1/4 "wh2 not deadlocked: vsync spin at 2063fc is normal frame-sync; title/attract render fine (74c@f3000). Real defect: after coin+start the scene/palette loader never runs (CRAM all-zero from f5812 fade-out onward, VRAM has content). Golden with same input timing reaches PLAYER SELECT (93-216c). Palette loader at 0x38b0e (script-driven movem to CRAM) called via table pointer; no direct callers. ROM mapping confirmed: addr<0x100000->file[0x100000+a], addr>=0x200000->file[a-0x200000]."
+[2026-11-01T00:15:20+08:00] [SESSION-226] LOCK acquired (pid=2261475)
+[2026-11-01T00:15:20+08:00] [SESSION-226] RECOVERY [task-227] action="resume from checkpoint 2" reason="prev session hit iter limit mid-investigation; probes uncommitted but reflect real progress"
+[2026-11-01T00:15:20+08:00] [SESSION-226] CHECKPOINT [task-227] step=2/4 "game logic reaches player-select after coin (b5/61 music cmds); black = CRAM all-zero; fade-engine 38b32 pushes zeros from staging 10a000; stager 204b26 stops emitting real palettes post-coin"
+[2026-11-01T03:06:11Z] [SESSION-227] CHECKPOINT [task-227] step=4/6 shared-RAM-window fix committed 3ba8edd; wh2 title renders
+[2026-11-01T03:06:11Z] [SESSION-227] CHECKPOINT [task-227] step=5/6 remaining: fade engine stuck active at level 0 pushing black every frame
+[2026-11-01T04:27:45Z] [SESSION-227] LOCK acquired (pid=reclaimed)
+[2026-11-01T04:27:45Z] [SESSION-227] RECOVERY [task-227] action="resume from checkpoint 5 (fade state machines healthy; per-frame zero-clear at ROM 0x38c3c identified)" reason="previous session hit iteration cap mid-investigation"
+[2026-11-01T05:18:36Z] [SESSION-227] ERROR [task-227] [TASK_EXEC] attempt 1/3 exhausted: root narrowed to demo-scene palette staging empty at fade-engine time (level ramps to 0f, source staging zero); golden CRAM 4084nz vs lin 0; intra-frame ordering of apply/clear is the open question
+[2026-11-01T05:18:36Z] [SESSION-227] Completed probes commit 78b4a28 (FADECALL/FADEWR)
+[2026-11-01T05:18:36Z] [SESSION-227] STATS tasks_total=225 completed=143 failed=82 pending=0 blocked=0 attempts_total=381 checkpoints=458
