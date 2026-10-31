@@ -4952,6 +4952,11 @@ void ng_run_frame(neogeo *ng)
         FILE *g = fopen(rp, "wb");
         if (g) { for (int a = 0; a < 0x10000; a += 2) { uint16_t w = ng->workram[(a >> 1) & 0x7fff]; fputc(w >> 8, g); fputc(w & 0xff, g); } fclose(g); }
     }
+    if (ng->frame == (getenv("RAMDUMP2F") ? (int)strtol(getenv("RAMDUMP2F"), 0, 0) : 300) && getenv("SMEMDUMP"))
+    {   /* true 68K work RAM (0x100000-0x10FFFF lives in smem[]) */
+        FILE *g = fopen(getenv("SMEMDUMP"), "wb");
+        if (g) { fwrite(ng->smem, 1, 0x10000, g); fclose(g); }
+    }
     if (ng->frame == 30 && getenv("RAM68K"))
     {   /* golden parity probe: dump 68K RAM code window 0x1e00-0x2000 */
         FILE *g = fopen("/tmp/lin_ram68k.bin", "wb");
