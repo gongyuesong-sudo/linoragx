@@ -7570,12 +7570,12 @@
     {
       "id": "task-224",
       "title": "bstars attract 块错位花屏（80k 帧仍 38c，sprite/层错位）",
-      "status": "failed",
+      "status": "in_progress",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
-      "started_at_commit": "8e4aec7",
+      "started_at_commit": "da66db1",
       "validation": {
         "command": "cd /home/gill/linoragx && ./reawork/bin/linoragx --rom roms/bstars.zip --bios . --frames 40000 --headless --no-audio --dump /tmp/v224.bmp >/dev/null 2>&1 && python3 -c \"import struct;d=open('/tmp/v224.bmp','rb').read();off=struct.unpack('<I',d[10:14])[0];w,h=struct.unpack('<ii',d[18:26]);row=(w*3+3)//4*4;cols=set();[cols.add(d[off+(abs(h)-1-y)*row+x*3:off+(abs(h)-1-y)*row+x*3+3]) for y in range(abs(h)) for x in range(0,w,2)];assert len(cols)>=60, len(cols)\"",
         "timeout_seconds": 300
@@ -7645,9 +7645,9 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
-      "started_at_commit": "9cbc70f",
+      "started_at_commit": "2a6ba38",
       "validation": {
         "command": "cd /home/gill/linoragx && ./reawork/bin/linoragx --rom roms/lastbld2.zip --bios . --frames 40000 --headless --no-audio --dump /tmp/v225.bmp >/dev/null 2>&1 && python3 -c \"import struct;d=open('/tmp/v225.bmp','rb').read();off=struct.unpack('<I',d[10:14])[0];w,h=struct.unpack('<ii',d[18:26]);row=(w*3+3)//4*4;cols=set();[cols.add(d[off+(abs(h)-1-y)*row+x*3:off+(abs(h)-1-y)*row+x*3+3]) for y in range(abs(h)) for x in range(0,w,2)];assert len(cols)>=60, len(cols)\"",
         "timeout_seconds": 300
@@ -7657,7 +7657,9 @@
       },
       "error_log": [
         "[TASK_EXEC] attempt 1: root cause not isolated; divergence is object-scheduler handle-order drift upstream of crash site (f2832 ring value 0800 vs golden 0c00). Crash itself = jmp(a0) via 1c74 dispatcher with 1082BA=0.",
-        "[TASK_EXEC] attempt2: divergence pinned to object-spawn: golden free-ring 0x108200 stays FULL all attract (2c00 0400..7e00 002c); lin allocates 0400..2e00 by f359-f1306 and release-order scrambles remainder (3e/3c,56/54,5a/58,6c/6a swaps). Allocator = ROM 176a-17b8 (lea $108200,a1 ring refill, addq #2,d7 handle ctr, cmpi #$7e wrap). lin writes: f359 108200=2e00 pc=17a2, f387 108202=3000 pc=17a2, f1309=5c00. Golden NEVER calls it during attract."
+        "[TASK_EXEC] attempt2: divergence pinned to object-spawn: golden free-ring 0x108200 stays FULL all attract (2c00 0400..7e00 002c); lin allocates 0400..2e00 by f359-f1306 and release-order scrambles remainder (3e/3c,56/54,5a/58,6c/6a swaps). Allocator = ROM 176a-17b8 (lea $108200,a1 ring refill, addq #2,d7 handle ctr, cmpi #$7e wrap). lin writes: f359 108200=2e00 pc=17a2, f387 108202=3000 pc=17a2, f1309=5c00. Golden NEVER calls it during attract.",
+        "[TASK_EXEC] attempt3: earliest divergence pinned to f293 pc=17096 (move.w $38(a0),$90(a5): lin dispatches task to object block 0x101c00, golden does not). f359 allocator fires in lin via gate tst.l $84(a4) bit31 (lin=0xfff426c0, gold=0), set by muls path gated on sign of $1cc(a4) (lin=0xff00 from $1da(a4) delete-flag, gold=0). CORRECTION: earlier \"handle 0400 missing in lin\" was an endianness misread (LE reader on BE dump) - lin ring actually matches golden except ring[0] (0x2e00 vs 0x0200). Official-BIOS hypothesis falsified (NEO-GEO.ROM and asia-s3.rom both still crash). Root class: bootleg object-scheduler dispatch-state divergence upstream of f293, not isolated in 3 attempts.",
+        "[TASK_EXEC] attempt3: earliest divergence pinned to f293 pc=17096 (move.w $38(a0),$90(a5): lin dispatches task to object block 0x101c00, golden does not). f359 allocator fires in lin via gate tst.l $84(a4) bit31 (lin=0xfff426c0, gold=0), set by muls path gated on sign of $1cc(a4) (lin=0xff00 from $1da(a4) delete-flag, gold=0). CORRECTION: earlier \"handle 0400 missing in lin\" was an endianness misread (LE reader on BE dump) - lin ring actually matches golden except ring[0] (0x2e00 vs 0x0200). Official-BIOS hypothesis falsified (NEO-GEO.ROM and asia-s3.rom both still crash). Root class: bootleg object-scheduler dispatch-state divergence upstream of f293, not isolated in 3 attempts."
       ],
       "checkpoints": [
         {
@@ -7683,12 +7685,24 @@
           "total": 3,
           "description": "NEXT attempt3: (a) find callers of allocator 176a: grep ROM for 4eb9 0000 176a (jsr) and 4ef9 0000 176a (jmp); upstream region 1b40-1b98 has jsr $fe8c/$bc40/$d448/$e908/$ae36/$a85c (VBlank task chain). (b) PCTRACE=359-359 capture PC window around first 17a2 hit, identify caller chain via return addrs on stack (SP dump). (c) diff golden vs lin RAM words around the branch gate variable at f358 (before first alloc) - full-RAM diff at f359 minus ring region should reveal the state bit that sends lin down the spawn path. (d) MAME probe recipe: LINORAGX_68RDUMP=<frame> LINORAGX_ZRAM=1 timeout -s KILL 200 ./mame lastbld2 -rompath \"/home/gill/mame/roms;/home/gill/linoragx/roms\" -nowindow -skip_gameinfo (NO -speed 0: invalid, SIGINT exit hangs - use -s KILL).",
           "timestamp": "2026-10-31T11:51:09Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "full causal chain recorded: f293 scheduler over-dispatch (pc 17096, object 0x101c00) -> f359 allocator+ring-refill (gate a4+0x84 bit31) -> cascade -> f2847 crash via illegal-instruction vector. If reopened: diff golden-vs-lin RAM at f292 (one frame before first over-dispatch) to find which task-table entry differs; the writer of lin 0x101c90 is pc=17096 inside dispatcher reached from 0x17060 chain; upstream gate is the task table entry $38(a0)=1 that golden lacks. NOTE: all RAM dumps are BIG-endian words - use >H not <H.",
+          "timestamp": "2026-10-31T12:51:25Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "full causal chain recorded: f293 scheduler over-dispatch (pc 17096, object 0x101c00) -> f359 allocator+ring-refill (gate a4+0x84 bit31) -> cascade -> f2847 crash via illegal-instruction vector. If reopened: diff golden-vs-lin RAM at f292 (one frame before first over-dispatch) to find which task-table entry differs; the writer of lin 0x101c90 is pc=17096 inside dispatcher reached from 0x17060 chain; upstream gate is the task table entry $38(a0)=1 that golden lacks. NOTE: all RAM dumps are BIG-endian words - use >H not <H.",
+          "timestamp": "2026-10-31T12:51:38Z"
         }
       ],
       "completed_at": null,
       "claimed_by": "session-215"
     }
   ],
-  "session_count": 220,
+  "session_count": 221,
   "last_session": "2026-10-31T07:55:47Z"
 }

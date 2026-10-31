@@ -1268,3 +1268,11 @@
 [2026-10-31T12:27:59Z] [SESSION-222] CHECKPOINT [task-224] step=3/3 "BIOS hypothesis falsified (uni-bios golden also writes zoom f100); lua memory API broken; attempt3 = f100 RAM diff + MAME VWPC probe"
 [2026-10-31T12:27:59Z] [SESSION-222] ERROR [task-224] [TASK_EXEC] attempt2: zoom-table writer PC not isolated (game-init divergence confirmed, writer unknown)
 [2026-10-31T12:27:59Z] [SESSION-222] STATS tasks_total=223 completed=142 failed=81 pending=0 in_progress=0
+[2026-10-31T12:30:39Z] [SESSION-223] LOCK acquired (pid=2139404)
+[2026-10-31T12:30:39Z] [SESSION-223] Starting [task-225] lastbld2 crash attempt3 (base=2a6ba38)
+[2026-10-31T12:51:25Z] [SESSION-223] CHECKPOINT [task-225] step=3/3 "causal chain f293 over-dispatch -> f359 allocator -> f2847 crash; endianness misread corrected; BIOS hypothesis falsified"
+[2026-10-31T12:51:25Z] [SESSION-223] ERROR [task-225] [TASK_EXEC] attempt3: bootleg scheduler dispatch-state divergence upstream of f293 not isolated; task at max_attempts
+[2026-10-31T12:51:25Z] [SESSION-223] Starting [task-224] bstars zoom-table game-init divergence attempt3 (base=da66db1)
+[2026-10-31T12:51:38Z] [SESSION-223] CHECKPOINT [task-225] step=3/3 "causal chain f293 over-dispatch -> f359 allocator -> f2847 crash; endianness misread corrected; BIOS hypothesis falsified"
+[2026-10-31T12:51:38Z] [SESSION-223] ERROR [task-225] [TASK_EXEC] attempt3: bootleg scheduler dispatch-state divergence upstream of f293 not isolated; task at max_attempts
+[2026-10-31T12:51:38Z] [SESSION-223] Starting [task-224] bstars zoom-table game-init divergence attempt3 (base=da66db1)
