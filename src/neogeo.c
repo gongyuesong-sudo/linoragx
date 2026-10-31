@@ -512,7 +512,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
     case 0x07: { extern int g_ym_frame; static int ymwb=-2; static int wlo=760, whi=900; if(ymwb==-2){ ymwb=getenv("YMWRB")?1:0; const char*e=getenv("YMWRB"); if(e&&*e){ wlo=(int)strtol(e,NULL,0); whi=strchr(e,':')?(int)strtol(strchr(e,':')+1,NULL,0):wlo+140; } }
         if (ymwb && ng->frame>=wlo && ng->frame<=whi) fprintf(stderr,"YMWR f=%d c1 r=%02x v=%02x zpc=%04x\n", ng->frame, ng->ym_reg[1], v, z80w_pc(ng->z));
         ym_write(ng->ym, 1, ng->ym_reg[1], v); } break;/* YM2610 B: data write */
-    case 0x0C: ng->soundlatch2 = v; if (!f_noirq2() && f_irq2legacy() && ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME parity DEFAULT (2026-10-22): soundlatch2 writes fire NO IRQ — MAME's irq3_pending is set once at construction only (neogeo.cpp:1559), soundlatch2_w has no IRQ line. Legacy homebrew path (IRQ2 + L2GATE) behind IRQ2LEGACY=1. Matrix @20000f: kof2000 30->393, kof98 157->368, fatfury3 177->294, sengoku2 1->103, zero regressions. */
+    case 0x0C: ng->soundlatch2 = v; if (getenv("L2DBG")) fprintf(stderr,"L2W f=%d v=%02x zpc=%04x\n", ng->frame, v, (unsigned)z80w_pc(ng->z)); if (!f_noirq2() && f_irq2legacy() && ng->frame >= l2gate()) { ng->irq_sound = 1; m68k_set_virq(2, 1); }   /* MAME parity DEFAULT (2026-10-22): soundlatch2 writes fire NO IRQ — MAME's irq3_pending is set once at construction only (neogeo.cpp:1559), soundlatch2_w has no IRQ line. Legacy homebrew path (IRQ2 + L2GATE) behind IRQ2LEGACY=1. Matrix @20000f: kof2000 30->393, kof98 157->368, fatfury3 177->294, sengoku2 1->103, zero regressions. */
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
                       z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
@@ -917,6 +917,10 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         }
         /* reading AUDIO_COIN acks IRQ_SOUND (MAME audio_coin_r) */
         if (ng->irq_sound) { ng->irq_sound = 0; if (f_sndirq3()) m68k_set_virq(3, 0); else if (!ng->raster_pending) m68k_set_virq(2, 0); }
+        { static int l2n = -1;
+          if (l2n == -1) l2n = getenv("L2DBG") ? 0 : -2;
+          if (l2n >= 0 && ng->frame >= 5000 && l2n < 300) { l2n++;
+              fprintf(stderr,"L2R f=%d sl2=%02x pc=%08x\n", ng->frame, ng->soundlatch2, (unsigned)m68k_get_reg(NULL,M68K_REG_PC)); } }
         return (ng->soundlatch2<<8) | lo;
     }
     if (a < 0x340002) {                     /* P2 */
@@ -1269,7 +1273,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         if (a >= 0x320000 && (a & 1) == 0 && (mem_mask & 0xFF00)) {
             { static int s1t = -2; static long n1t = 0;
               if (s1t == -2) s1t = getenv("SL1T") ? 1 : 0;
-              if (s1t && n1t++ < 40) fprintf(stderr, "SL1T f=%d cmd=%02x\n", ng->frame, (d>>8)&0xFF); }
+              if (s1t && n1t++ < 4000) fprintf(stderr, "SL1T f=%d cmd=%02x pc=%08x\n", ng->frame, (d>>8)&0xFF, (unsigned)m68k_get_reg(NULL,M68K_REG_PC)); }
             /* even-address byte lane = the command byte (Musashi: even byte
                write presents data<<8 with mask 0xFF00; word write d>>8;
                odd-byte writes (mask 0x00FF: watchdog $300001 etc.) must NOT
