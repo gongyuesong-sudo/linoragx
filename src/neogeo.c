@@ -1541,6 +1541,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             { static int sb=-2; if (sb==-2) sb = getenv("SNAPDBG") ? 1 : 0;
               if (sb && ng->frame > 11990) fprintf(stderr, "SNAP f=%llu bank=%x\n", (unsigned long long)ng->frame, ng->cram_bank_render); }
         }
+        { static int cnz = -2; static long cnzc; static int cnz_f;
+          if (cnz == -2) { cnz = getenv("CRAMNZ") ? 1 : 0;
+              cnz_f = getenv("CRAMNZF") ? (int)strtol(getenv("CRAMNZF"), 0, 0) : 19000; }
+          if (cnz && ng->frame >= cnz_f && (d & 0x7FFF) && cnzc++ < 200000)
+              fprintf(stderr, "CRAMNZ f=%d o=%04x d=%04x pc=%08x\n",
+                  ng->frame, o, d, m68k_get_reg(NULL, M68K_REG_PC)); }
         static int crtr2 = -2;
         if (crtr2 == -2) crtr2 = getenv("CRAMTRACE") ? 1 : 0;
         if (crtr2 && (ng->frame < 2000 || getenv("CRAMT2")) && (m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000 || getenv("CRAMT2"))) {

@@ -1301,3 +1301,8 @@
 [2026-11-01T05:18:36Z] [SESSION-227] ERROR [task-227] [TASK_EXEC] attempt 1/3 exhausted: root narrowed to demo-scene palette staging empty at fade-engine time (level ramps to 0f, source staging zero); golden CRAM 4084nz vs lin 0; intra-frame ordering of apply/clear is the open question
 [2026-11-01T05:18:36Z] [SESSION-227] Completed probes commit 78b4a28 (FADECALL/FADEWR)
 [2026-11-01T05:18:36Z] [SESSION-227] STATS tasks_total=225 completed=143 failed=82 pending=0 blocked=0 attempts_total=381 checkpoints=458
+[2026-10-31T22:08:44Z] [SESSION-228] LOCK acquired (pid=2423208)
+[2026-10-31T22:08:44Z] [SESSION-228] RECOVERY [task-227] action="resumed attempt 2" reason="attempt-1 'second boot' framing falsified: BIOS entry 0xc00402 hit only at f=0; f20400 jump to 0xc0044a is the game's normal jsr BIOS TimerC service"
+[2026-10-31T22:08:44Z] [SESSION-228] CHECKPOINT [task-227] step=9/10 "attract colour cycle mapped with MCLOCK=12345; fade level 0x107220 ramps 03->00 at f7514 and is never re-raised -> CRAM all-zero -> black"
+[2026-10-31T22:08:44Z] [SESSION-228] CHECKPOINT [task-227] step=10/10 "falsified: Z80 shared-RAM ack for residual (ZSHR zero writes), CRAM write-path loss (CRAMNZ shows writes land)"
+[2026-10-31T22:08:44Z] [SESSION-228] CHECKPOINT [task-227] step=11/10 "scene-task writer sites pinned 0x20b3aa/0x20b3ae/0x20b3c8/0x20b43a/0x20b512"
