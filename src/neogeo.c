@@ -3911,6 +3911,9 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             if ((sw_has(sw, swend, "k2k2_kof2k2\"") || sw_has(sw, swend, "k2k2_kf2k2p\"")
                                  || sw_has(sw, swend, "kf2k2ps2\"")) && ng->adpcm && ng->adpcm_size >= 0x1000000)
                                 pcm2_swap(ng->adpcm, 0);
+                            /* MAME kf2k3upl cart: pcm2 swap(ym,5) */
+                            if (sw_has(sw, swend, "boot_kf2k3upl\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
+                                pcm2_swap(ng->adpcm, 5);
                             /* MAME samsh5sp cart: pcm2 swap(ym,6) */
                             if (sw_has(sw, swend, "k2k2_sams5s\"") && ng->adpcm && ng->adpcm_size >= 0x1000000)
                                 pcm2_swap(ng->adpcm, 6);
@@ -4938,6 +4941,17 @@ void ng_run_frame(neogeo *ng)
     if (ng->frame == 2 && !getenv("NOQPRE") &&
         (!strncmp(ng->gamename, "samsho5", 7) || !strncmp(ng->gamename, "garou", 5) || getenv("SAMQINIT")))
         memset(&ng->smem[0x1040], 0xff, 0x100);
+    if (ng->frame == 300 && getenv("BIOSDUMP"))
+    {   /* dump merged BIOS view */
+        FILE *g = fopen(getenv("BIOSDUMP"), "wb");
+        if (g && ng->bios) { fwrite(ng->bios, 1, ng->bios_size, g); fclose(g); }
+    }
+    if (ng->frame == (getenv("RAMDUMP2F") ? (int)strtol(getenv("RAMDUMP2F"), 0, 0) : 300) && getenv("RAMDUMP2"))
+    {   /* full 64K work RAM dump for golden diff */
+        const char *rp = getenv("RAMDUMP2");
+        FILE *g = fopen(rp, "wb");
+        if (g) { for (int a = 0; a < 0x10000; a += 2) { uint16_t w = ng->workram[(a >> 1) & 0x7fff]; fputc(w >> 8, g); fputc(w & 0xff, g); } fclose(g); }
+    }
     if (ng->frame == 30 && getenv("RAM68K"))
     {   /* golden parity probe: dump 68K RAM code window 0x1e00-0x2000 */
         FILE *g = fopen("/tmp/lin_ram68k.bin", "wb");
