@@ -1,0 +1,112 @@
+{
+ "whp": {
+  "colors12k": 66,
+  "verdict": "fixed",
+  "note": "BEST HEROES 排行榜画面正常；旧灰背景记录过期"
+ },
+ "zupapa": {
+  "colors12k": 91,
+  "verdict": "fixed",
+  "note": "Care Bears 关卡画面正常；旧花屏记录过期"
+ },
+ "fswords": {
+  "colors12k": 38,
+  "verdict": "fixed",
+  "note": "完整对战画面全图层；旧精灵零输出记录过期"
+ },
+ "cphd": {
+  "colors12k": 12,
+  "verdict": "by-design",
+  "note": "homebrew demo"
+ },
+ "nitd": {
+  "colors12k": 31,
+  "verdict": "fixed",
+  "note": "剧情过场正常"
+ },
+ "ngem2k": {
+  "colors12k": 9,
+  "verdict": "by-design",
+  "note": "homebrew 打砖块，GAME OVER 屏正常"
+ },
+ "wh2": {
+  "colors12k": 1,
+  "verdict": "parked",
+  "note": "1色卡死（等待永不到来的标志），已知硬骨头维持 parked"
+ },
+ "kof97oro": {
+  "colors12k": 70,
+  "verdict": "fixed",
+  "note": "hack 版「重出江湖」标题正常；旧 RED/GREEN 测试屏记录过期"
+ },
+ "dragonsh": {
+  "colors12k": 3,
+  "verdict": "by-design",
+  "note": "dev-kit 静态调试菜单"
+ },
+ "columnsn": {
+  "colors12k": 42,
+  "verdict": "by-design",
+  "note": "homebrew"
+ },
+ "badapple": {
+  "colors12k": 31,
+  "verdict": "by-design",
+  "note": "homebrew"
+ },
+ "froman2b": {
+  "colors12k": 62,
+  "verdict": "fixed",
+  "note": "射击关卡正常"
+ },
+ "shocktro": {
+  "colors12k": 97,
+  "verdict": "fixed",
+  "note": "标题屏正常"
+ },
+ "sonicwi2": {
+  "colors12k": 32,
+  "verdict": "fixed",
+  "note": "关卡介绍屏正常"
+ },
+ "tws96": {
+  "colors12k": 82,
+  "verdict": "fixed",
+  "note": "足球演示赛正常"
+ },
+ "pulstar": {
+  "colors12k": 171,
+  "verdict": "fixed",
+  "note": "SNK 反盗版警告屏消失，跑到 GAME OVER 全流程；重大复活"
+ },
+ "samsh5sp": {
+  "colors12k": 84,
+  "verdict": "low-priority",
+  "note": "角色选择界面结构完整无乱码；网格背景疑 bootleg 原版设计；attract 与金标相位不同步，不再深挖"
+ },
+ "garou": {
+  "colors12k": 163,
+  "verdict": "fixed",
+  "note": "对战演示全图层正常；旧反盗版卡死记录过期"
+ },
+ "ganryu": {
+  "colors12k": 45,
+  "verdict": "fixed",
+  "note": "标题屏正常"
+ },
+ "samsho": {
+  "colors12k": 61,
+  "verdict": "fixed",
+  "note": "对战画面正常"
+ },
+ "shocktro2": {
+  "skip": "no zip",
+  "verdict": "skip",
+  "note": "无 zip"
+ },
+ "cndi": {
+  "colors12k": 5,
+  "verdict": "by-design",
+  "note": "homebrew"
+ }
+}
