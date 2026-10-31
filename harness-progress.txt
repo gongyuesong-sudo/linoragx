@@ -1306,3 +1306,4 @@
 [2026-10-31T22:08:44Z] [SESSION-228] CHECKPOINT [task-227] step=9/10 "attract colour cycle mapped with MCLOCK=12345; fade level 0x107220 ramps 03->00 at f7514 and is never re-raised -> CRAM all-zero -> black"
 [2026-10-31T22:08:44Z] [SESSION-228] CHECKPOINT [task-227] step=10/10 "falsified: Z80 shared-RAM ack for residual (ZSHR zero writes), CRAM write-path loss (CRAMNZ shows writes land)"
 [2026-10-31T22:08:44Z] [SESSION-228] CHECKPOINT [task-227] step=11/10 "scene-task writer sites pinned 0x20b3aa/0x20b3ae/0x20b3c8/0x20b43a/0x20b512"
+[2026-10-31T22:23:33Z] [SESSION-228] CHECKPOINT [task-227] step=12/12 "scene-task writers disassembled; wh2 p1 words are byte-swapped in file (swap pairs before capstone); a6 base for scene routines is not 0x108000 so fade-block attribution needs a5/a6 base resolution at fade task entry"

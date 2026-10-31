@@ -7833,6 +7833,12 @@
           "total": 10,
           "timestamp": "2026-10-31T22:08:35Z",
           "description": "Scene task writer sites pinned for the next attempt: fade control block 0x107200 (speed, pc 0x20b43a), 0x107204=0x64 (pc 0x20b3aa), 0x107206=0x14a (pc 0x20b3ae), 0x107202 (pc 0x20b3c8/0x20b512). Next step = disassemble the scene-sequence task around 0x20b380-0x20b540 and find the gate that must arm the next fade-in after a fade-out completes (compare with golden MAME same-window RAMWA-equivalent)."
+        },
+        {
+          "step": 12,
+          "total": 12,
+          "timestamp": "2026-10-31T22:23:28Z",
+          "description": "Scene-task writer sites disassembled (wh2 p1 file stores 68K words byte-swapped: swap each byte pair before capstone; raw file bytes at 0x20b3a8 decode correctly, CTL peek returns bus order). 0x20b3aa = scene-buffer clear routine (a6-relative -$dfa/-$1000/-$f00 buffers, clr.l -$e00(a6)), 0x20b43a/0x20b512 = scene-script token allocators writing $1c/$1e/$28(a5). NOTE the a6 base for these routines is NOT 0x108000 (offsets are negative), so the earlier 'fade control block 0x107200' attribution of these writes needs re-derivation: resolve a5/a6 bases at the fade task entry before the next attempt."
         }
       ],
       "completed_at": null
