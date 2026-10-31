@@ -7614,9 +7614,9 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 1,
+      "attempts": 2,
       "max_attempts": 3,
-      "started_at_commit": "d2c112e",
+      "started_at_commit": "9cbc70f",
       "validation": {
         "command": "cd /home/gill/linoragx && ./reawork/bin/linoragx --rom roms/lastbld2.zip --bios . --frames 40000 --headless --no-audio --dump /tmp/v225.bmp >/dev/null 2>&1 && python3 -c \"import struct;d=open('/tmp/v225.bmp','rb').read();off=struct.unpack('<I',d[10:14])[0];w,h=struct.unpack('<ii',d[18:26]);row=(w*3+3)//4*4;cols=set();[cols.add(d[off+(abs(h)-1-y)*row+x*3:off+(abs(h)-1-y)*row+x*3+3]) for y in range(abs(h)) for x in range(0,w,2)];assert len(cols)>=60, len(cols)\"",
         "timeout_seconds": 300
@@ -7625,7 +7625,8 @@
         "cleanup": null
       },
       "error_log": [
-        "[TASK_EXEC] attempt 1: root cause not isolated; divergence is object-scheduler handle-order drift upstream of crash site (f2832 ring value 0800 vs golden 0c00). Crash itself = jmp(a0) via 1c74 dispatcher with 1082BA=0."
+        "[TASK_EXEC] attempt 1: root cause not isolated; divergence is object-scheduler handle-order drift upstream of crash site (f2832 ring value 0800 vs golden 0c00). Crash itself = jmp(a0) via 1c74 dispatcher with 1082BA=0.",
+        "[TASK_EXEC] attempt2: divergence pinned to object-spawn: golden free-ring 0x108200 stays FULL all attract (2c00 0400..7e00 002c); lin allocates 0400..2e00 by f359-f1306 and release-order scrambles remainder (3e/3c,56/54,5a/58,6c/6a swaps). Allocator = ROM 176a-17b8 (lea $108200,a1 ring refill, addq #2,d7 handle ctr, cmpi #$7e wrap). lin writes: f359 108200=2e00 pc=17a2, f387 108202=3000 pc=17a2, f1309=5c00. Golden NEVER calls it during attract."
       ],
       "checkpoints": [
         {
@@ -7639,12 +7640,24 @@
           "total": 3,
           "description": "Tools built this session: lin SMEMDUMP probe (committed 76c7b94; 68K RAM 0x100000-0x10FFFF lives in smem[], RAMDUMP2 dumps dead workram[] - old comparisons invalid). MAME LINORAGX_68RDUMP=<frame> probe dumps full 64K golden 68K RAM to /tmp/mame_68ram.bin (needs LINORAGX_ZRAM=1 too). f2840 full-RAM diff: 3061 words differ, first at 100002; crash-aftermath contaminates f2847 diff (uni-bios handler writes c09322/c08e6c). Next attempt: trace WHO enqueues at 17a2 upstream (callers via 1b5c jsr fe8c / 1b74 jsr bc40 / 1b7a jsr d448 / 1b88 jsr e908 chain) and compare handle allocation order vs golden from f255 onward; also compare VBlank/IRQ timing cadence lin vs golden around f2830.",
           "timestamp": "2026-10-31T07:55:47Z"
+        },
+        {
+          "step": 1,
+          "total": 3,
+          "description": "Golden vs lin ring dumps at f359/f1306/f2832 obtained (/tmp/gold_lb2_*.bin via MAME LINORAGX_68RDUMP, /tmp/lin_lb2_*.bin via SMEMDUMP). f359: only ring[0] differs (gold 0200 lin 2e00). f1306: gold ring intact, lin consumed 0400-2e00 + order swaps. 68K mnemonic disassembler built: ~/.hermes/cache/scratch/m68dis.py (parses mame src/devices/cpu/m68000/m68k_in.lst base/mask/name table; ROM view = 243-pg1.p1 word_swap (rom[a+1]<<8|rom[a]) at /tmp/lb2_p1.bin).",
+          "timestamp": "2026-10-31T11:51:09Z"
+        },
+        {
+          "step": 2,
+          "total": 3,
+          "description": "NEXT attempt3: (a) find callers of allocator 176a: grep ROM for 4eb9 0000 176a (jsr) and 4ef9 0000 176a (jmp); upstream region 1b40-1b98 has jsr $fe8c/$bc40/$d448/$e908/$ae36/$a85c (VBlank task chain). (b) PCTRACE=359-359 capture PC window around first 17a2 hit, identify caller chain via return addrs on stack (SP dump). (c) diff golden vs lin RAM words around the branch gate variable at f358 (before first alloc) - full-RAM diff at f359 minus ring region should reveal the state bit that sends lin down the spawn path. (d) MAME probe recipe: LINORAGX_68RDUMP=<frame> LINORAGX_ZRAM=1 timeout -s KILL 200 ./mame lastbld2 -rompath \"/home/gill/mame/roms;/home/gill/linoragx/roms\" -nowindow -skip_gameinfo (NO -speed 0: invalid, SIGINT exit hangs - use -s KILL).",
+          "timestamp": "2026-10-31T11:51:09Z"
         }
       ],
       "completed_at": null,
       "claimed_by": "session-215"
     }
   ],
-  "session_count": 218,
+  "session_count": 219,
   "last_session": "2026-10-31T07:55:47Z"
 }
