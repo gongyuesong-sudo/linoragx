@@ -4150,6 +4150,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
         }
         if (!ng->fixed && (rom_load_zip_suffix(gamezip, ".s1", &d, &n) == 0 ||
                            rom_load_zip_suffix(gamezip, "-s1.bin", &d, &n) == 0)) { ng->fixed = d; ng->fixed_size = n; }
+        if (getenv("FIXDUMP")) { FILE *fp = fopen(getenv("FIXDUMP"), "wb"); if (fp && ng->fixed) { fwrite(ng->fixed, 1, ng->fixed_size, fp); } if (fp) fclose(fp); }
         if (!ng->snd && (rom_load_zip_suffix(gamezip, ".m1", &d, &n) == 0 ||
                          rom_load_zip_suffix(gamezip, "-m1.bin", &d, &n) == 0 ||
                          rom_load_zip_suffix(gamezip, "-m1.rom", &d, &n) == 0)) { ng->snd = d; ng->snd_size = n; }
