@@ -1235,9 +1235,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if (ti && off >= 0xC000 && off < 0xC400 && tic++ < 800)
               fprintf(stderr, "TINS f=%d off=%03x d=%04x m=%04x pc=%08x\n", ng->frame,
                   off, d, mem_mask, m68k_get_reg(NULL, M68K_REG_PC)); }
-        { static int f9 = -2;
-          if (f9 == -2) f9 = getenv("FD97W") ? 1 : 0;
-          if (f9 && (off == 0xFD96 || off == 0xFD97))
+        { static int f9 = -2; static unsigned f9a = 0xFD96;
+          if (f9 == -2) { const char *e = getenv("FD97W"); const char *s = getenv("SMEMWA");
+              f9 = (e || s) ? 1 : 0; if (s) f9a = (unsigned)strtol(s, 0, 0); }
+          if (f9 && (off == f9a || off == (f9a & ~1u) ||
+                     (off == ((f9a & ~1u) + 0) && mem_mask != 0)))
               fprintf(stderr, "FD97 f=%d off=%03x d=%04x m=%04x pc=%08x\n", ng->frame,
                   off, d, mem_mask, m68k_get_reg(NULL, M68K_REG_PC)); }
         if (mem_mask & 0xFF00) { ng->smem[off & ~1u] = d >> 8; ng->smem_dirty[(off & ~1u) >> 3] |= 1u << ((off & ~1u) & 7); }
@@ -5077,6 +5079,11 @@ void ng_run_frame(neogeo *ng)
     {   /* true 68K work RAM (0x100000-0x10FFFF lives in smem[]) */
         FILE *g = fopen(getenv("SMEMDUMP"), "wb");
         if (g) { fwrite(ng->smem, 1, 0x10000, g); fclose(g); }
+    }
+    if (ng->frame == (getenv("RAMDUMP2F") ? (int)strtol(getenv("RAMDUMP2F"), 0, 0) : 300) && getenv("CRAMDUMP"))
+    {   /* CRAM palette dump (bank0 0-0xFFF words) for golden diff */
+        FILE *g = fopen(getenv("CRAMDUMP"), "wb");
+        if (g) { fwrite(ng->cram, 2, 0x10000, g); fclose(g); }
     }
     if (ng->frame == 30 && getenv("RAM68K"))
     {   /* golden parity probe: dump 68K RAM code window 0x1e00-0x2000 */
