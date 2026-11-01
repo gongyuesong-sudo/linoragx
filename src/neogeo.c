@@ -1538,7 +1538,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                          if (!af) af = fopen(a3c, "w");
                          if (af) fprintf(af, "f=%u d=%04x\n", ng->frame, d); } }
             if (d & 2) { ng->raster_pending = 0; ng->irq_line = 0; m68k_set_virq(2, 0); }
-            if (d & 4) { m68k_set_virq(1, 0); ng->vbl_line = 0; }          /* vblank ack (VBLHOLD) */
+            if (d & 4) { m68k_set_virq(1, 0); ng->vbl_line = 0; if (getenv("VBLDBG")) fprintf(stderr, "VBLDBG f=%llu ack pc=%08x\n", (unsigned long long)ng->frame, (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
             if (d & 1) { }                                                /* irq3 (cart) */
             break;
         case 7: break;
@@ -4452,7 +4452,7 @@ void ng_run_frame(neogeo *ng)
        never processes the cart's $10fd82 transition request -> deadlock). */
     { static int vblhold = -2;
       if (vblhold == -2) vblhold = getenv("VBLHOLD") ? 1 : 0;
-      if (!vblhold || !ng->vbl_line) m68k_set_virq(1, 1);
+      if (!vblhold || !ng->vbl_line) { m68k_set_virq(1, 1); if (getenv("VBLDBG")) fprintf(stderr, "VBLDBG f=%llu assert pc=%08x\n", (unsigned long long)ng->frame, (unsigned)m68k_get_reg(NULL, M68K_REG_PC)); }
       ng->vbl_line = 1; }
     /* MAME per-line rendering: arm the framebuffer for this frame; lines are
        drawn at their start inside the chunk loop (mid-frame VRAM/CRAM writes
