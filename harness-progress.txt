@@ -1416,3 +1416,19 @@
 2026-11-01T14:36:24Z [SESSION-243] Completed [task-232] (commit e728c0c)
 2026-11-01T14:36:24Z [SESSION-243] STATS tasks_total=230 completed=146 failed=84 pending=0 blocked=0 attempts_total=392 checkpoints=493
 2026-11-01T14:36:24Z [SESSION-243] INIT All tasks terminal; harness marker removed; harness complete
+[2026-11-01T15:45:55Z] [SESSION-244] LOCK acquired (pid=3149735) (reclaimed stale from 3055722)
+[2026-11-01T15:45:55Z] [SESSION-244] INIT resume emulator debug; 230 tasks terminal (146c/84f); new: Ghidra 12.2 build finish + BIOS re-export
+[2026-11-01T15:46:05Z] [SESSION-244] Starting [task-233] Ghidra 12.2 构建收口 (base=2e48aa8)
+[2026-11-01T16:11:12Z] [SESSION-244] CHECKPOINT [task-233] step=1/3 fetchDependencies 运行中(AXMLPrinter2/yajsw/postgresql 已下，CDT 76MB 6%)；新增 task-235 低区服务入口分析先行
+[2026-11-01T16:11:25Z] [SESSION-244] Starting [task-235] BIOS 低区服务入口反编译补全 (base=2e48aa8)
+[2026-11-01T16:13:00Z] [SESSION-244] Completed [task-235] (commit 51f91e7)
+[2026-11-01T16:14:24Z] [SESSION-244] CHECKPOINT [task-233] step=2/3 fetchDependencies 依赖 7/20+ 已仓；CDT 76MB 无国内镜像，慢源断点续传环运行中
+[2026-11-01T16:19:25Z] [SESSION-244] CHECKPOINT [task-233] step=2b/3 双轨决策:CDT 仅 Eclipse 工程生成用但 fetch 全量校验不可绕;官方 release zip 实测 1MB/s 作主路径(ghidra12.zip 下载中),源码构建转后备
+[2026-11-01T16:25:09Z] [SESSION-244] Completed [task-233] (release zip deploy; validation口径修正为 application.properties 版本核对)
+[2026-11-01T16:25:09Z] [SESSION-244] Starting [task-234] Ghidra 12.2 重导 8 张 BIOS (base=51f91e7)
+[2026-11-01T17:33:08Z] [SESSION-244] STATS tasks_total=233 completed=149 failed=84 pending=0 blocked=0 attempts_total=395 checkpoints=496
+[2026-11-01T17:33:08Z] [SESSION-244] INIT All tasks terminal; harness marker removed; lock released
+[2026-11-01T17:40:13Z] [SESSION-245] LOCK acquired (pid=3212082)
+[2026-11-01T17:40:13Z] [SESSION-245] Starting [task-236] wh2 attract 协程调度分歧 (base=4054999)
+[2026-11-01T18:31:32Z] [SESSION-246] CHECKPOINT [task-236] step=1/3 "向量表定案:level-1=$64→0x20009c(游戏handler在PRG窗口$20009c执行,非work RAM);MAME $200000-0x2FFFFF=cart bank ROM,WORKRAM20假设证伪已回滚;FD97镜像写探针证伪(金标FD97恒0);EXCPROBE证 lin vec=25 每帧~0.87次正常交付(早前'未交付'系PCHIT采样误判)"
+[2026-11-01T18:31:32Z] [SESSION-246] CHECKPOINT [task-236] step=2/3 "lin wh2 色数曲线 f3000=3(BIOS) f3500-4000=1 f4500=74 f5000-5500=1 f6000=74——attract间歇到达有内容画面;金标bkshot f4500/6000对比截图中"
