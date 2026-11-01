@@ -1456,3 +1456,9 @@
 [2026-11-01T20:11:12Z] [SESSION-249] ERROR [task-238] [TASK_EXEC] attempt1: IRQ频率假设证伪(lin64Hz≈金标79Hz)；irq_latch门实验失败；分歧收窄至fd17任务计数器未清致任务链自持。attempts=1/3
 [2026-11-01T20:11:31Z] [SESSION-249] STATS tasks_total=237 completed=150 failed=86 pending=0 blocked=0 attempts_total=400 checkpoints=505
 [2026-11-01T20:11:31Z] [SESSION-249] LOCK released
+[2026-11-01T20:14:33Z] [SESSION-250] LOCK acquired (pid=3372627)
+[2026-11-01T20:14:33Z] [SESSION-250] Starting [task-238] cthd2003 fd17清除路径+m1 init 0dc0 调用链 (base=278b8a2)
+[2026-11-01T20:22:37Z] [SESSION-250] ERROR [task-238] [TASK_EXEC] attempt2: m1 boot根因第一层修复(68551b3 m1_view直映射,fffd死循环消除,环消费/fd17清零)但loud=1未达>10;音乐任务stall残留。attempts=2/3
+[2026-11-01T20:22:37Z] [SESSION-250] Added task-240(vliner 21→6既存回归定位)
+[2026-11-01T20:22:37Z] [SESSION-250] STATS tasks_total=238 completed=150 failed=86 pending=1 blocked=0 attempts_total=401 checkpoints=506
+[2026-11-01T20:22:37Z] [SESSION-250] LOCK released
