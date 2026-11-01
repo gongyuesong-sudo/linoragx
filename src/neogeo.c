@@ -1887,6 +1887,7 @@ static int load_bios_pref(neogeo *ng, const char *dir, const char *pref)
     if (fread(ng->bios,1,n,f) != (size_t)n) { fclose(f); return -2; }
     fclose(f);
     wordswap(ng->bios, n);                  /* MAME: ROM_LOAD16_WORD_SWAP_BIOS */
+    if (getenv("BIOSVIEW")) { FILE *bf = fopen("/tmp/lin_biosview.bin","wb"); if (bf) { fwrite(ng->bios,1,n,bf); fclose(bf); } fprintf(stderr,"BIOSVIEW n=%ld ->/tmp/lin_biosview.bin\n", n); }
     static const char *sf[] = { "sfix.sfix", "NG-SFIX.ROM", NULL };
     for (int i = 0; sf[i]; i++) {
         snprintf(p, sizeof p, "%s/%s", dir, sf[i]);
@@ -4482,7 +4483,7 @@ void ng_run_frame(neogeo *ng)
               for (int k = 0; k < 4 && pch[k]; k++) if (pc == (unsigned)pch[k]) {
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
-                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6)); } } }
+                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x a5=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6), (unsigned)m68k_get_reg(NULL, M68K_REG_A5)); } } }
         { static int pra_pc = -2; static long pra_n;
           if (pra_pc == -2) { const char *e = getenv("PCHITRA"); pra_pc = e ? (int)strtol(e, 0, 16) : -1; }
           if (pra_pc >= 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
@@ -5184,6 +5185,21 @@ void ng_run_frame(neogeo *ng)
                   if (d) { fprintf(fsf, " |b%d", i);
                       for (int j = 0; j < 8; j++) fprintf(fsf, " %04x", cur[4+i*8+j]); } }
               fprintf(fsf, "\n"); fflush(fsf); } } }
+    { static int rd_at = -2;
+      if (rd_at == -2) { const char *e = getenv("RAMDUMP"); rd_at = e ? atoi(e) : -1; }
+      if (rd_at > 0 && (int)ng->frame == rd_at) {
+          FILE *f = fopen("/tmp/lin_workram.bin","wb");
+          if (f) { fwrite(ng->smem,1,0x10000,f); fclose(f); }
+          fprintf(stderr,"RAMDUMP f=%d workram->/tmp/lin_workram.bin\n", ng->frame); } }
+    { static int vd_at = -2;
+      if (vd_at == -2) { const char *e = getenv("VRAMDUMP"); vd_at = e ? atoi(e) : -1; }
+      if (vd_at > 0 && (int)ng->frame == vd_at) {
+          uint16_t *vr = ng_vram(ng), *cr = ng_cram(ng);
+          FILE *f = fopen("/tmp/lin_vram.bin","wb");
+          if (f) { for (int i=0;i<0x10000;i++){uint8_t b[2]={(uint8_t)(vr[i]>>8),(uint8_t)vr[i]};fwrite(b,1,2,f);} fclose(f); }
+          f = fopen("/tmp/lin_cram.bin","wb");
+          if (f) { for (int i=0;i<0x10000;i++){uint8_t b[2]={(uint8_t)(cr[i]>>8),(uint8_t)cr[i]};fwrite(b,1,2,f);} fclose(f); }
+          fprintf(stderr,"VRAMDUMP f=%d vram+cram dumped via accessors\n", ng->frame); } }
     ng->frame++;
     { extern int g_ym_frame; g_ym_frame = (int)ng->frame; }  /* YMBDBG timeline fix: was never assigned, all YM writes printed f=0 */
     if (ng->tp_rise && --ng->tp_rise == 0) { ng->mc_tp = 1; ng->tp_cnt = 0; }  /* armed TP rising edge, 2 frames after STB */
@@ -5210,7 +5226,27 @@ void ng_run_frame(neogeo *ng)
     { static int k68 = -2;
       if (k68 == -2) k68 = getenv("K68PC") ? 1 : 0;
       if (k68) fprintf(stderr, "68KPC f=%llu pc=%08x\n",
-                       (unsigned long long)ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
+                       (unsigned long long)ng->frame, m68k_get_reg(NULL,M68K_REG_PC)); }
+    { static int vvt = -2;
+      if (vvt == -2) vvt = getenv("VECDUMP") ? (int)strtol(getenv("VECDUMP"), 0, 0) : -1;
+      if (vvt > 0 && (int)ng->frame == vvt) { extern uint32_t m68k_read_memory_32(uint32_t);
+          fprintf(stderr, "VECDUMP reset=%08x vbl=%08x irq2=%08x irq5=%08x irq6=%08x\n",
+              m68k_read_memory_32(0), m68k_read_memory_32(0x64), m68k_read_memory_32(0x68),
+              m68k_read_memory_32(0x74), m68k_read_memory_32(0x78)); } }
+    { static int stc = -2;
+      if (stc == -2) stc = getenv("SCENETRACE") ? 1 : 0;
+      if (stc) { extern uint32_t m68k_read_memory_16(uint32_t);
+          fprintf(stderr, "SCENE f=%d c530=%04x c532=%04x c534=%04x\n", (int)ng->frame,
+              m68k_read_memory_16(0x10C530), m68k_read_memory_16(0x10C532), m68k_read_memory_16(0x10C534)); } }
+    { static int vd2_at = -2;
+      if (vd2_at == -2) vd2_at = getenv("VRAMDUMP2") ? (int)strtol(getenv("VRAMDUMP2"), 0, 0) : -1;
+      if (vd2_at > 0 && (int)ng->frame == vd2_at) {
+          uint16_t *vr = ng_vram(ng), *cr = ng_cram(ng);
+          FILE *f = fopen("/tmp/lin_vram2.bin","wb");
+          if (f) { for (int i=0;i<0x10000;i++){uint8_t b[2]={(uint8_t)(vr[i]>>8),(uint8_t)vr[i]};fwrite(b,1,2,f);} fclose(f); }
+          f = fopen("/tmp/lin_cram2.bin","wb");
+          if (f) { for (int i=0;i<0x10000;i++){uint8_t b[2]={(uint8_t)(cr[i]>>8),(uint8_t)cr[i]};fwrite(b,1,2,f);} fclose(f); }
+          fprintf(stderr,"VRAMDUMP2 f=%d dumped at frame tail\n", ng->frame); } }
 }
 
 /* arm per-line rendering into fb (window mode); NULL disables (headless) */
