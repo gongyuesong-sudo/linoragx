@@ -1316,3 +1316,11 @@
 [2026-10-31T22:53:41Z] [SESSION-228] ERROR [task-227] [TASK_EXEC] attempt 3 exhausted: fade engine and CRAM path exonerated; residual is scene-script token-stream divergence, not isolated within this attempt
 [2026-10-31T22:53:51Z] [SESSION-228] STATS tasks_total=225 completed=143 failed=82 pending=0 blocked=0 attempts_total=304 checkpoints=245
 [2026-10-31T22:53:51Z] [SESSION-228] LOCK released
+[2026-10-31T23:22:50Z] [SESSION-229] LOCK acquired (pid=2444335)
+[2026-10-31T23:22:50Z] [SESSION-229] INIT no eligible tasks (143 completed / 82 failed, none retryable); opened regression sweep + low-color triage under the user's standing continue directive
+[2026-10-31T23:22:50Z] [SESSION-229] CHECKPOINT triage: rbffspec 86c@f3000 / 58c@f30000, doubledr 80c@f3000, legendos title screen clean text 56c@f60000 — all three low-color candidates are phase artifacts or text screens, not defects
+[2026-10-31T23:22:50Z] [SESSION-229] CHECKPOINT rebuilding+redeploying clean binary (md5 5e34ba92) and launching 208-card 3000f graphics sweep to regression-check the Z80 shared-RAM window change (3ba8edd)
+[2026-11-01T00:28:53Z] [SESSION-229] CHECKPOINT 208-card 3000f A/B (old daad804 vs new): 13 apparent diffs, all falsified by serial same-MCLOCK retest (bjourney new better at f12k/f20k 131c/217c vs 116c/91c; kof10th new 131c vs old 10c). No regression from the Z80 shared-RAM window change
+[2026-11-01T00:28:53Z] [SESSION-229] LESSON batch colour counts carry attract-phase jitter even at fixed MCLOCK seed; any batch A/B diff must be re-run serially on both binaries at the same frame and same MCLOCK before being called a regression
+[2026-11-01T00:28:53Z] [SESSION-229] STATS tasks_total=225 completed=143 failed=82 pending=0 blocked=0 attempts_total=304 checkpoints=249
+[2026-11-01T00:28:53Z] [SESSION-229] LOCK released
