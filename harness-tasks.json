@@ -8489,8 +8489,35 @@
       ],
       "checkpoints": [],
       "completed_at": null
+    },
+    {
+      "id": "task-243",
+      "title": "208卡图形批测复评波：修复波后 parked/BLACK 图形卡复核",
+      "status": "completed",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "63c9f1e",
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 1,
+          "description": "图形复评:OK 168->177/208(GAIN 11含kof2000/svcpcb/kf2k2pla/kf2k2pls/kf2k2ps2/kof10th/b2b/samsho4k/sengoku3/froman2b/viewpoin);LOST 2(sengoku2/socbrawl)12k复测91/110色证伪=3000f attract假阳性;最终LOST 0;新基线batch_t253.json",
+          "timestamp": "2026-11-01T21:50:14Z"
+        }
+      ],
+      "completed_at": "2026-11-01T21:50:14Z"
     }
   ],
   "session_count": 253,
-  "last_session": "2026-11-01T21:36:31Z"
+  "last_session": "2026-11-01T21:50:14Z"
 }

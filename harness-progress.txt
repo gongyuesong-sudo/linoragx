@@ -1480,3 +1480,6 @@
 [2026-11-01T21:33:48Z] [SESSION-253] LOCK acquired (pid=3431498)
 [2026-11-01T21:34:19Z] [SESSION-253] Starting [task-242] bootleg 语音命名再扩展 (base=1de43ba)
 [2026-11-01T21:36:31Z] [SESSION-253] ERROR [task-242] [TASK_EXEC] 前提证伪:三卡语音装载后仍零YM写(boot深保护非缺语音);扩展回滚
+[2026-11-01T21:36:46Z] [SESSION-253] Starting [task-243] 208卡图形批测复评波 (base=63c9f1e)
+[2026-11-01T21:50:14Z] [SESSION-253] Completed [task-243]: 图形复评波 OK 168->177/208; LOST 2 卡 12k 复测全证伪(91/110色); 基线 batch_t253.json
+[2026-11-01T21:50:14Z] [SESSION-253] STATS tasks_total=241 completed=153 failed=88 pending=0 blocked=0
