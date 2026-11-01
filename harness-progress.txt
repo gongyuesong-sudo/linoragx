@@ -1408,3 +1408,6 @@
 2026-11-01T12:19:59Z [SESSION-244] ERROR [task-232] [TASK_EXEC] attempt3未修复:fade节奏完全正常(周期1560f淡入淡出);黑屏真因=脚本长度字段0x108244 lin=0/金标=50(0x32)——场景无VRAM更新恒黑;注册链=游戏dbra循环0x9dc4->BIOS服务0x10ef8;脚本=VRAM偏移号列表(0x20905e读号+0x8000写VLOAD);剩余分叉=游戏注册脚本长度参数来源;task-232 3/3耗尽转CLOSED-PARKED
 2026-11-01T13:30:00Z [SESSION-244] STATS tasks_total=230 completed=145 failed=85 pending=0 blocked=0 attempts_total=394 checkpoints=492
 2026-11-01T13:30:01Z [SESSION-244] INIT All tasks terminal; harness marker removed; harness complete
+2026-11-01T12:27:44Z [SESSION-245] LOCK acquired (pid=2988813)
+2026-11-01T12:30:24Z [SESSION-245] Starting [task-232] wh2 attract 黑屏：脚本长度参数来源 (base=cc82deb)
+2026-11-01T13:04:46Z [SESSION-245] CHECKPOINT [task-232] step=8/9 "重大反转:lin title态与金标title态workram完全一致(0x8240结构同)——title本身无缺陷;金标f5900-6000靠0xfd98 FREE PLAY计时器7->0切战斗演示(400f/步);lin uni-bios计时器8->0->重置循环(546f/步永不触发切换);lin NEO-GEO.ROM计时器730f/步过慢(f6000才到3);lin VBLANK处理器执行率仅金标78%(0x8206增量0.25vs0.32/帧)——BIOS计时器由VBLANK驱动故变慢;VBLHOLD=1不修复;下一步=查VBLANK handler执行率缺口根因(68K IRQ接受时序)"
