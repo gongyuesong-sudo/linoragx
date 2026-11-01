@@ -1453,3 +1453,6 @@
 [2026-11-01T19:52:54Z] [SESSION-249] Added task-237(bootleg复测) task-238(cthd2003 IRQ门控收窄) task-239(kf98cb族DC-stuck)
 [2026-11-01T19:52:59Z] [SESSION-249] Starting [task-237] bootleg 七卡复测定案 (base=4de2da8)
 [2026-11-01T20:08:38Z] [SESSION-249] Completed [task-237] bootleg复测:kf2k2ps2/kof2000ps2有声(t217误判修正),余5卡无金标bootleg维持观察
+[2026-11-01T20:11:12Z] [SESSION-249] ERROR [task-238] [TASK_EXEC] attempt1: IRQ频率假设证伪(lin64Hz≈金标79Hz)；irq_latch门实验失败；分歧收窄至fd17任务计数器未清致任务链自持。attempts=1/3
+[2026-11-01T20:11:31Z] [SESSION-249] STATS tasks_total=237 completed=150 failed=86 pending=0 blocked=0 attempts_total=400 checkpoints=505
+[2026-11-01T20:11:31Z] [SESSION-249] LOCK released

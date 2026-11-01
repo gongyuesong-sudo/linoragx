@@ -8337,12 +8337,12 @@
     {
       "id": "task-238",
       "title": "cthd2003 phantom IRQ 门控收窄：以驱动读 YM 状态口为准（IN 04/06 sticky），不读则 crutch 不发 IRQ",
-      "status": "pending",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 1,
       "max_attempts": 3,
-      "started_at_commit": null,
+      "started_at_commit": "3a3ed4c",
       "validation": {
         "command": "cd /home/gill/linoragx && timeout 150 reawork/rewrite/build/linoragx --rom roms/cthd2003.zip --bios /home/gill/linoragx --frames 6000 --headless --dump-audio /tmp/v238_cthd.wav >/dev/null 2>&1 && python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v238_cthd.wav 10 && timeout 90 reawork/rewrite/build/linoragx --rom roms/mslug3.zip --bios /home/gill/linoragx --frames 3000 --headless --dump-audio /tmp/v238_mslug3.wav >/dev/null 2>&1 && python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v238_mslug3.wav 10",
         "timeout_seconds": 400
@@ -8350,8 +8350,17 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
-      "checkpoints": [],
+      "error_log": [
+        "[TASK_EXEC] attempt1: 金标cthd2003 ZIRQ=79Hz level IRQ(0x29零写但ymfm enable复位=3,timer flag直驱)；lin crutch频率64Hz与金标79Hz接近——IRQ频率不是分歧。irq_latch门实验失败(cthd2003 loud=1不变,vliner 6回归)。真分歧=lin任务链268x/帧自持(fd17=0e未清)vs金标任务链轻。attempt2方向:fd17清除路径"
+      ],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "金标0x29零写(275272 YM写0命中)+ZIRQ 79Hz；lin timer A 1024级精度正确(64Hz≈金标79Hz)；irq_latch门实验证伪",
+          "timestamp": "2026-11-01T20:11:12Z"
+        }
+      ],
       "completed_at": null
     },
     {
@@ -8376,5 +8385,5 @@
     }
   ],
   "session_count": 249,
-  "last_session": "2026-11-02T04:45:00Z"
+  "last_session": "2026-11-02T05:30:00Z"
 }
