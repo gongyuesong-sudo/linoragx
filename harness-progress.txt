@@ -1502,3 +1502,6 @@
 [2026-11-01T23:02:28Z] [SESSION-256] ERROR [task-246] [TASK_EXEC] ghostlop homebrew 无金标，背景层黑与 wh2 同族 CLOSED-PARKED
 [2026-11-01T23:02:28Z] [SESSION-256] Completed [task-247] (commit f6e2996)
 [2026-11-01T23:02:28Z] [SESSION-256] STATS tasks_total=245 completed=155 failed=90 pending=0 session=256
+[2026-11-01T23:04:51Z] [SESSION-257] LOCK acquired (pid=3504154)
+[2026-11-01T23:04:51Z] [SESSION-257] Starting [task-248] 全量图形回归批测 (base=8357d4f)
+[2026-11-01T23:05:34Z] [SESSION-257] CHECKPOINT [task-248] step=1/2 批测已启动（BIN md5 012bf4c1 部署核对一致，proc_59d8b19da4a9）

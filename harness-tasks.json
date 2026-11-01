@@ -8635,8 +8635,28 @@
         }
       ],
       "completed_at": "2026-11-01T23:02:28Z"
+    },
+    {
+      "id": "task-248",
+      "title": "全量 208 卡图形回归批测（lastbld2 BIOS pref 后基线确认）",
+      "status": "in_progress",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": "8357d4f47796ba3345f40c31734c60ba04fbdf20",
+      "validation": {
+        "command": "test -f ~/.hermes/cache/scratch/batch_t257.json",
+        "timeout_seconds": 3600
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
     }
   ],
-  "session_count": 256,
-  "last_session": "2026-11-01T23:02:28Z"
+  "session_count": 257,
+  "last_session": "2026-11-01T23:04:51Z"
 }
