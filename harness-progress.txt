@@ -1505,3 +1505,7 @@
 [2026-11-01T23:04:51Z] [SESSION-257] LOCK acquired (pid=3504154)
 [2026-11-01T23:04:51Z] [SESSION-257] Starting [task-248] 全量图形回归批测 (base=8357d4f)
 [2026-11-01T23:05:34Z] [SESSION-257] CHECKPOINT [task-248] step=1/2 批测已启动（BIN md5 012bf4c1 部署核对一致，proc_59d8b19da4a9）
+[2026-11-01T23:47:50Z] [SESSION-258] CHECKPOINT [task-248] step=2/2 批测完成 OK176/FEW19/BLACK13；viewpoin 12k/20k 复测证伪回归；wh2 为已parked卡attract噪声；tophuntr FEW->OK 增益
+[2026-11-01T23:47:50Z] [SESSION-258] Completed [task-248] (无真回归，图形基线维持 191/208)
+[2026-11-01T23:47:50Z] [SESSION-258] STATS tasks_total=245 completed=156 failed=90 pending=0 blocked=0
+[2026-11-01T23:47:50Z] [SESSION-258] LOCK released
