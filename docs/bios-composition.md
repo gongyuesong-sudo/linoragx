@@ -28,13 +28,16 @@
 ## 2. 向量表协议（8 张 68K BIOS 完全一致）
 
 ```
-SSP=$10F300  RESET=$C00402  NMI=$C00408  IRE/ILLEGAL等=$C00426(iret stub)
-IRQ1(VBlank)=$C00426  IRQ2/3=$C00426  IRQ4=$C00438  IRQ7=$C00438
+SSP=$10F300  RESET=$C00402  NMI=$C00408  未用异常=$C00426(iret stub)
+IRQ1=$C00432  IRQ2(VBlank)=$C00438→jmp $C11646  IRQ3=$C0043E→jmp $C118CA
+服务跳板：$C00444→$C112D2  $C0044A(TimerC)→jmp $C1167A  $C00450→$C117CE  $C00458→$C11820
 ```
 
-要点：BIOS 不把 VBlank 挂在向量表上处理——向量表 IRQ1 是 iret stub。真正的 BIOS 服务入口是
-$C00438（VBlank 服务）与 $C0044A（TimerC 服务），由游戏 VBlank handler 尾部 `jmp $C00438` 主动进入。
-linoragx 运行时实测与此一致（wh2 handler $20009C: tst $10FD80; bmi; jmp $C00438）。
+要点：低区 $C00402-$C004FF 全部是 6 字节 `jmp` 跳板（Ghidra 反汇编证实），一一对应向量表项。
+BIOS 的 VBlank 服务体挂在 IRQ2 向量（$C00438）上，游戏 VBlank handler 尾部
+`jmp $C00438` 主动进入；$C0044A（TimerC 服务 $C1167A）是游戏协程让出点，游戏以
+`jsr $C0044A` 挂起/恢复协程。linoragx 运行时实测与此一致（wh2 handler $20009C:
+tst $10FD80; bmi; jmp $C00438）。
 
 ## 3. 内存映射（NEO-GEO.ROM 反汇编 I/O 引用频次）
 
@@ -100,6 +103,36 @@ linoragx 对策：per-card BIOS pref 表（`src/neogeo.c` swlist 匹配块内 `l
 命中卡强制 NEO-GEO.ROM 或 asia-s3.rom。wh2/wh2j/wh2h 于 task-232 加入（NEO-GEO.ROM，
 验证：默认路径 f6000=74 色、f20000=74、f21500=47 场景推进；uni-bios 恒 1 色）。
 
-## 8. Ghidra 反编译补充
+## 8. Ghidra 反编译补充（11.3.1 headless，68000:BE:32:default，基址 $C00000）
 
-（Ghidra 11.3.1 headless 批量反编译结果，运行后填充：函数清单、关键服务伪代码、各 BIOS 差异函数对照）
+脚本 `~/.hermes/cache/scratch/bios_dis/export_bios.py`：全量线性反汇编 + 调用引用建函数 +
+KEYS 地址强制建函数 + 导出函数清单 JSON 与关键服务伪代码。产物 `ghidra_out/funcs_*.json`、
+`pseudocode_*.c`。
+
+函数规模：官方 MVS 各版 258-283（代码区 $C04000 + $C10000-$C1BFFF，约 32K）、uni-bios 793
+（自检/画面/字体全重写，代码翻倍）、neodebug 340。
+
+关键服务伪代码定案（NEO-GEO.ROM，uni-bios 3.2 逐字节同构）：
+
+- **VBlank 服务体 $C11646**：`$3C000C=4` ack → 喂狗 `$300001` → 若 `$10FEE3==0`：任务派发
+  `$C1871E` + TimerC 服务 `$C1167A` + 清主循环门 `$10FE8C` → VBlank 计数 `$10FEE4++`。
+- **TimerC 服务 $C1167A**：TimerC 计数 `$10FE88++` → 子服务 `$C126B4`/`$C1850E` →
+  `$10FEE1` 倒计时，到 0 且 `$10FD80` 高位置位则跑 `$C116C8`/`$C1183C`；`$10FD82!=0 &&
+  $10FDAF==2` 时跑 `$C12BE6`。
+- **任务派发器 $C1871E**：重入锁 `$10FDC2`；遍历队列 `$10FF00`（块首字节=下一块指针，块内
+  `[1]`=任务 id），id<0xE 查跳转表 `$C1877E`（14 项 4 字节）执行；id≥0xE 停止（游戏任务由
+  游戏自身调度器执行）。
+- **跳转表 14 项 = BIOS 服务原语**：nop×2、任务参数字节写 `[a4+2]`、word 拷贝、流读取
+  （`[a1]` + 指针 `$10FEC6` 自增）、流回退 `-4`、word memset、递增 memset、文本 VRAM 写原语
+  `$C18838`（按 d5 标志 4 模式：字节查找/字查找/定值填充/递增填充）、`[a6]=[a1]+d6`、
+  tile 拷贝 `$C18876/$C188DC`（`jsr (a2)` 回调）。
+- **VRAM 清屏任务 $C13A3C**：`$3C0004=1`、`$3C0000=$7000` 写使能，循环 0x500 次写
+  `$3C0002=$20`（display counter）并喂狗 `$300001=$20`。
+- **向量服务 handler**：默认异常 `$C11002`（`$3C000C=7`+`$3C0006=$4000`+`$C11A84`）；IRQ3
+  `$C118CA`（ack=2）；boot 清 RAM `$C112D2`（`$10FEE1=$FF`、清 `$10FD80` bit7、RAM $402000
+  起清零）；BCD 倒数服务 `$C117CE`（`$10FDB0/$10FDB1`，机台计时）；`$C11820`（`$10FEE0=0`、
+  `$10FD81=3`、`$C1299A`）。
+
+对标要点：linoragx 已实现的 VBlank ack/主循环门/协程 resume 语义与上述伪代码一致；未建模的
+服务原语（文本 VRAM 写 4 模式、流指针 `$10FEC6`、BCD 计时 `$10FDBx`）仅 BIOS 自身画面使用，
+游戏卡带路径不经过，无需补。
