@@ -1230,6 +1230,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
              so the hybrid read serves the bank-ROM view (game code) there. */
           if (mck >= 2 && off >= 0x8600 && off <= 0x86FF &&
               !((mem_mask & 0xFF00) ? (d >> 8) : (d & 0xFF))) return; }
+        { static int ti = -2; static long tic;
+          if (ti == -2) ti = getenv("TASKINS") ? 1 : 0;
+          if (ti && off >= 0xC000 && off < 0xC400 && tic++ < 800)
+              fprintf(stderr, "TINS f=%d off=%03x d=%04x m=%04x pc=%08x\n", ng->frame,
+                  off, d, mem_mask, m68k_get_reg(NULL, M68K_REG_PC)); }
         if (mem_mask & 0xFF00) { ng->smem[off & ~1u] = d >> 8; ng->smem_dirty[(off & ~1u) >> 3] |= 1u << ((off & ~1u) & 7); }
         if (mem_mask & 0x00FF) { ng->smem[off | 1u] = d & 0xFF; ng->smem_dirty[(off | 1u) >> 3] |= 1u << ((off | 1u) & 7); }
         return;
