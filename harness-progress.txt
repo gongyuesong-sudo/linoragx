@@ -1474,3 +1474,5 @@
 [2026-11-01T20:51:00Z] [SESSION-252] LOCK acquired (pid=3411309)
 [2026-11-01T20:52:23Z] [SESSION-252] Starting [task-241] 208卡音频复评波 (base=d268916)
 [2026-11-01T20:52:38Z] [SESSION-252] Starting [task-241] 208卡音频复评波 (base=d268916)
+[2026-11-01T21:32:21Z] [SESSION-252] Completed [task-241] (commit 38a004b): 音频复评波 voiced 189->194/208; lost 清零(kof96ae20 系 t217 BIOS 演示曲边缘值误记,修复后 loud 0->31)
+[2026-11-01T21:32:21Z] [SESSION-252] STATS tasks_total=239 completed=152 failed=87 pending=0 blocked=0

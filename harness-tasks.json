@@ -8438,7 +8438,7 @@
     {
       "id": "task-241",
       "title": "208卡音频复评波：修复波后静默卡复核（对照 audio_t217 基线）",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "P1",
       "depends_on": [],
       "attempts": 1,
@@ -8458,11 +8458,17 @@
           "total": 2,
           "description": "批测启动 audio_t252.py（BIN=cd168289 部署版）",
           "timestamp": "2026-11-01T20:52:23Z"
+        },
+        {
+          "step": 2,
+          "total": 2,
+          "description": "复评完成:voiced 189->193(+kf2k2ps2 0->18,kof2000ps2 0->28,kof98ae2016 0->8,kof98cb 0->9,kof99ae 2->16);唯一lost kof96ae20(3->0)实为ae族静默卡(t217的3=BIOS演示曲边缘值),泛化特例后0->31(38a004b),最终194/208;剩余14静默全定案族",
+          "timestamp": "2026-11-01T21:32:21Z"
         }
       ],
-      "completed_at": null
+      "completed_at": "2026-11-01T21:32:21Z"
     }
   ],
   "session_count": 252,
-  "last_session": "2026-11-01T20:51:00Z"
+  "last_session": "2026-11-01T21:32:21Z"
 }
