@@ -1547,6 +1547,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if (cnz && ng->frame >= cnz_f && (d & 0x7FFF) && cnzc++ < 200000)
               fprintf(stderr, "CRAMNZ f=%d o=%04x d=%04x pc=%08x\n",
                   ng->frame, o, d, m68k_get_reg(NULL, M68K_REG_PC)); }
+        { static int czw = -2; static long czwc; static int czw_f;
+          if (czw == -2) { const char *e = getenv("CRAMZW"); czw = e ? 1 : 0;
+              czw_f = e ? (int)strtol(e, 0, 0) : 0; }
+          if (czw && ng->frame >= czw_f && !(d & 0x7FFF) && czwc++ < 400)
+              fprintf(stderr, "CRAMZW f=%d o=%04x pc=%08x\n",
+                  ng->frame, o, m68k_get_reg(NULL, M68K_REG_PC)); }
         static int crtr2 = -2;
         if (crtr2 == -2) crtr2 = getenv("CRAMTRACE") ? 1 : 0;
         if (crtr2 && (ng->frame < 2000 || getenv("CRAMT2")) && (m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000 || getenv("CRAMT2"))) {
@@ -4459,6 +4465,31 @@ void ng_run_frame(neogeo *ng)
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
                       fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld\n", ng->frame, pc, c); } } }
+        { static int cw = -2; static long cwn;
+          static int cw2 = -2; static unsigned cw2b, cw2l; static long cw2done; static char cw2o[256];
+          if (cw2 == -2) { const char *e = getenv("CODEWIN2"); cw2 = 0;
+              if (e) { char buf[300]; strncpy(buf, e, 299); buf[299] = 0;
+                  cw2 = (int)strtol(strtok(buf, ":"), 0, 0);
+                  cw2b = (unsigned)strtol(strtok(0, ":"), 0, 0);
+                  cw2l = (unsigned)strtol(strtok(0, ":"), 0, 0);
+                  const char *o = strtok(0, ":"); strncpy(cw2o, o ? o : "/tmp/codewin2.bin", 255); } }
+          if (cw2 > 0 && !cw2done) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              if (pc == (unsigned)cw2) { cw2done = 1;
+                  FILE *g = fopen(cw2o, "wb");
+                  if (g) { extern uint32_t m68k_read_memory_16(uint32_t);
+                      for (unsigned a = cw2b; a < cw2b + cw2l; a += 2) {
+                          uint32_t w = m68k_read_memory_16(a); fputc((int)(w >> 8) & 0xff, g); fputc((int)w & 0xff, g); }
+                      fclose(g); } } }
+          if (cw == -2) { const char *e = getenv("CODEWIN"); cw = e ? (int)strtol(e, 0, 0) : -1; }
+          if (cw >= 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              if (pc == (unsigned)cw && cwn < 3001) { long h = cwn++;
+                  if (h == 0 || h == 3000) { const char *o = getenv("CODEWINOUT");
+                      char nm[512]; snprintf(nm, sizeof nm, "%s.%d", o ? o : "/tmp/codewin.bin", (int)(h / 3000) + 1);
+                      FILE *g = fopen(nm, "wb");
+                      if (g) { extern uint32_t m68k_read_memory_16(uint32_t);
+                          for (unsigned a = (unsigned)cw - 0x200; a < (unsigned)cw + 0x200; a += 2) {
+                              uint32_t w = m68k_read_memory_16(a); fputc((int)(w >> 8) & 0xff, g); fputc((int)w & 0xff, g); }
+                          fclose(g); } } } } }
         { static int fdbg = -2; static long fcnt;
           if (fdbg == -2) fdbg = getenv("FADEDBG") ? 1 : 0;
           if (fdbg && ng->frame >= 5000 && m68k_get_reg(NULL,M68K_REG_PC) == 0x20483a && fcnt++ < 60) {
@@ -5047,6 +5078,41 @@ void ng_run_frame(neogeo *ng)
         FILE *g = fopen("/tmp/lin_rom68k.bin", "wb");
         if (g) { for (int a = 0x1e00; a < 0x2000; a++) fputc(a < (int)ng->rom_size ? ng->rom[a] : 0xEE, g); fclose(g); }
     }
+    { static int rw2 = -2; static unsigned rw2a, rw2l; static long rw2f; static char rw2o[256];
+      if (rw2 == -2) { const char *e = getenv("RAMWIN"); rw2 = 0;
+          if (e) { char buf[300]; strncpy(buf, e, 299); buf[299] = 0;
+              rw2f = strtol(strtok(buf, ":"), 0, 0);
+              rw2a = (unsigned)strtol(strtok(0, ":"), 0, 0);
+              rw2l = (unsigned)strtol(strtok(0, ":"), 0, 0);
+              const char *o = strtok(0, ":"); strncpy(rw2o, o ? o : "/tmp/ramwin.bin", 255); rw2 = 1; } }
+      if (rw2 && rw2f && (long)ng->frame == rw2f) { rw2f = 0;
+          FILE *g = fopen(rw2o, "wb");
+          if (g) { extern uint32_t m68k_read_memory_16(uint32_t);
+              for (unsigned a = rw2a; a < rw2a + rw2l; a += 2) {
+                  uint32_t w = m68k_read_memory_16(a); fputc((int)(w >> 8) & 0xff, g); fputc((int)w & 0xff, g); }
+              fclose(g); } } }
+    { static int fs = -2; static FILE *fsf; static uint16_t fs_prev[4 + 11 * 8];
+      if (fs == -2) { const char *e = getenv("FADESTAT"); fs = e ? 1 : 0;
+          if (fs) fsf = fopen(e, "w"); }
+      if (fs && fsf) { extern uint32_t m68k_read_memory_16(uint32_t);
+          uint16_t cur[4 + 11 * 8]; int ch = 0; static int chg[4 + 11 * 8];
+          cur[0] = (uint16_t)m68k_read_memory_16(0x107220);   /* fade level */
+          cur[1] = (uint16_t)m68k_read_memory_16(0x10c51e);   /* fade-in counter */
+          cur[2] = (uint16_t)m68k_read_memory_16(0x10c530);   /* fade-out counter */
+          cur[3] = (uint16_t)m68k_read_memory_16(0x10c532);
+          for (int i = 0; i < 11; i++)
+              for (int j = 0; j < 8; j++)
+                  cur[4 + i * 8 + j] = (uint16_t)m68k_read_memory_16(0x100000 + i * 0x20 + j * 2);
+          if (fs == 1) { memcpy(fs_prev, cur, sizeof cur); fs = 2; }
+          else { ch = 0;
+              for (int i = 0; i < 4 + 11 * 8; i++)
+                  if ((chg[i] = cur[i] != fs_prev[i])) { fs_prev[i] = cur[i]; ch = 1; } }
+          if (ch) { fprintf(fsf, "FST f=%u lvl=%04x fin=%04x fout=%04x w=%04x", ng->frame, cur[0], cur[1], cur[2], cur[3]);
+              for (int i = 0; i < 11; i++) { int d = 0;
+                  for (int j = 0; j < 8; j++) if (chg[4+i*8+j]) d = 1;
+                  if (d) { fprintf(fsf, " |b%d", i);
+                      for (int j = 0; j < 8; j++) fprintf(fsf, " %04x", cur[4+i*8+j]); } }
+              fprintf(fsf, "\n"); fflush(fsf); } } }
     ng->frame++;
     { extern int g_ym_frame; g_ym_frame = (int)ng->frame; }  /* YMBDBG timeline fix: was never assigned, all YM writes printed f=0 */
     if (ng->tp_rise && --ng->tp_rise == 0) { ng->mc_tp = 1; ng->tp_cnt = 0; }  /* armed TP rising edge, 2 frames after STB */
