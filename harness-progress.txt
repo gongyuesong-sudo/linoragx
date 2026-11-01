@@ -1484,3 +1484,6 @@
 [2026-11-01T21:50:14Z] [SESSION-253] Completed [task-243]: 图形复评波 OK 168->177/208; LOST 2 卡 12k 复测全证伪(91/110色); 基线 batch_t253.json
 [2026-11-01T21:50:14Z] [SESSION-253] STATS tasks_total=241 completed=153 failed=88 pending=0 blocked=0
 [2026-11-01T21:50:16Z] [SESSION-253] LOCK released
+[2026-11-01T21:51:17Z] [SESSION-254] LOCK acquired (pid=3442854)
+[2026-11-01T21:51:17Z] [SESSION-254] Starting [task-244] BLACK/FEW 12k 复测定级 (base=11fecf2)
+[2026-11-01T22:11:42Z] [SESSION-254] Completed [task-244]: 12k 复测定级 16 卡——11 恢复+2 vision 判正常；图形总评 177->190/208；新线索 aodk/ghostlop/lastbld2 登记 task-245/246/247

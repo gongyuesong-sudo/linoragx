@@ -8516,8 +8516,95 @@
         }
       ],
       "completed_at": "2026-11-01T21:50:14Z"
+    },
+    {
+      "id": "task-244",
+      "title": "t253 BLACK/FEW 卡 12k 帧复测定级（legendos/samsho5x/ssideki3/wh2j/whp + FEW 组）",
+      "status": "completed",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "11fecf2",
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 1,
+          "description": "16卡12k复测:11卡恢复正常(samsho5x/ssideki3/wh2j/whp/burningf/crswd2bl/kotm2/magdrop3/maglord/tophuntr/fightfev);legendos=BEST10高分榜/neothndr=homebrew标题 vision判正常;图形总评177->190/208;新线索3:aodk(官方卡停BIOS logo但68K已进游戏卡ea5e空转)/ghostlop(attract仅文字层图形缺失)/lastbld2(Uni-BIOS ILLEGAL INSTRUCTION PC=5复位向量无效)",
+          "timestamp": "2026-11-01T22:11:42Z"
+        }
+      ],
+      "completed_at": "2026-11-01T22:11:42Z"
+    },
+    {
+      "id": "task-245",
+      "title": "aodk 官方卡 boot stall：68K 进游戏后卡 0xea5e 空转、画面停 BIOS logo（swlist 装载正常，官方/uni BIOS 均卡）",
+      "status": "pending",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
+    },
+    {
+      "id": "task-246",
+      "title": "ghostlop attract 仅文字层（sprite/图形层缺失）排查",
+      "status": "pending",
+      "priority": "P2",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
+    },
+    {
+      "id": "task-247",
+      "title": "lastbld2 Uni-BIOS 崩溃 ILLEGAL INSTRUCTION PC=0005（复位向量无效）排查",
+      "status": "pending",
+      "priority": "P2",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
     }
   ],
-  "session_count": 253,
-  "last_session": "2026-11-01T21:50:14Z"
+  "session_count": 254,
+  "last_session": "2026-11-01T22:11:42Z"
 }
