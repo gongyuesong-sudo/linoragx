@@ -136,3 +136,41 @@ KEYS 地址强制建函数 + 导出函数清单 JSON 与关键服务伪代码。
 对标要点：linoragx 已实现的 VBlank ack/主循环门/协程 resume 语义与上述伪代码一致；未建模的
 服务原语（文本 VRAM 写 4 模式、流指针 `$10FEC6`、BCD 计时 `$10FDBx`）仅 BIOS 自身画面使用，
 游戏卡带路径不经过，无需补。
+
+## 9. Ghidra 12.2 重导对照（官方 release 部署，PyGhidra 不可用改 Java 脚本）
+
+部署：官方 release `ghidra_12.2_PUBLIC_20261016.zip` → `~/opt/ghidra12`（application.version=12.2，
+JDK25）。源码构建线（~/opt/ghidra-Ghidra_12.2_build）因 CDT 依赖无国内镜像（archive.eclipse.org
+~20KB/s）且 CDT 仅用于 Eclipse 工程生成，判定非 headless 必需，退役。
+
+12.2 迁移坑（对脚本作者）：
+- 项目路径必须绝对且不含 `.` 开头元素（`.hermes` 目录中招，报 Path element starting with '.'）
+- `-scriptPath` 必须放在 `-import`/`-process` 之前，否则静默不加载
+- Jython 已移除：Python 脚本需 PyGhidra（pip pyghidra+jpype1，且 Ghidra JVM 侧握手在 headless
+  下仍报 "not started with PyGhidra"）；最稳路线是 Java GhidraScript（ExportBios.java，自动编译）
+- `Function.getBody().getNumAddresses()` 返回 long（11.x 脚本移植需显式收窄）
+
+重导口径与 11.3.1 完全一致（BinaryLoader 基址 $C00000、68000:BE:32:default、全 ROM 线性反汇编 +
+call 目标建函数 + 32 关键服务反编译），产物在 scratch/bios_dis/ghidra_out12/。
+
+函数数对照（11.3.1 → 12.2）：NEO-GEO 275→273、asia-s3 258→257、sp-s 259→262、sp-e 263→266、
+usa_2slt 258→261、vs-bios 283→285、neodebug 340→348、uni-bios 806→792。函数集合高度一致
+（互差 ≤19），无新增关键服务。
+
+关键服务反编译成功率（32 项）：
+
+| BIOS | 11.3.1 | 12.2 |
+|---|---|---|
+| NEO-GEO.ROM | 32 | 32 |
+| asia-s3 | 3 | 26 |
+| sp-s.sp1 | 1 | 26 |
+| sp-e.sp1 | 3 | 28 |
+| usa_2slt | 3 | 28 |
+| vs-bios | 0 | 18 |
+| neodebug | 1 | 24 |
+| uni-bios 3.2 | 27 | 32 |
+
+结论：12.2 反编译器对 68000 BIOS 代码的成功率提升一个数量级（旧版对 sp-*/vs/us 系派生 BIOS
+几乎全灭），函数识别数基本持平——增益全部在反编译质量（控制流还原、循环结构化）。此前
+§8 的机制结论（VBlank ack、主循环门、协程 resume、服务原语清单）经 12.2 伪代码复核无推翻项；
+mslug4 BIOS 敏感案（§7）的 `move.b $320001,d0` AUDIO 轮询路径在 12.2 反编译中同样可见。
