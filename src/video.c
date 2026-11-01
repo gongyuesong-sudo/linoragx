@@ -173,6 +173,13 @@ void ng_draw_line(neogeo *ng, uint32_t *fb, int line)
     uint16_t *vram = ng_vram(ng);
     uint16_t *cram = ng_cram(ng);
     uint32_t bank = ng_cram_bank_render(ng);
+    { static int rc = -2; extern uint64_t ng_frame_no(neogeo*);
+      if (rc == -2) rc = getenv("RENDERCRAM") ? (int)strtol(getenv("RENDERCRAM"), 0, 0) : 0;
+      if (rc && ng_frame_no(ng) == (uint64_t)rc) {
+          int nz = 0; for (int i = 0; i < 0x10000; i++) if (cram[i]) nz++;
+          fprintf(stderr, "RENDERCRAM f=%llu bank=%x nonzero=%d first:", (unsigned long long)ng_frame_no(ng), bank, nz);
+          for (int i = 0, k = 0; i < 0x10000 && k < 8; i++) if (cram[i]) { fprintf(stderr, " %04x:%04x", i, cram[i]); k++; }
+          fprintf(stderr, "\n"); } }
     uint32_t fix_sz, spr_mask;
     int sh = render_shadow;   /* frame-start snapshot (MAME vblank semantics) */
     uint8_t *fixed = ng_fixed(ng, &fix_sz);
