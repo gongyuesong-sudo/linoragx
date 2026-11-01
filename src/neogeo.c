@@ -1532,6 +1532,10 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             ng->raster_armed = 1;              /* MAME: any lsb write arms timer */
             break;
         case 6:
+            { const char *a3c = getenv("ACK3C");
+              if (a3c) { static FILE *af = NULL;
+                         if (!af) af = fopen(a3c, "w");
+                         if (af) fprintf(af, "f=%u d=%04x\n", ng->frame, d); } }
             if (d & 2) { ng->raster_pending = 0; ng->irq_line = 0; m68k_set_virq(2, 0); }
             if (d & 4) { m68k_set_virq(1, 0); ng->vbl_line = 0; }          /* vblank ack (VBLHOLD) */
             if (d & 1) { }                                                /* irq3 (cart) */
@@ -3897,6 +3901,18 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                    (c13xxx 5555/aaaa write-test loop, golden f1-f442); uni-bios fast-boot
                                    skips it (zoom table stays reset 0xfff through f20000).  Stock NEO-GEO
                                    BIOS: zoom-nondefault 511/512 at f100 == golden, attract renders. */
+                                free(ng->bios); ng->bios = NULL;
+                                load_bios_pref(ng, biosdir, "NEO-GEO.ROM");
+                            }
+                            if (!getenv("LINORAGX_BIOS") &&
+                                (sw_has(sw, swend, "\"wh2\"") || sw_has(sw, swend, "\"wh2j\"") || sw_has(sw, swend, "\"wh2h\""))) {
+                                fprintf(stderr, "T232DBG wh2-pref-hit swlen=%ld\n", (long)(swend - sw));
+                                /* wh2 attract is permanently black under uni-bios: the demo-script
+                                   registration path never populates the scene script (length field
+                                   stays 0, no VRAM updates -> fade cycles over empty scene). Stock
+                                   NEO-GEO BIOS restores attract scene content: f6000=74 colors,
+                                   f20000=74, f21500=47 (scene advances; black frames are fade
+                                   phases). uni-bios: 1 color at every sampled frame f3000-20000. */
                                 free(ng->bios); ng->bios = NULL;
                                 load_bios_pref(ng, biosdir, "NEO-GEO.ROM");
                             }
