@@ -1509,3 +1509,4 @@
 [2026-11-01T23:47:50Z] [SESSION-258] Completed [task-248] (无真回归，图形基线维持 191/208)
 [2026-11-01T23:47:50Z] [SESSION-258] STATS tasks_total=245 completed=156 failed=90 pending=0 blocked=0
 [2026-11-01T23:47:50Z] [SESSION-258] LOCK released
+[2026-11-01T23:50:36Z] [SESSION-258] STATS final: tasks_total=245 completed=156 failed=90 pending=0 blocked=0 — lastbld2 12k=69色确认 task-247 修复有效，图形基线 191/208、音频 194/208 维持
