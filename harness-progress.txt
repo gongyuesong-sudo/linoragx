@@ -1355,3 +1355,11 @@
 [2026-11-01T05:50:24Z] [SESSION-235] CHECKPOINT [task-228] step=7/7 "fade pinned 0x0F still BLACK; true gap = palette staging buffer 0x10A000 empty (scene-script output divergence)"
 [2026-11-01T05:50:24Z] [SESSION-235] ERROR [task-228] [TEST_FAIL] attempt3 no fix; CLOSED-PARKED 3/3 bootleg scene-script engine wall
 [2026-11-01T05:50:24Z] [SESSION-235] STATS tasks_total=226 completed=143 failed=83 pending=0 blocked=0 attempts_total=386 checkpoints=470
+[2026-11-01T05:59:09Z] [SESSION-236] LOCK acquired
+[2026-11-01T05:59:09Z] [SESSION-236] Starting [task-229] wh2 scene-script engine divergence (base=5c5d986)
+[2026-11-01T06:09:21Z] [SESSION-236] CHECKPOINT [task-229] step=2/3 "attract timer 0x108236 mapped; golden RAM parity run in flight"
+[2026-11-01T06:13:20Z] [SESSION-236] ERROR [task-229] [TIMEOUT] golden RAM dump killed twice; lin tick hypothesis falsified (0x10822c unconsumed)
+[2026-11-01T06:13:20Z] [SESSION-236] STATS tasks_total=227 completed=143 failed=84 pending=0 blocked=0 attempts_total=387 checkpoints=473
+[2026-11-01T06:13:20Z] [SESSION-236] LOCK released
+[2026-11-01T06:23:58Z] [SESSION-236] ERROR [task-229] [TEST_FAIL] attempt2 no fix; lin task chain alive, palette-copy dies f16156; golden census blocked by lua API
+[2026-11-01T06:23:58Z] [SESSION-236] LOCK released

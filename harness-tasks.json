@@ -7919,8 +7919,57 @@
     }
    ],
    "completed_at": null
+  },
+  {
+   "id": "task-229",
+   "title": "wh2 attract black (reopen of task-228 with new entry point): scene-script engine 0x200174 output divergence \u2014 palette staging buffer 0x10A000 never written post-attract and 0x1062b6 params differ (lin 18/10 vs gold 0808/4040); trace script engine token dispatch vs golden to find the branch that skips palette-source writes",
+   "status": "failed",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 2,
+   "max_attempts": 3,
+   "started_at_commit": "5c5d986",
+   "validation": {
+    "command": "bash /home/gill/linoragx/reawork/rewrite/tools/harness/val_attract.sh wh2 80",
+    "timeout_seconds": 900
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [
+    "[TIMEOUT] golden RAM dump via MAME lua killed twice (900s/1500s) at f16990+: MAME wh2 too slow at high frame counts; use f<=8000 dump points or per-N-frame sampled tick read next attempt",
+    "[TEST_FAIL] attempt2: no fix. PCHITRA=0x2062bc shows lin task chain ALIVE (55 distinct vsync-wait callers incl attract tasks 0xa17c x5542, 0x137a2 x4620); palette-copy routine (ra=0x20480c) called 74x then dies f16156. 0x107400 dense block = interp params (0x2047d8) not palette. STACKDUMP frame-boundary sampling too sparse to catch routine entry. Golden GRA lua failed: maincpu .registers is nil in MAME 0.289 lua \u2014 use manager.machine.debug or memory.regions instead."
+   ],
+   "checkpoints": [
+    {
+     "step": 1,
+     "total": 3,
+     "description": "carry-over from task-228 attempt3: fade pinned 0x0F still BLACK; palette staging 0x10A000 all-zero at f17990; fade tbl A6-0xd00 (0x107300) has data (127 nonzero); blit chain intact, source empty. A6=0x108000. RAMPOKE68/PCHIT-a6 probes in 5c5d986.",
+     "timestamp": "2026-11-01T05:59:09Z"
+    },
+    {
+     "step": 2,
+     "total": 3,
+     "description": "lin side mapped: 0x108236=A5+0x22e countdown (reload 0x14f=335, every-frame dec via pc=0x209024; D0&0xF==0xF sub-tick; A5+0x22c stays 0 unconsumed). RAM diff f16990->17490: 274 byte diffs, 12 word candidates, 0x108236 top attract-timer candidate. Palette chain re-check: 0x204800 routine copies ROM(0x1000+D1)->A0; 0x204854 direct-CRAM movem only fires BIOS phase f728-730. Golden RAM dumps f16990/f17490 running for tick-parity comparison.",
+     "timestamp": "2026-11-01T06:09:21Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "attempt1 end: lin attract timer 0x108236 reloads 0x14f but A5+0x22c tick stays 0 (unconsumed) => timer not the attract driver after all. Smoke kof2000=380c/mslug4=107c/samsho2=50c no regression on 5c5d986. Next attempt: (a) golden RAM at f8000 only (fits MAME budget), compare 0x1062b6/0x108236/0x10A000; (b) trace who calls 0x204800 palette-copy via stack-return probe (add PCHITRA printing 4-byte stack top on PC hit); (c) check attract scene task's script pointer stream for the op that loads palette.",
+     "timestamp": "2026-11-01T06:13:20Z"
+    },
+    {
+     "step": 4,
+     "total": 4,
+     "description": "attempt2 end: lin vsync-wait caller census captured (baseline for golden compare). Next attempt: (1) golden vsync-wait census via MAME lua debug API (manager.machine.debug:debug('cpuexec')? or patch MAME C++ probe LINORAGX_68KPC extended to log ra at 0x2062bc) then diff caller sets \u2014 missing golden caller = dead palette-load task; (2) or instrument lin: log every jsr target from task dispatcher 0x392a2 region.",
+     "timestamp": "2026-11-01T06:23:58Z"
+    }
+   ],
+   "completed_at": null,
+   "lease_expires_at": "2026-11-01T06:09:21Z"
   }
  ],
- "session_count": 235,
- "last_session": "2026-11-01T05:31:55Z"
+ "session_count": 236,
+ "last_session": "2026-11-01T05:59:09Z"
 }

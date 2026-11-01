@@ -4477,6 +4477,31 @@ void ng_run_frame(neogeo *ng)
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
                       fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6)); } } }
+        { static int pra_pc = -2; static long pra_n;
+          if (pra_pc == -2) { const char *e = getenv("PCHITRA"); pra_pc = e ? (int)strtol(e, 0, 16) : -1; }
+          if (pra_pc >= 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              if (pc == (unsigned)pra_pc && pra_n < 30000) { pra_n++;
+                  unsigned sp = (unsigned)m68k_get_reg(NULL, M68K_REG_A7);
+                  unsigned ra = 0;
+                  if (sp >= 0x100000 && sp + 3 < 0x110000) {
+                      uint8_t *p = ng->smem + (sp - 0x100000);
+                      ra = (p[0]<<24)|(p[1]<<16)|(p[2]<<8)|p[3]; }
+                  fprintf(stderr, "PCHITRA f=%d pc=%08x sp=%08x ra=%08x\n", ng->frame, pc, sp, ra); } } }
+        { static int sc_pc = -2; static long sc_n; static int sc_f = -2;
+          if (sc_pc == -2) { const char *e = getenv("STACKDUMP"); sc_pc = e ? (int)strtol(e, 0, 16) : -1;
+              const char *g = getenv("STACKDUMPF"); sc_f = g ? (int)strtol(g, 0, 16) : 0; }
+          if (sc_pc >= 0 && ng->frame >= sc_f) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              if (pc == (unsigned)sc_pc && sc_n < 30) { sc_n++;
+                  unsigned sp = (unsigned)m68k_get_reg(NULL, M68K_REG_A7);
+                  fprintf(stderr, "STACKDUMP f=%d sp=%08x\n", ng->frame, sp);
+                  for (unsigned q = 0; q < 0x40; q += 2) {
+                      unsigned v = 0;
+                      if (sp + q + 1 < 0x110000 && sp >= 0x100000) {
+                          uint8_t *p = ng->smem + (sp + q - 0x100000);
+                          v = (p[0] << 8) | p[1]; }
+                      if ((q & 0xF) == 0) fprintf(stderr, "\nS %08x:", sp + q);
+                      fprintf(stderr, " %04x", v); }
+                  fprintf(stderr, "\n"); } } }
         { static int cw = -2; static long cwn;
           static int cw2 = -2; static unsigned cw2b, cw2l; static long cw2done; static char cw2o[256];
           if (cw2 == -2) { const char *e = getenv("CODEWIN2"); cw2 = 0;
