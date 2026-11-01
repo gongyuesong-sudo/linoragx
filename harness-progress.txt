@@ -1411,3 +1411,8 @@
 2026-11-01T12:27:44Z [SESSION-245] LOCK acquired (pid=2988813)
 2026-11-01T12:30:24Z [SESSION-245] Starting [task-232] wh2 attract 黑屏：脚本长度参数来源 (base=cc82deb)
 2026-11-01T13:04:46Z [SESSION-245] CHECKPOINT [task-232] step=8/9 "重大反转:lin title态与金标title态workram完全一致(0x8240结构同)——title本身无缺陷;金标f5900-6000靠0xfd98 FREE PLAY计时器7->0切战斗演示(400f/步);lin uni-bios计时器8->0->重置循环(546f/步永不触发切换);lin NEO-GEO.ROM计时器730f/步过慢(f6000才到3);lin VBLANK处理器执行率仅金标78%(0x8206增量0.25vs0.32/帧)——BIOS计时器由VBLANK驱动故变慢;VBLHOLD=1不修复;下一步=查VBLANK handler执行率缺口根因(68K IRQ接受时序)"
+2026-11-01T14:36:24Z [SESSION-243] RECOVERY [task-232] action="resumed from SESSION-245 in_progress" reason="ACK3C probe showed lin ack 2.8/frame vs golden 1/frame; falsified as root cause (official-bios lin also 2-4/frame yet renders)"
+2026-11-01T14:36:24Z [SESSION-243] CHECKPOINT [task-232] step=9/10 "root cause = BIOS selection not timing: LINORAGX_BIOS=NEO-GEO.ROM f6000=74 colors vs uni-bios always-1; same family as mslug4/bstars (task-191); load_bios_pref worked all along, (cart-pref) stderr line was being discarded by 2>/dev/null probes"
+2026-11-01T14:36:24Z [SESSION-243] Completed [task-232] (commit e728c0c)
+2026-11-01T14:36:24Z [SESSION-243] STATS tasks_total=230 completed=146 failed=84 pending=0 blocked=0 attempts_total=392 checkpoints=493
+2026-11-01T14:36:24Z [SESSION-243] INIT All tasks terminal; harness marker removed; harness complete
