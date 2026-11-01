@@ -1465,3 +1465,5 @@
 [2026-11-01T20:24:58Z] [SESSION-250] ERROR [task-240] [TASK_EXEC] 前提证伪:vliner=6非回归(三点A/B全=6),t217=21为旧部署模型历史值。基线口径修正
 [2026-11-01T20:24:58Z] [SESSION-250] STATS tasks_total=238 completed=150 failed=87 pending=1 blocked=0 attempts_total=404 checkpoints=507
 [2026-11-01T20:24:58Z] [SESSION-250] LOCK released
+[2026-11-01T20:26:02Z] [SESSION-251] LOCK acquired (pid=3387863)
+[2026-11-01T20:26:02Z] [SESSION-251] Starting [task-238] cthd2003 音乐任务stall：TCB调度器派发缺口 (base=68551b3)

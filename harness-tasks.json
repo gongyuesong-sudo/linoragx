@@ -8340,9 +8340,9 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
-      "started_at_commit": "278b8a2",
+      "started_at_commit": "68551b3",
       "validation": {
         "command": "cd /home/gill/linoragx && timeout 150 reawork/rewrite/build/linoragx --rom roms/cthd2003.zip --bios /home/gill/linoragx --frames 6000 --headless --dump-audio /tmp/v238_cthd.wav >/dev/null 2>&1 && python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v238_cthd.wav 10 && timeout 90 reawork/rewrite/build/linoragx --rom roms/mslug3.zip --bios /home/gill/linoragx --frames 3000 --headless --dump-audio /tmp/v238_mslug3.wav >/dev/null 2>&1 && python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v238_mslug3.wav 10",
         "timeout_seconds": 400
@@ -8352,7 +8352,8 @@
       },
       "error_log": [
         "[TASK_EXEC] attempt1: 金标cthd2003 ZIRQ=79Hz level IRQ(0x29零写但ymfm enable复位=3,timer flag直驱)；lin crutch频率64Hz与金标79Hz接近——IRQ频率不是分歧。irq_latch门实验失败(cthd2003 loud=1不变,vliner 6回归)。真分歧=lin任务链268x/帧自持(fd17=0e未清)vs金标任务链轻。attempt2方向:fd17清除路径",
-        "[TASK_EXEC] attempt2 重大进展:根因第一层修复——MAME NEO_BIOS_AUDIO_128K 语义=5003-m1 即音频BIOS,Z80 复位直跑 m1,bootleg 无 ch5 握手;lin 之前等 ch5 致 Z80 卡 sm1 fffd 死循环(f241+)。修复 boot_cthd2k3 分支 m1_view=1(commit 68551b3):fffd 消失、m1 主循环 130d 活、命令环 fd66=fd67=05 消费、fd17 清零、TCB 有条目、FM init 音符出现。但 loud=1 未达校验>10——音乐任务仍 stall(900f 仅51 YM写,bank B 零)。attempt3 方向:音乐任务门(fd11=ff 为 m1 自设 init 完成标志正常,查 TCB 调度器为何不派发音乐任务)"
+        "[TASK_EXEC] attempt2 重大进展:根因第一层修复——MAME NEO_BIOS_AUDIO_128K 语义=5003-m1 即音频BIOS,Z80 复位直跑 m1,bootleg 无 ch5 握手;lin 之前等 ch5 致 Z80 卡 sm1 fffd 死循环(f241+)。修复 boot_cthd2k3 分支 m1_view=1(commit 68551b3):fffd 消失、m1 主循环 130d 活、命令环 fd66=fd67=05 消费、fd17 清零、TCB 有条目、FM init 音符出现。但 loud=1 未达校验>10——音乐任务仍 stall(900f 仅51 YM写,bank B 零)。attempt3 方向:音乐任务门(fd11=ff 为 m1 自设 init 完成标志正常,查 TCB 调度器为何不派发音乐任务)",
+        "[TASK_EXEC] attempt3 定案(3/3 CLOSED-PARKED): 音乐任务并未stall——YMWR 探针默认窗口 f1-141 曾致误判(实际 f900 单帧 bank A 写 416 次/帧,r10/r1c ADPCM-B start-stop 对×207)。真分歧=bank B 助手 26f9 从未被调用(lin bank B 零写 vs 金标 off=2/3 各3751 写=ADPCM-A 鼓+FM)；26f9 无直接 call 点(经函数指针表间接)，音乐引擎按 track bank 位选 A/B 助手——lin track 解析的 bank 选择分支全部落 bank A。金标 cthd2003 ADPCM-B reads=0 同 lin(声音来自 FM+bank B ADPCM-A 鼓)。修复需金标 Z80 track 解析逐字节对照(金标无 WAV,MAME 无 wavwrite)——与 mslug4/kof10th music-task-stall 同族深层问题"
       ],
       "checkpoints": [
         {
@@ -8366,10 +8367,16 @@
           "total": 3,
           "description": "m1_view=1 修复 m1 boot(68551b3);音乐任务仍 stall;附带发现 vliner 21→6 既存回归(与本轮无关,BASE 复现)",
           "timestamp": "2026-11-01T20:22:37Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "YMWR 帧窗口误判修正;音乐引擎高频运行(416写/帧);分歧=bank B 助手 26f9 零调用(track bank 选择分支);CLOSED-PARKED",
+          "timestamp": "2026-11-01T20:28:19Z"
         }
       ],
       "completed_at": null,
-      "claimed_by": "session-250"
+      "claimed_by": "session-251"
     },
     {
       "id": "task-239",
@@ -8421,6 +8428,6 @@
       "completed_at": null
     }
   ],
-  "session_count": 250,
-  "last_session": "2026-11-01T20:24:58Z"
+  "session_count": 251,
+  "last_session": "2026-11-01T20:28:19Z"
 }
