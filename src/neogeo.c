@@ -3837,7 +3837,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                             else if (sw_has(sw, swend, "pvc_svc\"")     && sz >= 0x800000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_svc);     ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_kf2k3h\"")  && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003h);ng->cart_prot = 8; }
                             else if (sw_has(sw, swend, "pvc_kf2k3\"")   && sz >= 0x900000) { pvc_run(ng->rom, ng->rom_size, pvc_dec_kof2003); ng->cart_prot = 8; }
-                            else if (sw_has(sw, swend, "boot_cthd2k3\"")) { cthd2003_decrypt(ng); cthd_patch(ng); ng->cart_prot = 9; }
+                            else if (sw_has(sw, swend, "boot_cthd2k3\"")) { cthd2003_decrypt(ng); cthd_patch(ng); ng->cart_prot = 9; ng->m1_view = 1; /* MAME NEO_BIOS_AUDIO_128K: 5003-m1 IS the audio bios — Z80 runs m1 from reset, no ch5 handoff on this bootleg */ }
                             else if (sw_has(sw, swend, "k2k2_matrim\"")) { matrim_dec68k(ng);  ng->cart_prot = 10; ng->fixed_bank_type = 2; }
                             else if (sw_has(sw, swend, "k2k2_samsh5\"")) { samsho5_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
                             else if (sw_has(sw, swend, "k2k2_sams5s\"")) { samsh5sp_dec68k(ng); ng->cart_prot = 11; ng->fixed_bank_type = 1; }
