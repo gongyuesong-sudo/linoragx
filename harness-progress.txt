@@ -1447,3 +1447,9 @@
 [2026-11-02T04:40:00Z] [SESSION-248] ERROR [task-236] [TASK_EXEC] attempt3 未修复：门控假设($FF/$FD82/$FD96)全证伪；金标f12000=68色证实校验有效；根因=lin游戏冷启动被BIOS每帧重复触发致init无法完成，属深层时序保真问题。attempts=3/3 CLOSED-PARKED
 [2026-11-01T19:33:41Z] [SESSION-248] LOCK released
 [2026-11-01T19:33:41Z] [SESSION-248] STATS tasks_total=234 completed=149 failed=85 pending=0 blocked=0 attempts_total=398 checkpoints=503
+[2026-11-01T19:48:02Z] [SESSION-249] LOCK acquired (pid=3349946)
+[2026-11-01T19:48:02Z] [SESSION-249] INIT resume emulator debug; all 234 terminal; user directs new debug round
+[2026-11-01T19:52:28Z] [SESSION-249] Added task-237(bootleg复测) task-238(cthd2003 IRQ门控收窄) task-239(kf98cb族DC-stuck)
+[2026-11-01T19:52:54Z] [SESSION-249] Added task-237(bootleg复测) task-238(cthd2003 IRQ门控收窄) task-239(kf98cb族DC-stuck)
+[2026-11-01T19:52:59Z] [SESSION-249] Starting [task-237] bootleg 七卡复测定案 (base=4de2da8)
+[2026-11-01T20:08:38Z] [SESSION-249] Completed [task-237] bootleg复测:kf2k2ps2/kof2000ps2有声(t217误判修正),余5卡无金标bootleg维持观察

@@ -8305,8 +8305,76 @@
         }
       ],
       "completed_at": null
+    },
+    {
+      "id": "task-237",
+      "title": "bootleg 七卡复测定案（kf2k2ps2/kof2000ps2 疑似 t217 误判有声）",
+      "status": "completed",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "4de2da8",
+      "validation": {
+        "command": "cd /home/gill/linoragx && for g in kf2k2ps2 kof2000ps2; do timeout 90 reawork/rewrite/build/linoragx --rom roms/$g.zip --bios /home/gill/linoragx --frames 3000 --headless --dump-audio /tmp/v237_$g.wav >/dev/null 2>&1; python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v237_$g.wav 5; done",
+        "timeout_seconds": 300
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 1,
+          "description": "复测定案:kf2k2ps2 loud=42/kof2000ps2 loud=55 @6000f(t217 silent判定为误判,校验3000f 18/26 PASS);kf2k1pls黑屏静默/kof98cb/cnbe/ngem2k静默/kof98ae2016弱声5s——均无金标bootleg,维持静默观察名单",
+          "timestamp": "2026-11-01T20:08:38Z"
+        }
+      ],
+      "completed_at": "2026-11-01T20:08:38Z",
+      "claimed_by": "session-249"
+    },
+    {
+      "id": "task-238",
+      "title": "cthd2003 phantom IRQ 门控收窄：以驱动读 YM 状态口为准（IN 04/06 sticky），不读则 crutch 不发 IRQ",
+      "status": "pending",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "cd /home/gill/linoragx && timeout 150 reawork/rewrite/build/linoragx --rom roms/cthd2003.zip --bios /home/gill/linoragx --frames 6000 --headless --dump-audio /tmp/v238_cthd.wav >/dev/null 2>&1 && python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v238_cthd.wav 10 && timeout 90 reawork/rewrite/build/linoragx --rom roms/mslug3.zip --bios /home/gill/linoragx --frames 3000 --headless --dump-audio /tmp/v238_mslug3.wav >/dev/null 2>&1 && python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v238_mslug3.wav 10",
+        "timeout_seconds": 400
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
+    },
+    {
+      "id": "task-239",
+      "title": "kf98cb/kof98ae2016 DC-stuck attract BGM 排查（无金标 bootleg，music-task-stall 族）",
+      "status": "pending",
+      "priority": "P2",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "cd /home/gill/linoragx && for g in kf98cb kof98ae2016; do timeout 150 reawork/rewrite/build/linoragx --rom roms/$g.zip --bios /home/gill/linoragx --frames 6000 --headless --dump-audio /tmp/v239_$g.wav >/dev/null 2>&1; python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v239_$g.wav 10; done",
+        "timeout_seconds": 400
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
     }
   ],
-  "session_count": 248,
-  "last_session": "2026-11-02T04:40:00Z"
+  "session_count": 249,
+  "last_session": "2026-11-02T04:45:00Z"
 }
