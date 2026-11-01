@@ -1375,3 +1375,11 @@
 [2026-11-01T07:52:36Z] [SESSION-238] CHECKPOINT [task-229] post-park 金标对照证伪 staging 理论，新线索入检查点
 [2026-11-01T07:52:36Z] [SESSION-238] STATS tasks_total=228 completed=144 failed=84 pending=0 blocked=0 attempts_total=390 checkpoints=479
 [2026-11-01T07:52:36Z] [SESSION-238] LOCK released
+[2026-11-01T15:54:07Z] [SESSION-239] LOCK acquired (pid=0)
+[2026-11-01T15:54:07Z] [SESSION-239] Starting [task-231] wh2 调色板列表装载点定位 (base=1d9d48e)
+[2026-11-01T16:40:11Z] [SESSION-239] CHECKPOINT [task-231] step=1/3 四连证伪（0x1000窗/抹除论/VRAM转储法），lin wh2 非黑屏是相位慢
+[2026-11-01T08:43:49Z] [SESSION-239] CHECKPOINT [task-231] 部署版同步 build→reawork/bin (md5 f5f29e4)，val_attract 旧版误判源已消除
+[2026-11-01T16:45:30Z] [SESSION-239] Completed [task-231] (证据 /tmp/t242_list_evidence.txt；四连证伪)
+[2026-11-01T16:45:30Z] [SESSION-239] Starting [task-232] wh2 attract 状态机分叉定位 (base=1d9d48e)
+[2026-11-01T16:51:02Z] [SESSION-239] CHECKPOINT [task-230] 再反转：金标 lua 内存读取静默全零，裁决作废，staging 理论复活
+[2026-11-01T16:51:02Z] [SESSION-239] Starting [task-232] 金标 workram C++ 重取中

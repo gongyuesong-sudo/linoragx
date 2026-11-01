@@ -8018,11 +8018,77 @@
           "total": 2,
           "description": "裁决：金标 f2000 staging 全零=lin，attempt-3 staging 理论证伪；金标 CRAM f2000 全零 vs lin 0x8000x2046 残留；真缺陷=lin 游戏侧未向 0x1000 窗写真实调色板或提交任务多执行",
           "timestamp": "2026-11-01T07:48:56Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "SESSION-239 再反转：task-230 裁决本身作废——金标 lua 内存读取（spaces.cpu_space）对任何地址静默返回 0（BIOS@0 自校验=0000 证实绑定死路），故金标 staging/CRAM/VRAM/workram 的 lua 转储全零均为假读数；task-229 attempt-3 staging 理论未被推翻。可靠金标内存路线仅 C++ 探针（LINORAGX_68RDUMP 等）。",
+          "timestamp": "2026-11-01T16:51:02Z"
         }
       ],
       "completed_at": "2026-11-01T07:48:56Z"
+    },
+    {
+      "id": "task-231",
+      "title": "wh2 调色板提交/填充列表装载点定位与 lin/金标列表内容对比（task-229 新线索延续）",
+      "status": "completed",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "1d9d48e",
+      "validation": {
+        "command": "test -f /tmp/t242_list_evidence.txt",
+        "timeout_seconds": 120
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "四连证伪：①0x1000 窗=BIOS ROM 区非 CRAM 镜像（RAMWA a=101000 实为 workram 游戏自有 staging）；②提交任务 0x38b08 调用者=PCHITRA 抓到 ra=0x10b7e/8a/96/a2(主调度)+0x3824c/56，最后命中 f16773 早于 f17830 直载——抹除论证伪；③lin CRAM 无输入版 f17170 直载 3462 真彩词（pc=0x20480e 群），f18000 屏=10 色文字画面非纯黑（旧 val_attract 用旧部署版误判 colors=1）；④金标 VRAM lua 转储全零=VRAM 是设备内存不在 maincpu space，金标对照只能走截图色数。当前口径：lin wh2 attract 相位慢（金标 f18000=93 彩屏 vs lin f18000=10 文字屏），跑 30k/45k/60k 长帧验证是否最终到达彩屏",
+          "timestamp": "2026-11-01T16:40:11Z"
+        },
+        {
+          "step": 2,
+          "total": 2,
+          "description": "证据文件 /tmp/t242_list_evidence.txt 落盘；定性改判：attract 状态机分叉（lin 45000 帧仍黑/文字循环，金标 18000 已 93 色彩色演示），渲染管线完好",
+          "timestamp": "2026-11-01T16:45:30Z"
+        }
+      ],
+      "completed_at": "2026-11-01T16:45:30Z"
+    },
+    {
+      "id": "task-232",
+      "title": "wh2 attract 状态机分叉定位：lin 不进彩色角色演示（68K 任务链候选：定时器/随机数/输入轮询）",
+      "status": "in_progress",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": "1d9d48e",
+      "validation": {
+        "command": "test -f /tmp/t243_branch_evidence.txt",
+        "timeout_seconds": 120
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "金标 lua 假读数定案（本任务内发现）；lin 无输入 attract：f18000=10 文字屏、f19000-60000 恒黑，金标 f18000-24000=93/216/176/205 彩屏；lin CRAM f17170 起 3462 真彩词（与金标 C++ 探针 3462 一致）、VRAM 1255 非零（文字 tiles）；提交任务最后命中 f16773 早于写入，抹除论证伪。金标 workram 正用 C++ 探针重取（proc_692716bdd381）",
+          "timestamp": "2026-11-01T16:51:02Z"
+        }
+      ],
+      "completed_at": null
     }
   ],
-  "session_count": 238,
+  "session_count": 239,
   "last_session": "2026-11-01T07:52:36Z"
 }
