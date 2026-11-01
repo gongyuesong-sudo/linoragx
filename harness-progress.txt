@@ -1467,3 +1467,4 @@
 [2026-11-01T20:24:58Z] [SESSION-250] LOCK released
 [2026-11-01T20:26:02Z] [SESSION-251] LOCK acquired (pid=3387863)
 [2026-11-01T20:26:02Z] [SESSION-251] Starting [task-238] cthd2003 音乐任务stall：TCB调度器派发缺口 (base=68551b3)
+[2026-11-01T20:28:34Z] [SESSION-251] Starting [task-239] kf98cb/kof98ae2016 DC-stuck attract BGM 排查 (base=6fb5a24)

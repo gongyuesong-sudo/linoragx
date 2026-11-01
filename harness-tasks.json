@@ -8381,12 +8381,12 @@
     {
       "id": "task-239",
       "title": "kf98cb/kof98ae2016 DC-stuck attract BGM 排查（无金标 bootleg，music-task-stall 族）",
-      "status": "pending",
+      "status": "in_progress",
       "priority": "P2",
       "depends_on": [],
       "attempts": 0,
       "max_attempts": 3,
-      "started_at_commit": null,
+      "started_at_commit": "6fb5a24",
       "validation": {
         "command": "cd /home/gill/linoragx && for g in kf98cb kof98ae2016; do timeout 150 reawork/rewrite/build/linoragx --rom roms/$g.zip --bios /home/gill/linoragx --frames 6000 --headless --dump-audio /tmp/v239_$g.wav >/dev/null 2>&1; python3 ~/.hermes/cache/scratch/t249_loud.py /tmp/v239_$g.wav 10; done",
         "timeout_seconds": 400
@@ -8396,7 +8396,8 @@
       },
       "error_log": [],
       "checkpoints": [],
-      "completed_at": null
+      "completed_at": null,
+      "claimed_by": "session-251"
     },
     {
       "id": "task-240",

@@ -60,6 +60,7 @@ struct neogeo {
     uint8_t *fixed; uint32_t fixed_size;  /* s1: packed 4bpp fix tiles */
     uint8_t  *snd;   uint32_t snd_size;    /* m1: z80 program */
     uint8_t  *adpcm; uint32_t adpcm_size;  /* ymsnd:adpcma: ADPCM sample ROM (v1-v4) */
+    uint8_t   k98cb;                      /* kof98cb bootleg: voice in 242-v1..v4, sp2 not program */
     uint8_t *acrypt; uint32_t acrypt_size; /* encrypted m1 (cmc50 carts) */
     int fixed_bank_type;                   /* MAME FIX_BANKTYPE: 1=GAROU(mslug3) 2=KOF2000 */
     uint16_t jgram[0x1000];               /* NEOGEO_JOCKEYGP/VLINER cart RAM @200000-201fff */
@@ -1433,7 +1434,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                         /* MAME: no dedicated adpcmb region -> ADPCM-B reads the
                            audiocpu (cart m1) program space. Install it as b_rom
                            at every handoff so B reads never fall to zero. */
-                        if (ng->ym && ng->snd && ng->snd_size)
+                        if (ng->ym && !ng->k98cb && ng->snd && ng->snd_size)
                             ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
                     } else { ng->cart_audio = 0;   /* keep SM1 visible through BIOS phase */
                         ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
@@ -4198,6 +4199,27 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
         if (f_swdbg()) fprintf(stderr, "SWDBG %s rom=%p/%x spr=%p/%x fix=%p/%x snd=%p/%x\n",
             ng->gamename, (void*)ng->rom, ng->rom_size, (void*)ng->spr, ng->spr_size,
             (void*)ng->fixed, ng->fixed_size, (void*)ng->snd, ng->snd_size);
+        /* kof98cb/kof98ae2016 bootleg mixed zips (242 + 242cb/242ae members):
+         * ADPCM-A voice is 242-v1..v4 linear 16M. These sets have no swlist
+         * entry so the fallback left every ADPCM read OOB -> DC-stuck. */
+        {
+            uint8_t *mm; uint32_t mn;
+            if (!ng->adpcm && rom_load_zip(gamezip, "242-v1.v1", &mm, &mn) == 0) {
+                free(mm);
+                uint8_t *va = calloc(1, 0x1000000); uint32_t got = 0;
+                static const char *vn[4] = {"242-v1.v1","242-v2.v2","242-v3.v3","242-v4.v4"};
+                for (int k = 0; k < 4; k++) {
+                    uint8_t *dv; uint32_t nv;
+                    if (rom_load_zip(gamezip, vn[k], &dv, &nv) == 0) {
+                        memcpy(va + (size_t)k * 0x400000, dv, nv < 0x400000 ? nv : 0x400000);
+                        free(dv); got = 1;
+                    }
+                }
+                if (got) { ng->adpcm = va; ng->adpcm_size = 0x1000000; }
+                else free(va);
+                ng->k98cb = 1;
+            }
+        }
         if (!ng->rom && (rom_load_zip_suffix(gamezip, ".p1", &d, &n) == 0 ||
                          rom_load_zip_suffix(gamezip, "-p1.bin", &d, &n) == 0)) {
             wordswap(d, n);
