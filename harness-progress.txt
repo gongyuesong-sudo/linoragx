@@ -1470,3 +1470,4 @@
 [2026-11-01T20:28:34Z] [SESSION-251] Starting [task-239] kf98cb/kof98ae2016 DC-stuck attract BGM 排查 (base=6fb5a24)
 [2026-11-01T20:45:57Z] [SESSION-251] Completed [task-239] (commit 1f8a57d): kof98cb/ae2016 ADPCM-A voice 装载修复 loud 0->35/33
 [2026-11-01T20:45:57Z] [SESSION-251] STATS tasks_total=238 completed=151 failed=87 pending=0 blocked=0
+[2026-11-01T20:46:24Z] [SESSION-251] LOCK released
