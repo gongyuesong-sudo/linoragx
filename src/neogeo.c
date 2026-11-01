@@ -3906,6 +3906,15 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                                 load_bios_pref(ng, biosdir, "NEO-GEO.ROM");
                             }
                             if (!getenv("LINORAGX_BIOS") &&
+                                (sw_has(sw, swend, "\"lastbld2\"") || sw_has(sw, swend, "\"lastbld2h\""))) {
+                                /* lastbld2 (The Last Blade 2 bootleg) crashes under uni-bios with an
+                                   ILLEGAL INSTRUCTION at PC=0005 (invalid reset vector): the bootleg
+                                   expects stock-BIOS init the fast-boot path skips. Stock NEO-GEO
+                                   BIOS: attract renders (69 colors @12k, moon/maple scene clean). */
+                                free(ng->bios); ng->bios = NULL;
+                                load_bios_pref(ng, biosdir, "NEO-GEO.ROM");
+                            }
+                            if (!getenv("LINORAGX_BIOS") &&
                                 (sw_has(sw, swend, "\"wh2\"") || sw_has(sw, swend, "\"wh2j\"") || sw_has(sw, swend, "\"wh2h\""))) {
                                 fprintf(stderr, "T232DBG wh2-pref-hit swlen=%ld\n", (long)(swend - sw));
                                 /* wh2 attract is permanently black under uni-bios: the demo-script
