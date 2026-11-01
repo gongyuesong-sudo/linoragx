@@ -8547,10 +8547,10 @@
     {
       "id": "task-245",
       "title": "aodk 官方卡 boot stall：68K 进游戏后卡 0xea5e 空转、画面停 BIOS logo（swlist 装载正常，官方/uni BIOS 均卡）",
-      "status": "pending",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 1,
       "max_attempts": 3,
       "started_at_commit": null,
       "validation": {
@@ -8560,8 +8560,17 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
-      "checkpoints": [],
+      "error_log": [
+        "[TASK_EXEC] 未解但根因收窄：aodk 游戏主循环卡 ea5e(cmp $206(a6),d0;beq)等 RAM 0x100206 事件；事件源=VBlank 处理器(9060,会 ack $3C000C)；VBlank IRQ 仅 f251 进过一次后不再被接受（assert 每帧正常）；下一步=m68k 核 IPL/SR 探针查为何 IRQ 不被接受。MAME aodk 正常(140色@3k)确认为 lin 缺陷"
+      ],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "根因收窄至 VBlank IRQ 接受层；VBLDBG 探针已入库",
+          "timestamp": "2026-11-01T22:33:16Z"
+        }
+      ],
       "completed_at": null
     },
     {
@@ -8606,5 +8615,5 @@
     }
   ],
   "session_count": 254,
-  "last_session": "2026-11-01T22:11:42Z"
+  "last_session": "2026-11-01T22:33:16Z"
 }
