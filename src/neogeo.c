@@ -4476,7 +4476,7 @@ void ng_run_frame(neogeo *ng)
               for (int k = 0; k < 4 && pch[k]; k++) if (pc == (unsigned)pch[k]) {
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
-                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld\n", ng->frame, pc, c); } } }
+                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6)); } } }
         { static int cw = -2; static long cwn;
           static int cw2 = -2; static unsigned cw2b, cw2l; static long cw2done; static char cw2o[256];
           if (cw2 == -2) { const char *e = getenv("CODEWIN2"); cw2 = 0;
@@ -5085,6 +5085,16 @@ void ng_run_frame(neogeo *ng)
         FILE *g = fopen(getenv("CRAMDUMP"), "wb");
         if (g) { fwrite(ng->cram, 2, 0x10000, g); fclose(g); }
     }
+    { static int r6_ok = -2; static unsigned r6_addr[8]; static unsigned r6_val[8]; static int r6_n = 0; static int r6_f = -1;
+      if (r6_ok == -2) { r6_ok = 1; const char *e = getenv("RAMPOKE68"); r6_f = e ? (int)strtol(e, (char**)&e, 0) : -1;
+          if (e && *e == ':') { e++; while (*e && r6_n < 8) {
+              r6_addr[r6_n] = (unsigned)strtoul(e, (char**)&e, 0);
+              if (*e == ',') { e++; r6_val[r6_n] = (unsigned)strtoul(e, (char**)&e, 0); r6_n++; }
+              if (*e == ';') e++; } } }
+      if (r6_ok && r6_f >= 0 && ng->frame == r6_f) {
+          for (int i = 0; i < r6_n; i++)
+              if (r6_addr[i] >= 0x100000 && r6_addr[i] < 0x110000)
+                  ng->smem[r6_addr[i] - 0x100000] = (uint8_t)r6_val[i]; } }
     if (ng->frame == 30 && getenv("RAM68K"))
     {   /* golden parity probe: dump 68K RAM code window 0x1e00-0x2000 */
         FILE *g = fopen("/tmp/lin_ram68k.bin", "wb");

@@ -1350,3 +1350,8 @@
 [2026-11-01T05:29:23Z] [SESSION-234] CHECKPOINT [task-228] step=6/6 "CRAM black root: fade-table index parked level 0; palette blit alive but fade-IN ramp never starts"
 [2026-11-01T05:29:47Z] [SESSION-234] ERROR [task-228] [TEST_FAIL] attempt2 no fix; black continuous f17800-24000; fade-level parked 0, fade-IN ramp never starts
 [2026-11-01T05:29:47Z] [SESSION-234] STATS tasks_total=226 completed=143 failed=83 pending=0 blocked=0 attempts_total=612 checkpoints=590
+[2026-11-01T05:31:55Z] [SESSION-235] LOCK acquired (pid=2709119)
+[2026-11-01T05:31:55Z] [SESSION-235] Starting [task-228] wh2 attract fade-IN ramp final attempt (base=27c967c)
+[2026-11-01T05:50:24Z] [SESSION-235] CHECKPOINT [task-228] step=7/7 "fade pinned 0x0F still BLACK; true gap = palette staging buffer 0x10A000 empty (scene-script output divergence)"
+[2026-11-01T05:50:24Z] [SESSION-235] ERROR [task-228] [TEST_FAIL] attempt3 no fix; CLOSED-PARKED 3/3 bootleg scene-script engine wall
+[2026-11-01T05:50:24Z] [SESSION-235] STATS tasks_total=226 completed=143 failed=83 pending=0 blocked=0 attempts_total=386 checkpoints=470

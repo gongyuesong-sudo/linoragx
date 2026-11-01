@@ -7850,11 +7850,11 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
-   "started_at_commit": "caabb68",
-   "claimed_by": "session-233",
-   "lease_expires_at": "2026-11-01T04:56:30Z",
+   "started_at_commit": "27c967c",
+   "claimed_by": "session-235",
+   "lease_expires_at": "2026-11-01T05:31:55Z",
    "validation": {
     "command": "bash /home/gill/linoragx/reawork/rewrite/tools/harness/val_attract.sh wh2 80",
     "timeout_seconds": 900
@@ -7865,7 +7865,8 @@
    "error_log": [
     "[TASK_EXEC] wh2 game init/decrypt service never completes in lin; 68K stuck in uni-bios trap scheduler",
     "[TEST_FAIL] attract still 1c at f18000-24000 post-coin; narrowed to attract-timer step-rate divergence (lin 30.6f/tick vs gold 19f/tick), caller schedule suspect",
-    "[TEST_FAIL] attempt2: no fix. BLACK confirmed continuous f17800-24000 (6 pts all 1c) vs gold 93-100c. CRAM timeline: 3462 nonzero palette writes f17830 -> fade-out zero-fill f17832 -> ZERO further writes to f17990. Scene blitter alive (tiles/text/sprites written, scene# cycles 1562f) but fade-table index parked at level 0; fade-IN ramp never starts. 0x38a00 region is fade-table DATA. Next: find fade-level var + its advance tick (lin 30.6f/tick vs gold 19f/tick)."
+    "[TEST_FAIL] attempt2: no fix. BLACK confirmed continuous f17800-24000 (6 pts all 1c) vs gold 93-100c. CRAM timeline: 3462 nonzero palette writes f17830 -> fade-out zero-fill f17832 -> ZERO further writes to f17990. Scene blitter alive (tiles/text/sprites written, scene# cycles 1562f) but fade-table index parked at level 0; fade-IN ramp never starts. 0x38a00 region is fade-table DATA. Next: find fade-level var + its advance tick (lin 30.6f/tick vs gold 19f/tick).",
+    "[TEST_FAIL] attempt3: no fix; root cause MOVED BELOW fade. A6=0x108000, fade-level var=0x107220 (A6-0xde0). Forcing fade=0x0F via RAMPOKE68 still BLACK => fade is symptom not cause. Palette staging buffer A6+0x2000 (0x10A000) ALL ZEROS at f17990: scene-script engine never writes palette source post-attract (blit chain onchipRAM->A6+2000->CRAM intact, source empty). Dispatcher 3929c = FD97 bit0/1/4 poll loop only; FD97=0 in lin (BIOS c18698 zeroes FD94-96 every frame; FD99=08). Same layer as SESSION-233 scene-script content divergence (0x1062b6 params). Bootleg scene-script engine fidelity wall; CLOSED-PARKED after 3/3."
    ],
    "checkpoints": [
     {
@@ -7909,11 +7910,17 @@
      "total": 6,
      "description": "SESSION-234: coin accepted (state block matches gold); attract scene# cycles period 1562f, scene data+text+sprites all written; BLACK root narrowed to CRAM: palette gets 3462 nonzero writes f17830 (pc=0x20480e) then fade-out zero-fill f17832 (pc=0x38b32) and NO further nonzero writes to f17990 (CRAMDUMP probe added, dumps ng->cram at RAMDUMP2F). Palette blit routine 0x38b08 (movem->CRAM 0x400020) still called every frame but fade-table index parked at level 0. Fade ramp advance tied to attract tick (lin 30.6f/tick vs gold 19f/tick). Next: RAMWA on fade-level var in A6 frame, find why fade-IN ramp never starts after fade-out completes.",
      "timestamp": "2026-11-01T05:29:23Z"
+    },
+    {
+     "step": 7,
+     "total": 7,
+     "description": "attempt3 final: fade-level=0x107220 pinned 0x0F => STILL BLACK (counter-example). True gap = palette staging buffer 0x10A000 empty; scene-script engine output params diverge (0x1062b6). RAMPOKE68 + PCHIT a6 probes added. No fix path within budget: needs script-engine instruction-level trace vs golden.",
+     "timestamp": "2026-11-01T05:50:24Z"
     }
    ],
    "completed_at": null
   }
  ],
- "session_count": 233,
- "last_session": "2026-11-01T04:56:30Z"
+ "session_count": 235,
+ "last_session": "2026-11-01T05:31:55Z"
 }
