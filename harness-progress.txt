@@ -1434,3 +1434,10 @@
 [2026-11-01T18:31:32Z] [SESSION-246] CHECKPOINT [task-236] step=2/3 "lin wh2 色数曲线 f3000=3(BIOS) f3500-4000=1 f4500=74 f5000-5500=1 f6000=74——attract间歇到达有内容画面;金标bkshot f4500/6000对比截图中"
 [2026-11-01T18:58:10Z] [SESSION-246] ERROR [task-236] [TASK_EXEC] wh2 attract 到标题循环进不了对战演示；金标对战热循环在 $10EA00 共享RAM自解密handler(恒33FC)，lin 被游戏 0x204d04 周期写坏成 4E73(f615/2171/3730)再由 0x2093b6 恢复——lin 多走破坏分支。FD97镜像/WORKRAM20/向量偏移假设全部证伪；EXCPROBE 证 vec25/26 IRQ 交付正常。attempts=1/3
 [2026-11-01T18:58:10Z] [SESSION-246] STATS tasks_total=236 completed=229 failed=1 pending=0 blocked=0 attempts_total=312 checkpoints=487
+[2026-11-01T19:00:55Z] [SESSION-247] LOCK acquired (pid=3308832)
+[2026-11-01T19:01:14Z] [SESSION-247] Starting [task-236] wh2 attract 进不了对战演示：金标$10EA00写序列对照 (base=3f08bc2)
+[2026-11-01T19:18:48Z] [SESSION-247] CHECKPOINT [task-236] step=1/3 "金标$10EA00仅BIOS-init写55(未触碰区)；金标GPCHIT=0x204d04零命中——lin周期执行游戏反仿真init(装illegal trap 4E73)是分歧；v2.v2实为ADPCM-A音频ROM；lin主循环$6300=BIOS调度器轮询"
+[2026-11-01T19:24:13Z] [SESSION-247] CHECKPOINT [task-236] step=2/3 "金标也执行0x204d04(GPCHIT 4次t10.2-14.9s)——lin多走代码假设证伪；金标执行同指令但不写$10EA00/$0EA00(写目标未知)；金标主循环c18716(官方BIOS高区demo任务)vs lin $6300(BIOS低区等待循环)——官方BIOS下lin仍$6300：lin BIOS任务停在更早阶段；GPCHIST金标探针已入库MAME"
+[2026-11-01T19:24:58Z] [SESSION-247] ERROR [task-236] [TASK_EXEC] attempt2 未修复：根因收窄至 lin BIOS demo 任务未推进（周期性重跑游戏冷启动）；金标主循环 c18716=demo 任务，lin 滞留 $6300 等待循环。attempts=2/3
+[2026-11-01T19:24:58Z] [SESSION-247] LOCK released
+[2026-11-01T19:24:58Z] [SESSION-247] STATS tasks_total=236 completed=229 failed=1 pending=0 blocked=0 attempts_total=313 checkpoints=489

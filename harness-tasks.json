@@ -8245,7 +8245,7 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 1,
+      "attempts": 2,
       "max_attempts": 3,
       "started_at_commit": "4054999",
       "validation": {
@@ -8256,7 +8256,8 @@
         "cleanup": null
       },
       "error_log": [
-        "[TASK_EXEC] wh2 attract reaches title loop but never battle-demo; golden battle hot-loop at $10EA00 (self-decrypt handler in shared RAM); lin $10EA00 patched 33FC<->4E73 cyclically (game 0x204d04 corrupts, 0x2093b6 restores); golden stays 33FC. FD97-mirror/WORKRAM20/vector-offset hypotheses all falsified; IRQ delivery (vec25+vec26) proven normal via EXCPROBE"
+        "[TASK_EXEC] wh2 attract reaches title loop but never battle-demo; golden battle hot-loop at $10EA00 (self-decrypt handler in shared RAM); lin $10EA00 patched 33FC<->4E73 cyclically (game 0x204d04 corrupts, 0x2093b6 restores); golden stays 33FC. FD97-mirror/WORKRAM20/vector-offset hypotheses all falsified; IRQ delivery (vec25+vec26) proven normal via EXCPROBE",
+        "[TASK_EXEC] attempt2: 金标也执行0x204d04(4次)——多走代码假设证伪；金标同指令不写$10EA00/$0EA00(a6未知,旧核无accessor)；lin BIOS主循环滞留$6300等待循环并周期性重跑游戏冷启动(游戏ROM$0 move #$2700,sr+设栈)，金标BIOS推进到demo任务；官方BIOS不改变。根因收窄：lin BIOS demo任务未推进"
       ],
       "checkpoints": [
         {
@@ -8276,11 +8277,29 @@
           "total": 3,
           "description": "金标对战热循环$10EA08(共享RAM自解密handler);lin $10EA00被游戏周期改写33FC<->4E73(f615/2171/3730破坏,f1445/3001/4560恢复);金标恒33FC。下一步:比对金标$10EA00写序列(FD97W探针)找lin多走破坏分支的门控差异",
           "timestamp": "2026-11-02T03:20:00Z"
+        },
+        {
+          "step": 1,
+          "total": 3,
+          "description": "金标$10EA00=未触碰区(仅BIOS写55)；金标GPCHIT=0x204d04零命中；lin周期(f615/2169/3753/5309)执行游戏反仿真init区(p1 0x4d00 move.l #4E730010,$EA00(a6)装illegal trap)。v2.v2=ADPCM-A非程序。GPCHIST金标探针已建",
+          "timestamp": "2026-11-02T03:40:00Z"
+        },
+        {
+          "step": 2,
+          "total": 3,
+          "description": "金标GPCHIT=0x204d04命中4次(t=10.24/11.80/13.36/14.92s)——双方都执行该区代码；金标不写$10EA00/$0EA00(旧核无寄存器accessor取不到a6)。金标GPCHIST主循环c18716(官方BIOS demo任务循环)vs lin主循环$6300(BIOS等待循环)——LINORAGX_BIOS=NEO-GEO.ROM仍$6300。attempt3方向：官方BIOS c18xxx demo任务启动条件",
+          "timestamp": "2026-11-02T04:05:00Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "游戏ROM$0=冷启动入口(move #$2700,sr;lea $10f2f0,a7)——lin周期性重跑冷启动=BIOS重复启动游戏；金标仅启动一次进demo任务。attempt3方向：BIOS demo任务启动/推进条件(官方BIOS c18xxx demo任务 vs lin停留$6300等待循环)",
+          "timestamp": "2026-11-02T04:15:00Z"
         }
       ],
       "completed_at": null
     }
   ],
-  "session_count": 246,
+  "session_count": 247,
   "last_session": "2026-11-01T17:40:13Z"
 }
