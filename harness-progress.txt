@@ -1477,3 +1477,6 @@
 [2026-11-01T21:32:21Z] [SESSION-252] Completed [task-241] (commit 38a004b): 音频复评波 voiced 189->194/208; lost 清零(kof96ae20 系 t217 BIOS 演示曲边缘值误记,修复后 loud 0->31)
 [2026-11-01T21:32:21Z] [SESSION-252] STATS tasks_total=239 completed=152 failed=87 pending=0 blocked=0
 [2026-11-01T21:32:45Z] [SESSION-252] LOCK released
+[2026-11-01T21:33:48Z] [SESSION-253] LOCK acquired (pid=3431498)
+[2026-11-01T21:34:19Z] [SESSION-253] Starting [task-242] bootleg 语音命名再扩展 (base=1de43ba)
+[2026-11-01T21:36:31Z] [SESSION-253] ERROR [task-242] [TASK_EXEC] 前提证伪:三卡语音装载后仍零YM写(boot深保护非缺语音);扩展回滚

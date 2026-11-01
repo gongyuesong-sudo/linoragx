@@ -8467,8 +8467,30 @@
         }
       ],
       "completed_at": "2026-11-01T21:32:21Z"
+    },
+    {
+      "id": "task-242",
+      "title": "bootleg 语音命名再扩展：kf2k1pls(-v1-08-e0.bin)/kf2k3pcb(271-v1.v1 16M单片)/kf2k3upl(271-v1c.v1)",
+      "status": "failed",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 3,
+      "max_attempts": 3,
+      "started_at_commit": "1de43ba",
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [
+        "[TASK_EXEC] 前提证伪:kf2k1pls/kf2k3pcb/kf2k3upl 语音ROM虽在zip内(262-v1-08-e0.bin/271-v1.v1 16M单片/271-v1c.v1 8M×2),扩展装载后三卡仍 peak=0 且 YM 写=0——Z80 音频侧根本没跑(boot 深保护卡,与此前定案一致),非缺语音卡。扩展代码已回滚,重试无意义"
+      ],
+      "checkpoints": [],
+      "completed_at": null
     }
   ],
-  "session_count": 252,
-  "last_session": "2026-11-01T21:32:21Z"
+  "session_count": 253,
+  "last_session": "2026-11-01T21:36:31Z"
 }
