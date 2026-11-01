@@ -7923,10 +7923,10 @@
   {
    "id": "task-229",
    "title": "wh2 attract black (reopen of task-228 with new entry point): scene-script engine 0x200174 output divergence \u2014 palette staging buffer 0x10A000 never written post-attract and 0x1062b6 params differ (lin 18/10 vs gold 0808/4040); trace script engine token dispatch vs golden to find the branch that skips palette-source writes",
-   "status": "in_progress",
+   "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
    "started_at_commit": "12ea80d",
    "validation": {
@@ -7938,7 +7938,8 @@
    },
    "error_log": [
     "[TIMEOUT] golden RAM dump via MAME lua killed twice (900s/1500s) at f16990+: MAME wh2 too slow at high frame counts; use f<=8000 dump points or per-N-frame sampled tick read next attempt",
-    "[TEST_FAIL] attempt2: no fix. PCHITRA=0x2062bc shows lin task chain ALIVE (55 distinct vsync-wait callers incl attract tasks 0xa17c x5542, 0x137a2 x4620); palette-copy routine (ra=0x20480c) called 74x then dies f16156. 0x107400 dense block = interp params (0x2047d8) not palette. STACKDUMP frame-boundary sampling too sparse to catch routine entry. Golden GRA lua failed: maincpu .registers is nil in MAME 0.289 lua \u2014 use manager.machine.debug or memory.regions instead."
+    "[TEST_FAIL] attempt2: no fix. PCHITRA=0x2062bc shows lin task chain ALIVE (55 distinct vsync-wait callers incl attract tasks 0xa17c x5542, 0x137a2 x4620); palette-copy routine (ra=0x20480c) called 74x then dies f16156. 0x107400 dense block = interp params (0x2047d8) not palette. STACKDUMP frame-boundary sampling too sparse to catch routine entry. Golden GRA lua failed: maincpu .registers is nil in MAME 0.289 lua \u2014 use manager.machine.debug or memory.regions instead.",
+    "[TEST_FAIL] attempt3: no fix. Full chain mapped: black CRAM(f17831-32) <- 0x38b12 task flushes all-zero staging(a6+0x2000=0x10A000,a6=0x108000) <- fill routine 0x38bf4 always takes d3=15 clear-branch (fade level pinned full-black) <- dispatcher d3 source unresolved (no d3 writes in 0x38900-0x39500 disasm; capstone m68k weak). D00 index table 0x107300 IS populated (0-15) - earlier 'D00 empty' was wrong address (0x10F300). Golden staging/D00 dump via lua (t241_d00.lua, memory.spaces API works) still running at session end: proc_89b70572f24e, outputs /tmp/t241_gold_d00.bin + /tmp/t241_gold_st.bin (f2000). If golden staging nonzero -> lin fade-in progression dead; if zero -> divergence in render read path."
    ],
    "checkpoints": [
     {
@@ -7970,6 +7971,12 @@
      "total": 4,
      "description": "ROOT CAUSE NARROWED: palette task (0x38ae6/0x38b3a ping-pong) alternates fill-staging(a6+0x2000)/flush-D00(a6-D00) via a6-F220 toggle. At f17831 BOTH buffers empty -> flush writes zeros over the fresh palette written f17830 by 0x204800 routine (bus 0x1000 source, legit). a6=0x110000 for game tasks (0x108000 for another context). D00 table all-zero at f17829 AND f17832. Upstream: 68K command consumer (BIOS c11d96) must populate staging; lin consumer stalled. Next: check if lin 68K ever enters c11d96 post-attract vs golden.",
      "timestamp": "2026-11-01T06:50:39Z"
+    },
+    {
+     "step": 4,
+     "total": 4,
+     "description": "attempt3 end (3/3 exhausted -> CLOSED-PARKED). Palette ping-pong fully mapped: fill(0x38bf4/0x38c50, d3=fade level, 15=clear) / flush(0x38b12 movem staging->CRAM). lin d3=15 forever => fade never progresses past black. Same signature as task-228 'fade-level parked 0'. Next-session entry: (1) read /tmp/t241_gold_{d00,st}.bin when golden dump finishes (compare staging color); (2) find d3 writer: instrument m68k core movem/regs at dispatcher, or golden ZPCH census; (3) wh2 attract script pointer trace.",
+     "timestamp": "2026-11-01T07:22:27Z"
     }
    ],
    "completed_at": null,
@@ -7978,5 +7985,5 @@
   }
  ],
  "session_count": 237,
- "last_session": "2026-11-01T06:33:20Z"
+ "last_session": "2026-11-01T07:22:27Z"
 }

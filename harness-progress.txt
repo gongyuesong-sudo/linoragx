@@ -1366,3 +1366,6 @@
 [2026-11-01T06:33:20Z] [SESSION-237] LOCK acquired (pid=2744976)
 [2026-11-01T06:33:20Z] [SESSION-237] Starting [task-229] wh2 attract black attempt 3/3 (base=12ea80d)
 [2026-11-01T06:50:39Z] [SESSION-237] CHECKPOINT [task-229] step=3/4 root cause narrowed: palette ping-pong both-buffers-empty at f17831
+[2026-11-01T07:22:27Z] [SESSION-237] ERROR [task-229] [TEST_FAIL] attempt3 no fix; fade-level d3=15 pinned, dispatcher d3 source unresolved
+[2026-11-01T07:22:27Z] [SESSION-237] STATS tasks_total=227 completed=143 failed=84 pending=0 blocked=0 attempts_total=389 checkpoints=476
+[2026-11-01T07:22:27Z] [SESSION-237] LOCK released
