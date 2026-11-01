@@ -1462,3 +1462,6 @@
 [2026-11-01T20:22:37Z] [SESSION-250] Added task-240(vliner 21→6既存回归定位)
 [2026-11-01T20:22:37Z] [SESSION-250] STATS tasks_total=238 completed=150 failed=86 pending=1 blocked=0 attempts_total=401 checkpoints=506
 [2026-11-01T20:22:37Z] [SESSION-250] LOCK released
+[2026-11-01T20:24:58Z] [SESSION-250] ERROR [task-240] [TASK_EXEC] 前提证伪:vliner=6非回归(三点A/B全=6),t217=21为旧部署模型历史值。基线口径修正
+[2026-11-01T20:24:58Z] [SESSION-250] STATS tasks_total=238 completed=150 failed=87 pending=1 blocked=0 attempts_total=404 checkpoints=507
+[2026-11-01T20:24:58Z] [SESSION-250] LOCK released

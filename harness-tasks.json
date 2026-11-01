@@ -8394,10 +8394,10 @@
     {
       "id": "task-240",
       "title": "vliner/vlinero BIOS 鼓演示 loud 21→6 既存回归定位（t217 后引入，git bisect）",
-      "status": "pending",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 3,
       "max_attempts": 3,
       "started_at_commit": null,
       "validation": {
@@ -8407,11 +8407,20 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
-      "checkpoints": [],
+      "error_log": [
+        "[TASK_EXEC] 前提证伪(无需重试):vliner=6 非回归——t217 时点源码(4edf641)构建实测 loud=6、当前部署版也=6、3ba8edd~1 也=6。t217 记录的 21 来自更早部署二进制的旧 IRQ 模型(LEGACYIRQ 语义);现行默认 pulse+cap 模型稳态即 6(鼓演示仍在,loud>0 判定不变)。基线口径修正:vliner/vlinero 现行值=6"
+      ],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 1,
+          "description": "三点 A/B(4edf641/3ba8edd~1/部署版)全=6,判定非回归,是模型基线差",
+          "timestamp": "2026-11-01T20:24:58Z"
+        }
+      ],
       "completed_at": null
     }
   ],
   "session_count": 250,
-  "last_session": "2026-11-01T20:22:37Z"
+  "last_session": "2026-11-01T20:24:58Z"
 }
