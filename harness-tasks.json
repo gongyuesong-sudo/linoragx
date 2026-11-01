@@ -8381,10 +8381,10 @@
     {
       "id": "task-239",
       "title": "kf98cb/kof98ae2016 DC-stuck attract BGM 排查（无金标 bootleg，music-task-stall 族）",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "P2",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 1,
       "max_attempts": 3,
       "started_at_commit": "6fb5a24",
       "validation": {
@@ -8395,8 +8395,15 @@
         "cleanup": null
       },
       "error_log": [],
-      "checkpoints": [],
-      "completed_at": null,
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 1,
+          "description": "根因:混合zip无swlist条目走fallback,ADPCM-A语音(242-v1..v4)未装载,ADPCM读100%OOB致DC-stuck;特例装16M语音区+handoff不装snd为b_rom(ADBSHARE共享);kof98cb loud 0->35/101, ae2016 0->33/101;回归kof2000/mslug4/samsho2无变化;R通道ADPCM-B映射无金标未定",
+          "timestamp": "2026-11-01T20:45:57Z"
+        }
+      ],
+      "completed_at": "2026-11-01T20:45:57Z",
       "claimed_by": "session-251"
     },
     {
@@ -8430,5 +8437,5 @@
     }
   ],
   "session_count": 251,
-  "last_session": "2026-11-01T20:28:19Z"
+  "last_session": "2026-11-01T20:45:57Z"
 }
