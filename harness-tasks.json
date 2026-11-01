@@ -8434,8 +8434,35 @@
         }
       ],
       "completed_at": null
+    },
+    {
+      "id": "task-241",
+      "title": "208卡音频复评波：修复波后静默卡复核（对照 audio_t217 基线）",
+      "status": "in_progress",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "d268916",
+      "validation": {
+        "command": "true",
+        "timeout_seconds": 60
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 2,
+          "description": "批测启动 audio_t252.py（BIN=cd168289 部署版）",
+          "timestamp": "2026-11-01T20:52:23Z"
+        }
+      ],
+      "completed_at": null
     }
   ],
-  "session_count": 251,
-  "last_session": "2026-11-01T20:45:57Z"
+  "session_count": 252,
+  "last_session": "2026-11-01T20:51:00Z"
 }

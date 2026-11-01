@@ -4199,26 +4199,26 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
         if (f_swdbg()) fprintf(stderr, "SWDBG %s rom=%p/%x spr=%p/%x fix=%p/%x snd=%p/%x\n",
             ng->gamename, (void*)ng->rom, ng->rom_size, (void*)ng->spr, ng->spr_size,
             (void*)ng->fixed, ng->fixed_size, (void*)ng->snd, ng->snd_size);
-        /* kof98cb/kof98ae2016 bootleg mixed zips (242 + 242cb/242ae members):
-         * ADPCM-A voice is 242-v1..v4 linear 16M. These sets have no swlist
-         * entry so the fallback left every ADPCM read OOB -> DC-stuck. */
+        /* Bootleg mixed zips (kof98cb/242cb, kof98ae2016/242ae, kof96ae20/214ae
+         * ...) have no swlist entry, so the fallback left ADPCM-A voice
+         * uninstalled and every ADPCM read OOB -> attract DC-stuck/silent.
+         * Voice ROMs follow per-set naming: 242-v1.v1 linear or <set>-vN.bin /
+         * <set>-vN.v3 suffixes. Official sets build adpcm via swlist and skip. */
         {
-            uint8_t *mm; uint32_t mn;
-            if (!ng->adpcm && rom_load_zip(gamezip, "242-v1.v1", &mm, &mn) == 0) {
-                free(mm);
-                uint8_t *va = calloc(1, 0x1000000); uint32_t got = 0;
-                static const char *vn[4] = {"242-v1.v1","242-v2.v2","242-v3.v3","242-v4.v4"};
-                for (int k = 0; k < 4; k++) {
-                    uint8_t *dv; uint32_t nv;
-                    if (rom_load_zip(gamezip, vn[k], &dv, &nv) == 0) {
-                        memcpy(va + (size_t)k * 0x400000, dv, nv < 0x400000 ? nv : 0x400000);
-                        free(dv); got = 1;
-                    }
+            static const char *vsuf[4][2] = {
+                {"242-v1.v1","-v1.bin"}, {"242-v2.v2","-v2.bin"},
+                {"242-v3.v3",".v3"},     {"242-v4.v4","-v4.bin"}};
+            uint8_t *va = calloc(1, 0x1000000); uint32_t got = 0;
+            for (int k = 0; !ng->adpcm && k < 4; k++) {
+                uint8_t *dv; uint32_t nv;
+                if (rom_load_zip(gamezip, vsuf[k][0], &dv, &nv) == 0 ||
+                    rom_load_zip_suffix(gamezip, vsuf[k][1], &dv, &nv) == 0) {
+                    memcpy(va + (size_t)k * 0x400000, dv, nv < 0x400000 ? nv : 0x400000);
+                    free(dv); got = 1;
                 }
-                if (got) { ng->adpcm = va; ng->adpcm_size = 0x1000000; }
-                else free(va);
-                ng->k98cb = 1;
             }
+            if (!ng->adpcm && got) { ng->adpcm = va; ng->adpcm_size = 0x1000000; ng->k98cb = 1; }
+            else free(va);
         }
         if (!ng->rom && (rom_load_zip_suffix(gamezip, ".p1", &d, &n) == 0 ||
                          rom_load_zip_suffix(gamezip, "-p1.bin", &d, &n) == 0)) {

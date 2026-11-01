@@ -1471,3 +1471,6 @@
 [2026-11-01T20:45:57Z] [SESSION-251] Completed [task-239] (commit 1f8a57d): kof98cb/ae2016 ADPCM-A voice 装载修复 loud 0->35/33
 [2026-11-01T20:45:57Z] [SESSION-251] STATS tasks_total=238 completed=151 failed=87 pending=0 blocked=0
 [2026-11-01T20:46:24Z] [SESSION-251] LOCK released
+[2026-11-01T20:51:00Z] [SESSION-252] LOCK acquired (pid=3411309)
+[2026-11-01T20:52:23Z] [SESSION-252] Starting [task-241] 208卡音频复评波 (base=d268916)
+[2026-11-01T20:52:38Z] [SESSION-252] Starting [task-241] 208卡音频复评波 (base=d268916)
