@@ -1402,3 +1402,9 @@
 2026-11-01T11:47:05Z [SESSION-243] CHECKPOINT [task-232] step=3/4 "证伪三连:asia-s3两侧同logo态(非缺陷)、0x405c6系误记(金标workram无此resume点)、协程调用者=BIOS 0x1378a;lin主循环0x2063fc=VBLANK轮询(06(A6)vsa6(A6));lin场景周期1557f空转vs金标三场景循环3495f;下一步金标demo态PC热点对照"
 2026-11-01T11:55:49Z [SESSION-243] CHECKPOINT [task-232] step=4/4 "金标demo态PC直方图=lin同构(2063fa VBLANK轮询84%)——主循环无差异；分叉最终收敛:VBLANK处理器任务链中demo回放/对象生成任务lin未运行；attempt2方向=VBLANK向量处理器任务调度对照探针；金标68KPC探针写/tmp/mame_68kpc.log非stdout(再次踩坑)"
 2026-11-01T12:05:09Z [SESSION-243] CHECKPOINT [task-232] step=5/6 "协程系统全证伪:resume点(20bbb6/20bbf8/2063f4)两侧相同且lin每帧执行;VBLANK链(0x20009c)派发正常(0x2000e8每帧);lin多4个BIOS协程指针c1e4d0(金标已退出);剩余唯一分叉=demo回放脚本流读取(对象生成器读脚本→lin读到空);VECDUMP探针已加(reset/vbl/irq向量);attempt2=追demo脚本指针与回放任务"
+2026-11-01T12:06:06Z [SESSION-243] STATS tasks_total=230 completed=145 failed=84 pending=0 blocked=0 attempts_total=392 checkpoints=489
+2026-11-01T12:07:51Z [SESSION-244] LOCK acquired (pid=2974486)
+2026-11-01T12:18:27Z [SESSION-244] ERROR [task-232] [TASK_EXEC] attempt2未修复:attract表组分叉查明(lin=0xc82e8组/金标=0xc8090组,主表P1 0x10ff70 12B/条);lin长跑f8000-15000恒1色黑屏(金标180色)——脚本播放正常但画面黑,根因收敛VLOAD->VRAM背景通路;RAMWIN路径陷阱=strtok截断冒号后路径
+2026-11-01T12:19:59Z [SESSION-244] ERROR [task-232] [TASK_EXEC] attempt3未修复:fade节奏完全正常(周期1560f淡入淡出);黑屏真因=脚本长度字段0x108244 lin=0/金标=50(0x32)——场景无VRAM更新恒黑;注册链=游戏dbra循环0x9dc4->BIOS服务0x10ef8;脚本=VRAM偏移号列表(0x20905e读号+0x8000写VLOAD);剩余分叉=游戏注册脚本长度参数来源;task-232 3/3耗尽转CLOSED-PARKED
+2026-11-01T13:30:00Z [SESSION-244] STATS tasks_total=230 completed=145 failed=85 pending=0 blocked=0 attempts_total=394 checkpoints=492
+2026-11-01T13:30:01Z [SESSION-244] INIT All tasks terminal; harness marker removed; harness complete
