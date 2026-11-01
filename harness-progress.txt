@@ -1432,3 +1432,5 @@
 [2026-11-01T17:40:13Z] [SESSION-245] Starting [task-236] wh2 attract 协程调度分歧 (base=4054999)
 [2026-11-01T18:31:32Z] [SESSION-246] CHECKPOINT [task-236] step=1/3 "向量表定案:level-1=$64→0x20009c(游戏handler在PRG窗口$20009c执行,非work RAM);MAME $200000-0x2FFFFF=cart bank ROM,WORKRAM20假设证伪已回滚;FD97镜像写探针证伪(金标FD97恒0);EXCPROBE证 lin vec=25 每帧~0.87次正常交付(早前'未交付'系PCHIT采样误判)"
 [2026-11-01T18:31:32Z] [SESSION-246] CHECKPOINT [task-236] step=2/3 "lin wh2 色数曲线 f3000=3(BIOS) f3500-4000=1 f4500=74 f5000-5500=1 f6000=74——attract间歇到达有内容画面;金标bkshot f4500/6000对比截图中"
+[2026-11-01T18:58:10Z] [SESSION-246] ERROR [task-236] [TASK_EXEC] wh2 attract 到标题循环进不了对战演示；金标对战热循环在 $10EA00 共享RAM自解密handler(恒33FC)，lin 被游戏 0x204d04 周期写坏成 4E73(f615/2171/3730)再由 0x2093b6 恢复——lin 多走破坏分支。FD97镜像/WORKRAM20/向量偏移假设全部证伪；EXCPROBE 证 vec25/26 IRQ 交付正常。attempts=1/3
+[2026-11-01T18:58:10Z] [SESSION-246] STATS tasks_total=236 completed=229 failed=1 pending=0 blocked=0 attempts_total=312 checkpoints=487

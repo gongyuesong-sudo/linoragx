@@ -8242,7 +8242,7 @@
     {
       "id": "task-236",
       "title": "wh2 attract 黑屏残留：场景脚本协程 0x3929c 从未被调度——定位安装者/注册表",
-      "status": "in_progress",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
       "attempts": 1,
@@ -8255,7 +8255,9 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
+      "error_log": [
+        "[TASK_EXEC] wh2 attract reaches title loop but never battle-demo; golden battle hot-loop at $10EA00 (self-decrypt handler in shared RAM); lin $10EA00 patched 33FC<->4E73 cyclically (game 0x204d04 corrupts, 0x2093b6 restores); golden stays 33FC. FD97-mirror/WORKRAM20/vector-offset hypotheses all falsified; IRQ delivery (vec25+vec26) proven normal via EXCPROBE"
+      ],
       "checkpoints": [
         {
           "step": 0,
@@ -8268,6 +8270,12 @@
           "total": 3,
           "description": "向量表定案level-1=$64→0x20009c handler在PRG窗口执行;WORKRAM20/FD97镜像假设证伪回滚;EXCPROBE证IRQ正常交付;lin attract间歇74色",
           "timestamp": "2026-11-02T03:00:00Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "金标对战热循环$10EA08(共享RAM自解密handler);lin $10EA00被游戏周期改写33FC<->4E73(f615/2171/3730破坏,f1445/3001/4560恢复);金标恒33FC。下一步:比对金标$10EA00写序列(FD97W探针)找lin多走破坏分支的门控差异",
+          "timestamp": "2026-11-02T03:20:00Z"
         }
       ],
       "completed_at": null
