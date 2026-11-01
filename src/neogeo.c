@@ -4795,6 +4795,27 @@ void ng_run_frame(neogeo *ng)
         ng->mc_cycles += chunk;
         left -= chunk;
         ng->scanline = (int)((CYCLES_PER_FRAME - left) / CYCLES_PER_LINE) % LINES_PER_FRAME;
+        /* PCHIST68=1: 68K PC histogram (sampled per chunk), printed every 1000 frames */
+        { static int pch_on = -2;
+          static uint32_t hpc[4096]; static uint32_t hcnt[4096]; static int hn = 0;
+          if (pch_on == -2) pch_on = getenv("PCHIST68") ? 1 : 0;
+          if (pch_on) {
+              unsigned pc = m68k_get_reg(NULL, M68K_REG_PC);
+              uint32_t bucket = (pc >> 8) & 0xFFF;
+              int i;
+              for (i = 0; i < hn; i++) if (hpc[i] == bucket) { hcnt[i]++; break; }
+              if (i == hn && hn < 4096) { hpc[hn] = bucket; hcnt[hn] = 1; hn++; }
+              else if (i == hn) hcnt[0]++;
+              if (ng->frame % 1000 == 0 && ng->scanline == 100) {
+                  int j, k;
+                  for (j = 0; j < hn-1 && j < 40; j++)
+                      for (k = j+1; k < hn; k++)
+                          if (hcnt[k] > hcnt[j]) { uint32_t t=hcnt[j]; hcnt[j]=hcnt[k]; hcnt[k]=t; uint32_t u=hpc[j]; hpc[j]=hpc[k]; hpc[k]=u; }
+                  fprintf(stderr, "PCHIST68 f=%d n=%d\n", ng->frame, hn);
+                  for (j = 0; j < hn && j < 25; j++) fprintf(stderr, "PCHIST68 %06x %u\n", hpc[j]<<8, hcnt[j]);
+              }
+          }
+        }
         /* L1PULSE=<lines> experiment: re-assert level-1 every N scanlines
            (models the real UPD4990A timer output pulsing multiple times
            per frame instead of our once-per-frame edge). Games that spin
