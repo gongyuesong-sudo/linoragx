@@ -1441,3 +1441,9 @@
 [2026-11-01T19:24:58Z] [SESSION-247] ERROR [task-236] [TASK_EXEC] attempt2 未修复：根因收窄至 lin BIOS demo 任务未推进（周期性重跑游戏冷启动）；金标主循环 c18716=demo 任务，lin 滞留 $6300 等待循环。attempts=2/3
 [2026-11-01T19:24:58Z] [SESSION-247] LOCK released
 [2026-11-01T19:24:58Z] [SESSION-247] STATS tasks_total=236 completed=229 failed=1 pending=0 blocked=0 attempts_total=313 checkpoints=489
+[2026-11-01T19:25:36Z] [SESSION-248] LOCK acquired (pid=3334964)
+[2026-11-01T19:25:50Z] [SESSION-248] Starting [task-236] wh2 BIOS demo 任务推进条件（attempt 3/3，base=feb9c2e）
+[2026-11-01T19:32:49Z] [SESSION-248] CHECKPOINT [task-236] step=3/3 "$FF握手/$FD82/$FD96门控假设全部证伪(双方均零写)；lin游戏冷启动每帧重跑=BIOS反复重启未就绪游戏；金标f12000截图验证校验命令可靠性中"
+[2026-11-02T04:40:00Z] [SESSION-248] ERROR [task-236] [TASK_EXEC] attempt3 未修复：门控假设($FF/$FD82/$FD96)全证伪；金标f12000=68色证实校验有效；根因=lin游戏冷启动被BIOS每帧重复触发致init无法完成，属深层时序保真问题。attempts=3/3 CLOSED-PARKED
+[2026-11-01T19:33:41Z] [SESSION-248] LOCK released
+[2026-11-01T19:33:41Z] [SESSION-248] STATS tasks_total=234 completed=149 failed=85 pending=0 blocked=0 attempts_total=398 checkpoints=503

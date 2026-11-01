@@ -8245,9 +8245,9 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
-      "started_at_commit": "4054999",
+      "started_at_commit": "feb9c2e",
       "validation": {
         "command": "cd /home/gill/linoragx && reawork/rewrite/build/linoragx --rom roms/wh2.zip --bios /home/gill/linoragx --frames 12000 --headless --dump /tmp/t236.bmp --save-state /dev/null 2>/dev/null; python3 -c \"import sys;d=open('/tmp/t236.bmp','rb').read();sys.exit(0 if len({d[54+i*3:d+57+i*3] for i in range(0,(len(d)-54)//3,997)})>8 else 1)\"",
         "timeout_seconds": 300
@@ -8257,7 +8257,8 @@
       },
       "error_log": [
         "[TASK_EXEC] wh2 attract reaches title loop but never battle-demo; golden battle hot-loop at $10EA00 (self-decrypt handler in shared RAM); lin $10EA00 patched 33FC<->4E73 cyclically (game 0x204d04 corrupts, 0x2093b6 restores); golden stays 33FC. FD97-mirror/WORKRAM20/vector-offset hypotheses all falsified; IRQ delivery (vec25+vec26) proven normal via EXCPROBE",
-        "[TASK_EXEC] attempt2: 金标也执行0x204d04(4次)——多走代码假设证伪；金标同指令不写$10EA00/$0EA00(a6未知,旧核无accessor)；lin BIOS主循环滞留$6300等待循环并周期性重跑游戏冷启动(游戏ROM$0 move #$2700,sr+设栈)，金标BIOS推进到demo任务；官方BIOS不改变。根因收窄：lin BIOS demo任务未推进"
+        "[TASK_EXEC] attempt2: 金标也执行0x204d04(4次)——多走代码假设证伪；金标同指令不写$10EA00/$0EA00(a6未知,旧核无accessor)；lin BIOS主循环滞留$6300等待循环并周期性重跑游戏冷启动(游戏ROM$0 move #$2700,sr+设栈)，金标BIOS推进到demo任务；官方BIOS不改变。根因收窄：lin BIOS demo任务未推进",
+        "[TASK_EXEC] attempt3: $FF握手/$FD82/$FD96门控全部证伪(双方均零写)；金标f12000=68色证实校验命令有效，lin f12000=1色FAIL。根因画像：lin游戏冷启动(ROM$0 move #$2700,sr)每帧被BIOS重复触发，游戏init无法完成写$FD96就绪标志，BIOS滞留$6300等待循环不进demo任务(c18716)。属深层状态机/时序保真问题，与mslug3族music-task-stall同类。CLOSED-PARKED at max_attempts"
       ],
       "checkpoints": [
         {
@@ -8295,11 +8296,17 @@
           "total": 3,
           "description": "游戏ROM$0=冷启动入口(move #$2700,sr;lea $10f2f0,a7)——lin周期性重跑冷启动=BIOS重复启动游戏；金标仅启动一次进demo任务。attempt3方向：BIOS demo任务启动/推进条件(官方BIOS c18xxx demo任务 vs lin停留$6300等待循环)",
           "timestamp": "2026-11-02T04:15:00Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "$FF握手(cmpi #$db双方均不满足)、$FD82、$FD96门控全部证伪——lin与金标这些地址均零写。lin游戏冷启动(ROM$0)每帧重跑=BIOS反复重启未就绪游戏；金标游戏init完成写$FD96 bit7清0→BIOS退出$6300等待循环进demo任务。金标f12000截图判定校验命令可靠性",
+          "timestamp": "2026-11-02T04:35:00Z"
         }
       ],
       "completed_at": null
     }
   ],
-  "session_count": 247,
-  "last_session": "2026-11-01T17:40:13Z"
+  "session_count": 248,
+  "last_session": "2026-11-02T04:40:00Z"
 }
