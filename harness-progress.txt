@@ -1490,3 +1490,8 @@
 [2026-11-01T22:33:16Z] [SESSION-254] CHECKPOINT [task-245] step=1/3 aodk 根因收窄至 VBlank IRQ 接受层（游戏等 0x100206 事件、处理器 f251 后未再进）
 [2026-11-01T22:33:16Z] [SESSION-254] STATS tasks_total=245 completed=154 failed=89 pending=2 session=254
 [2026-11-01T22:34:13Z] [SESSION-254] LOCK released
+[2026-11-01T22:37:29Z] [SESSION-255] LOCK acquired (pid=3476449)
+[2026-11-01T22:37:29Z] [SESSION-255] Starting [task-245] aodk VBlank IRQ 接受层排查 attempt2 (base=42e0c43)
+[2026-11-01T22:51:14Z] [SESSION-255] CHECKPOINT [task-245] step=2/3 交接正常/TimerC 排除/[0x100206] 写者待查
+[2026-11-01T22:51:14Z] [SESSION-255] ERROR [task-245] [TASK_EXEC] attempt2 未解，根因收窄至游戏等待事件写者未明
+[2026-11-01T22:51:14Z] [SESSION-255] STATS tasks_total=245 completed=154 failed=89 pending=2 session=255
