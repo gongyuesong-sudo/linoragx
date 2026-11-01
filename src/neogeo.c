@@ -1562,9 +1562,15 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         { static int czw = -2; static long czwc; static int czw_f;
           if (czw == -2) { const char *e = getenv("CRAMZW"); czw = e ? 1 : 0;
               czw_f = e ? (int)strtol(e, 0, 0) : 0; }
-          if (czw && ng->frame >= czw_f && !(d & 0x7FFF) && czwc++ < 400)
-              fprintf(stderr, "CRAMZW f=%d o=%04x pc=%08x\n",
-                  ng->frame, o, m68k_get_reg(NULL, M68K_REG_PC)); }
+          if (czw && ng->frame >= czw_f && !(d & 0x7FFF) && czwc++ < 200000) {
+              extern uint32_t m68k_read_memory_16(uint32_t);
+              unsigned a0 = (unsigned)m68k_get_reg(NULL, M68K_REG_A0);
+              unsigned a1 = (unsigned)m68k_get_reg(NULL, M68K_REG_A1);
+              fprintf(stderr, "CRAMZW f=%d o=%04x pc=%08x a0=%08x a1=%08x d1=%08x d2=%08x src=%04x\n",
+                  ng->frame, o, m68k_get_reg(NULL, M68K_REG_PC), a0, a1,
+                  (unsigned)m68k_get_reg(NULL, M68K_REG_D1),
+                  (unsigned)m68k_get_reg(NULL, M68K_REG_D2),
+                  (unsigned)(a1 < 0x800000 ? m68k_read_memory_16(a1) : 0xFFFF)); } }
         static int crtr2 = -2;
         if (crtr2 == -2) crtr2 = getenv("CRAMTRACE") ? 1 : 0;
         if (crtr2 && (ng->frame < 2000 || getenv("CRAMT2")) && (m68k_get_reg(NULL,M68K_REG_PC) < 0xC00000 || getenv("CRAMT2"))) {
@@ -4493,7 +4499,13 @@ void ng_run_frame(neogeo *ng)
           if (sc_pc >= 0 && ng->frame >= sc_f) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
               if (pc == (unsigned)sc_pc && sc_n < 30) { sc_n++;
                   unsigned sp = (unsigned)m68k_get_reg(NULL, M68K_REG_A7);
-                  fprintf(stderr, "STACKDUMP f=%d sp=%08x\n", ng->frame, sp);
+                  fprintf(stderr, "STACKDUMP f=%d sp=%08x a4=%08x a5=%08x a6=%08x d0=%08x d1=%08x\n",
+                      ng->frame, sp,
+                      (unsigned)m68k_get_reg(NULL, M68K_REG_A4),
+                      (unsigned)m68k_get_reg(NULL, M68K_REG_A5),
+                      (unsigned)m68k_get_reg(NULL, M68K_REG_A6),
+                      (unsigned)m68k_get_reg(NULL, M68K_REG_D0),
+                      (unsigned)m68k_get_reg(NULL, M68K_REG_D1));
                   for (unsigned q = 0; q < 0x40; q += 2) {
                       unsigned v = 0;
                       if (sp + q + 1 < 0x110000 && sp >= 0x100000) {

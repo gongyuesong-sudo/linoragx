@@ -7923,12 +7923,12 @@
   {
    "id": "task-229",
    "title": "wh2 attract black (reopen of task-228 with new entry point): scene-script engine 0x200174 output divergence \u2014 palette staging buffer 0x10A000 never written post-attract and 0x1062b6 params differ (lin 18/10 vs gold 0808/4040); trace script engine token dispatch vs golden to find the branch that skips palette-source writes",
-   "status": "failed",
+   "status": "in_progress",
    "priority": "P1",
    "depends_on": [],
    "attempts": 2,
    "max_attempts": 3,
-   "started_at_commit": "5c5d986",
+   "started_at_commit": "12ea80d",
    "validation": {
     "command": "bash /home/gill/linoragx/reawork/rewrite/tools/harness/val_attract.sh wh2 80",
     "timeout_seconds": 900
@@ -7964,12 +7964,19 @@
      "total": 4,
      "description": "attempt2 end: lin vsync-wait caller census captured (baseline for golden compare). Next attempt: (1) golden vsync-wait census via MAME lua debug API (manager.machine.debug:debug('cpuexec')? or patch MAME C++ probe LINORAGX_68KPC extended to log ra at 0x2062bc) then diff caller sets \u2014 missing golden caller = dead palette-load task; (2) or instrument lin: log every jsr target from task dispatcher 0x392a2 region.",
      "timestamp": "2026-11-01T06:23:58Z"
+    },
+    {
+     "step": 3,
+     "total": 4,
+     "description": "ROOT CAUSE NARROWED: palette task (0x38ae6/0x38b3a ping-pong) alternates fill-staging(a6+0x2000)/flush-D00(a6-D00) via a6-F220 toggle. At f17831 BOTH buffers empty -> flush writes zeros over the fresh palette written f17830 by 0x204800 routine (bus 0x1000 source, legit). a6=0x110000 for game tasks (0x108000 for another context). D00 table all-zero at f17829 AND f17832. Upstream: 68K command consumer (BIOS c11d96) must populate staging; lin consumer stalled. Next: check if lin 68K ever enters c11d96 post-attract vs golden.",
+     "timestamp": "2026-11-01T06:50:39Z"
     }
    ],
    "completed_at": null,
-   "lease_expires_at": "2026-11-01T06:09:21Z"
+   "lease_expires_at": "2026-11-01T06:33:20Z",
+   "claimed_by": "SESSION-237"
   }
  ],
- "session_count": 236,
- "last_session": "2026-11-01T05:59:09Z"
+ "session_count": 237,
+ "last_session": "2026-11-01T06:33:20Z"
 }

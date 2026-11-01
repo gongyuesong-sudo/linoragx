@@ -1363,3 +1363,6 @@
 [2026-11-01T06:13:20Z] [SESSION-236] LOCK released
 [2026-11-01T06:23:58Z] [SESSION-236] ERROR [task-229] [TEST_FAIL] attempt2 no fix; lin task chain alive, palette-copy dies f16156; golden census blocked by lua API
 [2026-11-01T06:23:58Z] [SESSION-236] LOCK released
+[2026-11-01T06:33:20Z] [SESSION-237] LOCK acquired (pid=2744976)
+[2026-11-01T06:33:20Z] [SESSION-237] Starting [task-229] wh2 attract black attempt 3/3 (base=12ea80d)
+[2026-11-01T06:50:39Z] [SESSION-237] CHECKPOINT [task-229] step=3/4 root cause narrowed: palette ping-pong both-buffers-empty at f17831
