@@ -1235,6 +1235,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if (ti && off >= 0xC000 && off < 0xC400 && tic++ < 800)
               fprintf(stderr, "TINS f=%d off=%03x d=%04x m=%04x pc=%08x\n", ng->frame,
                   off, d, mem_mask, m68k_get_reg(NULL, M68K_REG_PC)); }
+        { static int f9 = -2;
+          if (f9 == -2) f9 = getenv("FD97W") ? 1 : 0;
+          if (f9 && (off == 0xFD96 || off == 0xFD97))
+              fprintf(stderr, "FD97 f=%d off=%03x d=%04x m=%04x pc=%08x\n", ng->frame,
+                  off, d, mem_mask, m68k_get_reg(NULL, M68K_REG_PC)); }
         if (mem_mask & 0xFF00) { ng->smem[off & ~1u] = d >> 8; ng->smem_dirty[(off & ~1u) >> 3] |= 1u << ((off & ~1u) & 7); }
         if (mem_mask & 0x00FF) { ng->smem[off | 1u] = d & 0xFF; ng->smem_dirty[(off | 1u) >> 3] |= 1u << ((off | 1u) & 7); }
         return;
@@ -5083,6 +5088,10 @@ void ng_run_frame(neogeo *ng)
         FILE *g = fopen("/tmp/lin_rom68k.bin", "wb");
         if (g) { for (int a = 0x1e00; a < 0x2000; a++) fputc(a < (int)ng->rom_size ? ng->rom[a] : 0xEE, g); fclose(g); }
     }
+    { static int pc1 = -2;
+      if (pc1 == -2) pc1 = getenv("PCSAMP") ? 1 : 0;
+      if (pc1 && (ng->frame & 15) == 0)
+          fprintf(stderr, "PCSA f=%d pc=%08x\n", ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
     { static int rw2 = -2; static unsigned rw2a, rw2l; static long rw2f; static char rw2o[256];
       if (rw2 == -2) { const char *e = getenv("RAMWIN"); rw2 = 0;
           if (e) { char buf[300]; strncpy(buf, e, 299); buf[299] = 0;
@@ -5095,7 +5104,10 @@ void ng_run_frame(neogeo *ng)
           if (g) { extern uint32_t m68k_read_memory_16(uint32_t);
               for (unsigned a = rw2a; a < rw2a + rw2l; a += 2) {
                   uint32_t w = m68k_read_memory_16(a); fputc((int)(w >> 8) & 0xff, g); fputc((int)w & 0xff, g); }
-              fclose(g); } } }
+              fclose(g); }
+          for (unsigned a = rw2a; a < rw2a + rw2l; a++)
+              if (ng->smem_dirty[(a & 0xFFFF) >> 3] & (1u << (a & 7)))
+                  fprintf(stderr, "DIRTY %04x=%02x\n", a & 0xFFFF, ng->smem[a & 0xFFFF]); } }
     { static int fs = -2; static FILE *fsf; static uint16_t fs_prev[4 + 11 * 8];
       if (fs == -2) { const char *e = getenv("FADESTAT"); fs = e ? 1 : 0;
           if (fs) fsf = fopen(e, "w"); }
