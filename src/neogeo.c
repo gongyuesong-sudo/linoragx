@@ -4981,6 +4981,10 @@ void ng_run_frame(neogeo *ng)
           if (a && !ng->z80_nmi_asserted) { z80w_nmi(ng->z); ng->nmi_cnt++; if (f_znmit()) ng->znmi_t = 40; }
           ng->z80_nmi_asserted = a; }
         /* Timer C: level 1 (vector 0x64), once per frame mid-screen */
+        { static long irqdbg_n; if (getenv("IRQDBG") && (irqdbg_n++ % 50) == 0)
+            fprintf(stderr, "IRQDBG n=%ld ien=%x dcnt=%06x armed=%d pend=%d\n",
+                    irqdbg_n, ng->irq_enable, ng->display_counter,
+                    ng->raster_armed, ng->raster_pending); }
         if (!f_noraster() && (ng->irq_enable & 1) && ng->raster_armed && !ng->raster_pending) {
             int64_t cyc = (int64_t)((CYCLES_PER_FRAME - left)) ;   /* cycles since frame start */
             if (cyc * 2 > (int64_t)ng->display_counter) {          /* pixel ticks */
