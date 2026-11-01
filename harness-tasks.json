@@ -8550,7 +8550,7 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
       "started_at_commit": null,
       "validation": {
@@ -8562,7 +8562,8 @@
       },
       "error_log": [
         "[TASK_EXEC] 未解但根因收窄：aodk 游戏主循环卡 ea5e(cmp $206(a6),d0;beq)等 RAM 0x100206 事件；事件源=VBlank 处理器(9060,会 ack $3C000C)；VBlank IRQ 仅 f251 进过一次后不再被接受（assert 每帧正常）；下一步=m68k 核 IPL/SR 探针查为何 IRQ 不被接受。MAME aodk 正常(140色@3k)确认为 lin 缺陷",
-        "[TASK_EXEC] attempt2 修正认知：交接其实正常（f642 进游戏，早前未交接系误读）；游戏稳态 sr=2004 IPL=4 自屏蔽 VBlank(lvl1)/TimerC(lvl2)；TimerC 三要素 ien=0/dcnt=0（正常卡 samsho2 相同，非根因）；BIOS 服务链正常（$10fee4 每帧自增）；死锁点=游戏主循环 ea5e 等 [0x100206] 事件、写者未明——下一步反汇编游戏 eb1e/init 找 [0x206] 写者"
+        "[TASK_EXEC] attempt2 修正认知：交接其实正常（f642 进游戏，早前未交接系误读）；游戏稳态 sr=2004 IPL=4 自屏蔽 VBlank(lvl1)/TimerC(lvl2)；TimerC 三要素 ien=0/dcnt=0（正常卡 samsho2 相同，非根因）；BIOS 服务链正常（$10fee4 每帧自增）；死锁点=游戏主循环 ea5e 等 [0x100206] 事件、写者未明——下一步反汇编游戏 eb1e/init 找 [0x206] 写者",
+        "[TASK_EXEC] attempt3 证据链闭合：等待环 ea52-62=jsr eb1e(恒走 clr $301c 清零路径，$10fd96/9c bit4 恒 0 与正常卡同)→move $206(a6),d0→cmp 等变化；全 ROM 扫描 $206(a6) 直接写指令=0（3 处命中均为读源）；RAMWA 证 [0x100206] 全程零写；MAME 证 vblank_level=1/raster_level=2 固定无 0x2000 寄存器、lin 向量映射一致；TimerC ien=0 正常卡同；游戏稳态 sr=2004 IPL=4 自屏蔽 VBlank——[0x206] 预期写者（疑游戏 VBlank handler 或经其他基址寄存器）未定位，需游戏服务链 eb6e→29e62 深拆，成本超单卡收益。CLOSED-PARKED"
       ],
       "checkpoints": [
         {
@@ -8576,6 +8577,12 @@
           "total": 3,
           "description": "交接正常确认；TimerC 排除；[0x100206] 写者待查",
           "timestamp": "2026-11-01T22:51:14Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "证据链闭合：[0x206] 零写者确认；CLOSED-PARKED",
+          "timestamp": "2026-11-01T22:54:50Z"
         }
       ],
       "completed_at": null
@@ -8583,10 +8590,10 @@
     {
       "id": "task-246",
       "title": "ghostlop attract 仅文字层（sprite/图形层缺失）排查",
-      "status": "pending",
+      "status": "failed",
       "priority": "P2",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 1,
       "max_attempts": 3,
       "started_at_commit": null,
       "validation": {
@@ -8596,14 +8603,16 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
+      "error_log": [
+        "[TASK_EXEC] ghostlop 为 homebrew hack 卡（proto_228 前缀，MAME 无金标）；VRAMDUMP 证背景1层有数据(0x0000 nz=1146)+fix 层正常（文字出）、sprite 表区 nz=0；背景有数据渲染全黑与 wh2 黑屏同族（task-236 已 CLOSED-PARKED）。CLOSED-PARKED"
+      ],
       "checkpoints": [],
       "completed_at": null
     },
     {
       "id": "task-247",
       "title": "lastbld2 Uni-BIOS 崩溃 ILLEGAL INSTRUCTION PC=0005（复位向量无效）排查",
-      "status": "pending",
+      "status": "completed",
       "priority": "P2",
       "depends_on": [],
       "attempts": 0,
@@ -8617,10 +8626,17 @@
         "cleanup": null
       },
       "error_log": [],
-      "checkpoints": [],
-      "completed_at": null
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 1,
+          "description": "根因=uni-bios 快速启动跳过官方初始化致 bootleg 复位向量无效崩溃；修复=per-card 官方 BIOS 偏好；验证=默认 BIOS 12k 69色 attract 月夜枫叶场景正常（vision 确认），kof2000 冒烟无回归",
+          "timestamp": "2026-11-01T23:02:28Z"
+        }
+      ],
+      "completed_at": "2026-11-01T23:02:28Z"
     }
   ],
-  "session_count": 255,
-  "last_session": "2026-11-01T22:51:14Z"
+  "session_count": 256,
+  "last_session": "2026-11-01T23:02:28Z"
 }

@@ -1495,3 +1495,10 @@
 [2026-11-01T22:51:14Z] [SESSION-255] CHECKPOINT [task-245] step=2/3 交接正常/TimerC 排除/[0x100206] 写者待查
 [2026-11-01T22:51:14Z] [SESSION-255] ERROR [task-245] [TASK_EXEC] attempt2 未解，根因收窄至游戏等待事件写者未明
 [2026-11-01T22:51:14Z] [SESSION-255] STATS tasks_total=245 completed=154 failed=89 pending=2 session=255
+[2026-11-01T22:52:08Z] [SESSION-256] LOCK acquired (pid=3494210)
+[2026-11-01T22:52:08Z] [SESSION-256] Starting [task-245] aodk [0x206] 写者定位 attempt3 (base=e040a64)
+[2026-11-01T22:54:50Z] [SESSION-256] ERROR [task-245] [TASK_EXEC] attempt3 未解 CLOSED-PARKED（[0x206] 写者未定位，游戏服务链深拆成本超收益）
+[2026-11-01T22:54:50Z] [SESSION-256] Starting [task-246] ghostlop attract 图形层缺失 (base=e040a64)
+[2026-11-01T23:02:28Z] [SESSION-256] ERROR [task-246] [TASK_EXEC] ghostlop homebrew 无金标，背景层黑与 wh2 同族 CLOSED-PARKED
+[2026-11-01T23:02:28Z] [SESSION-256] Completed [task-247] (commit f6e2996)
+[2026-11-01T23:02:28Z] [SESSION-256] STATS tasks_total=245 completed=155 failed=90 pending=0 session=256
