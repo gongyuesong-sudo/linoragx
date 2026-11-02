@@ -1618,3 +1618,8 @@
 [2026-11-02T15:59:34Z] [SESSION-276] ERROR [task-256] [TASK_EXEC] attempt1：金标 bank B r27=0 但 timer flag 翻转 → BIOS 期使能假设
 [2026-11-02T15:59:34Z] [SESSION-276] STATS tasks_total=254 completed=160 failed=94 pending=0
 [2026-11-02T15:59:34Z] [SESSION-276] LOCK released
+[2026-11-02T16:04:05Z] [SESSION-277] LOCK acquired (pid=3996609)
+[2026-11-02T16:04:05Z] [SESSION-277] Starting [task-256] BIOS 期 bank B r27 实证 (base=db1f21c)
+[2026-11-02T16:06:46Z] [SESSION-277] ERROR [task-256] [TASK_EXEC] attempt2：IN(06)=ADPCM-A EOS 状态非 timer（ymfm ym2610::read_status_hi）
+[2026-11-02T16:06:46Z] [SESSION-277] STATS tasks_total=254 completed=160 failed=94 pending=0
+[2026-11-02T16:06:46Z] [SESSION-277] LOCK released
