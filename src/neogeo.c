@@ -3721,6 +3721,15 @@ void linoragx_z80_step(unsigned int pc)
       { static int dump_left = 0; static int fired = 0;
         if (hnd && g_ng && !fired && g_ng->frame > 600 && pc == 0x20ef) { dump_left = 400; fired = 1; }
         if (dump_left > 0) { fprintf(stderr, "HND %04x\n", pc); dump_left--; } } }
+    { static int fld = -2;
+      if (fld == -2) fld = getenv("FILLDBG") ? 1 : 0;
+      if (fld && g_ng && (pc == 0x1260 || pc == 0x1253)) {
+          extern uint16_t z80w_ix(void*), z80w_iy(void*); extern uint8_t z_read(uint32_t, void*);
+          uint16_t iy = z80w_iy(g_ng->z);
+          fprintf(stderr, "FILL f=%llu pc=%04x iy=%04x iy07=%02x iy08=%02x tgt=%04x\n",
+                  (unsigned long long)g_ng->frame, pc, iy,
+                  z_read((uint16_t)(iy + 0x07), g_ng), z_read((uint16_t)(iy + 0x08), g_ng),
+                  (unsigned)(iy + 0x09)); } }
     { static int ixx = -2;
       if (ixx == -2) ixx = getenv("IXXDBG") ? 1 : 0;
       if (ixx && g_ng && (pc == 0x1386 || pc == 0x138c || pc == 0x138f || pc == 0x218f || pc == 0x21f4 || pc == 0x0133 || pc == 0x217f || pc == 0x21e8 || pc == 0x2164 || pc == 0x217c || pc == 0x20ef || pc == 0x214d || pc == 0x2152 || pc == 0x03ce || pc == 0x0837)) {

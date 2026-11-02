@@ -1689,3 +1689,7 @@
 [2026-11-02T17:59:12Z] [SESSION-291] CHECKPOINT [task-261] step=1/3 "派发表/rst 向量结构全解码"
 [2026-11-02T17:59:12Z] [SESSION-291] STATS tasks_total=259 completed=161 failed=98 pending=0
 [2026-11-02T17:59:12Z] [SESSION-291] LOCK released
+[2026-11-02T18:24:08Z] [SESSION-292] CHECKPOINT [task-261] step=2/3 "06cd=call 2b71 调用点；lin 1264=200 有执行；ZW zpc 不可靠；缺口上移至 iy+07/08 数据块"
+[2026-11-02T18:24:08Z] [SESSION-292] ERROR [task-261] [TASK_EXEC] attempt2 前提翻转，fd26 真写者 PC 未证实
+[2026-11-02T18:24:08Z] [SESSION-292] STATS tasks_total=259 completed=161 failed=98 pending=0
+[2026-11-02T18:24:08Z] [SESSION-292] LOCK released
