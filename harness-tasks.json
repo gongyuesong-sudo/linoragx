@@ -9124,7 +9124,7 @@
   {
    "id": "task-259",
    "title": "samsho2 fd26-fd29 RAM \u6307\u9488\u586b\u5145\u8005\uff1a\u91d1\u6807 f794/f780 vs lin ROM \u5783\u573e\uff08fd20 \u73af=\u9759\u6001\u4efb\u52a1\u8868\uff0c\u961f\u5217\u5047\u8bbe\u8bc1\u4f2a\uff09",
-   "status": "failed",
+   "status": "in_progress",
    "priority": "P1",
    "depends_on": [],
    "attempts": 2,
@@ -9153,11 +9153,17 @@
      "total": 3,
      "description": "\u586b\u5145\u7a97\u53e3 t4.2-9s \u9501\u5b9a\uff08zs7 \u90e8\u5206\u586b\u5145\u8bc1\u636e\uff09\u3002lin \u586b\u5145\u4f8b\u7a0b\u96f6\u6267\u884c\u3002attempt3\uff1a\u91d1\u6807\u586b\u5145\u8005 zpc \u5b9a\u4f4d",
      "timestamp": "2026-11-02T17:07:13Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "attempt3 \u8fdb\u884c\u4e2d\uff1aMAME AUDWR \u63a2\u9488\u5730\u5740\u7ec4\u5df2\u6539\u4e3a {fd26,fd27,fd22,fd20,fc3b,fa99}\uff08neogeo.cpp:2117\uff09\uff0c\u540e\u53f0\u91cd\u7f16\u8bd1\u4e2d\uff08proc_7109b449e70b\uff0c\u65e5\u5fd7 /tmp/mame_build287.log\uff09\u3002\u4e0b session\uff1a\u7f16\u8bd1\u5b8c\u6210\u540e\u8dd1 LINORAGX_AUDWR=1 timeout -s INT 30 ./mame samsho2 \u2192 \u62ff fd26 \u586b\u5145\u65f6\u523b\u7684 zpc \u2192 \u53cd\u6c47\u7f16\u586b\u5145\u4f8b\u7a0b \u2192 \u67e5 lin \u7f3a\u5931\u539f\u56e0\u3002\u6ce8\u610f AUDWR \u662f YM-write \u65f6\u8f6e\u8be2\u5f0f\u63a2\u9488\uff0c\u586b\u5145\u671f\u9700\u6709 YM \u5199\u624d\u80fd\u6355\u83b7\uff08attract \u671f r27 \u5fc3\u8df3\u6ee1\u8db3\u6761\u4ef6\uff09",
+     "timestamp": "2026-11-02T17:08:51Z"
     }
    ],
    "completed_at": null
   }
  ],
  "session_count": 273,
- "last_session": "2026-11-02T17:07:13Z"
+ "last_session": "2026-11-02T17:08:51Z"
 }

@@ -1661,3 +1661,8 @@
 [2026-11-02T17:07:13Z] [SESSION-286] ERROR [task-259] [TASK_EXEC] attempt2：填充窗口 t4.2-9s，lin 零写入，填充者未定位
 [2026-11-02T17:07:13Z] [SESSION-286] STATS tasks_total=257 completed=160 failed=97 pending=0
 [2026-11-02T17:07:13Z] [SESSION-286] LOCK released
+[2026-11-02T17:08:51Z] [SESSION-287] LOCK acquired
+[2026-11-02T17:08:51Z] [SESSION-287] Starting [task-259] attempt3 MAME fd26 探针改造 (base=task-259a2)
+[2026-11-02T17:08:51Z] [SESSION-287] CHECKPOINT [task-259] step=3/3 "AUDWR 探针改监视 fd26/fd27/fd22/fd20，MAME 后台重编译中"
+[2026-11-02T17:08:51Z] [SESSION-287] STATS tasks_total=257 completed=160 failed=97 pending=0
+[2026-11-02T17:08:51Z] [SESSION-287] LOCK released (task-259 in_progress 待续，MAME 编译完成后跑探针)
