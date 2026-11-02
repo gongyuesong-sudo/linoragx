@@ -1541,3 +1541,6 @@
 [2026-11-02T12:33:26Z] [SESSION-263] CHECKPOINT [task-251] step=1/1 击打声随 BGM 修复复活（f2399 r23=c0 完整 ADPCM-A start）；validation 探针修正（补 YMWRB）
 [2026-11-02T12:33:26Z] [SESSION-263] Completed [task-251] (ac330b1 顺带修复)
 [2026-11-02T12:34:04Z] [SESSION-263] RECOVERY [task-250] action="validation 探针修正(补 YMWRB)后重跑 PASS，failed→completed" reason="原 FAIL 系探针配置错误非功能缺失"
+[2026-11-02T12:34:39Z] [SESSION-263] WARN 208卡批测仍在运行(proc_bfe7c8286ab5)，作为 ac330b1 验收门；结果出来后新会话核对
+[2026-11-02T12:34:39Z] [SESSION-263] STATS tasks_total=249 completed=159 failed=90 pending=0 blocked=0
+[2026-11-02T12:34:39Z] [SESSION-263] LOCK released
