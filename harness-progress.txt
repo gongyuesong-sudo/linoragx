@@ -1693,3 +1693,7 @@
 [2026-11-02T18:24:08Z] [SESSION-292] ERROR [task-261] [TASK_EXEC] attempt2 前提翻转，fd26 真写者 PC 未证实
 [2026-11-02T18:24:08Z] [SESSION-292] STATS tasks_total=259 completed=161 failed=98 pending=0
 [2026-11-02T18:24:08Z] [SESSION-292] LOCK released
+[2026-11-02T18:33:50Z] [SESSION-293] CHECKPOINT [task-261] step=3/3 "filler 两侧同段执行；golden hl=f794 vs lin hl=e974；fd23/24 源值写入者未捕获"
+[2026-11-02T18:33:50Z] [SESSION-293] ERROR [task-261] [TASK_EXEC] attempt3 完成，golden fd23/24 写入路径未定位
+[2026-11-02T18:33:50Z] [SESSION-293] STATS tasks_total=259 completed=161 failed=98 pending=0
+[2026-11-02T18:33:50Z] [SESSION-293] LOCK released
