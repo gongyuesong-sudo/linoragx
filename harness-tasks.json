@@ -9404,6 +9404,12 @@
           "total": 3,
           "description": "MAJOR REVERSAL: PCOUNT f=2399 shows 01ec=1 1105=2 - lin DOES reach engine-start block (earlier 'never reached' was frame-sampling blind spot; also MAMEVIEW=1 full 80-card batch recheck: lost=0 gain=0, the 5 'regressions' at 60/208 were parallel-run jitter false positives). But f967 handle table still all-zero => engine-start block executes then exits before building tables. Path inside 1105: gates(fe34/fe33/fc38 open) -> 1124 bank-B YM -> sub 20 -> table 2exx -> call 01aa(bank setup) -> jump table 3800 -> call 0b38(f837 zero) -> f967 zero -> call 2b39 + 2b27(task reg fcdd). 2b27 writes fcdd+a. Next: Z80STEP around the frame where 1105 hit occurs (find exact frame via finer PCOUNT) and trace exit point inside 1105..11c2.",
           "timestamp": "2026-11-02T20:58:27Z"
+        },
+        {
+          "step": 16,
+          "total": 3,
+          "description": "CIRCULAR-DEPENDENCY MODEL FINALIZED: lin timer A is one-shot (tcnt=0 after overflow, needs 0x27 re-arm - ymfm parity). Chain: music task emits r27 re-arms -> overflow -> IRQ -> handler runs music task -> more r27. lin: r27 55/s ~= overflow 45/s ~= IRQ accept 37.5/s ~= task rate 56/s (all 1:1, one task per IRQ). golden: r27 1306/s, overflow ~1306/s, IRQ accept 109/s (8% - Z80 busy), task rate 1306/s = ~12 r27 per IRQ acceptance. So golden handler services a BATCH of ~12 task ticks per IRQ while lin services 1. SESSION-282 proved lin heartbeat linear segment fully traversed per entry, so the batch must come from golden handler LOOPING the heartbeat N times per entry (N~12) - likely a tick-counter/elapsed loop keyed on a counter lin keeps at 0 (candidate: fc38 heartbeat counter or a frame-tick counter incremented by 68K-side/IRQ cadence). Next: diff golden vs lin handler entry->exit instruction span (Z80STEP golden unavailable; use golden ZPCH per-PC counts ratio: heartbeat PCs 21xx counts / IRQ accept count).",
+          "timestamp": "2026-11-02T21:01:55Z"
         }
       ],
       "completed_at": null

@@ -1731,3 +1731,4 @@
 [2026-11-02T20:37:12Z] [SESSION-494] task-263 step11: golden m1 cold-start+0.3s already has track/rhythm tables (runtime products, not in ROM); lin zero - m1 main-loop execution gap, not data gap.
 [2026-11-02T20:56:10Z] [SESSION-496] task-263 step13: engine-start gate = fe3f from table 6c4a+de; lin reads 01 (=disk, bank correct) -> 0ca0 branch; golden needs 2 -> 1105. 6c4a divergence: runtime-written table or bank map moment.
 [2026-11-02T20:58:27Z] [SESSION-497] task-263 step14: lin DOES reach 1105 engine-start (2x by f2399) - prior never-reached was sampling blind spot; MAMEVIEW full 80-card recheck lost=0 gain=0 (60/208 regressions were jitter). Gap moved inside 1105 block: executes but exits before building f967 tables.
+[2026-11-02T21:01:55Z] [SESSION-499] task-263 step16: circular dependency quantified - golden ~12 task ticks per IRQ accept vs lin 1; heartbeat batch-count gap is last unknown.
