@@ -9041,7 +9041,7 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 1,
+   "attempts": 2,
    "max_attempts": 3,
    "started_at_commit": "cf2aaa7",
    "validation": {
@@ -9052,7 +9052,8 @@
     "cleanup": null
    },
    "error_log": [
-    "[TASK_EXEC] attempt1\uff1alin vendored ymfm clock_split \u5df2\u542b m_adpcm_a.clock\u2192m_eos_status\uff08vendor/ymfm/ymfm_opn.cpp:2155\uff09\u3002EOSDBG \u63a2\u9488\u5b9e\u8bc1 attract \u671f rsh=04/20/01/02/10 \u6b63\u5e38\u7ffb\u8f6c\uff08f743 \u8d77\uff09\u3002ADPCM-A EOS \u673a\u5236\u65e0\u7f3a\u9677\u3002\u771f\u7f3a\u53e3\u91cd\u5b9a\u4f4d\uff1alin Z80 \u8bfb IN(06) \u4ec5 151 \u6b21/3000f vs \u91d1\u6807 ~85k \u6b21\u2014\u2014\u56e0 lin IRQ taken=0\uff08iff=0\uff0chandler \u4e0d\u7ecf IRQ \u9a71\u52a8\uff09\uff0chandler fc37 bit0\u21920837 \u5206\u652f\u5230\u8fbe\u7387\u4e0d\u8db3\u3002EOS \u72b6\u6001\u4f4d\u672c\u8eab\u4e0d\u662f\u7f3a\u53e3"
+    "[TASK_EXEC] attempt1\uff1alin vendored ymfm clock_split \u5df2\u542b m_adpcm_a.clock\u2192m_eos_status\uff08vendor/ymfm/ymfm_opn.cpp:2155\uff09\u3002EOSDBG \u63a2\u9488\u5b9e\u8bc1 attract \u671f rsh=04/20/01/02/10 \u6b63\u5e38\u7ffb\u8f6c\uff08f743 \u8d77\uff09\u3002ADPCM-A EOS \u673a\u5236\u65e0\u7f3a\u9677\u3002\u771f\u7f3a\u53e3\u91cd\u5b9a\u4f4d\uff1alin Z80 \u8bfb IN(06) \u4ec5 151 \u6b21/3000f vs \u91d1\u6807 ~85k \u6b21\u2014\u2014\u56e0 lin IRQ taken=0\uff08iff=0\uff0chandler \u4e0d\u7ecf IRQ \u9a71\u52a8\uff09\uff0chandler fc37 bit0\u21920837 \u5206\u652f\u5230\u8fbe\u7387\u4e0d\u8db3\u3002EOS \u72b6\u6001\u4f4d\u672c\u8eab\u4e0d\u662f\u7f3a\u53e3",
+    "[TASK_EXEC] attempt2\uff1aDIDBG \u63a2\u9488\uff08cpu_z80 Ei/Di env \u95e8\u63a7\uff09f=2000 \u5b9e\u6d4b\uff1aEI pc=0134\u00d74145\uff08\u4e3b\u5faa\u73af\u7a7a\u8f6c\u6b63\u5e38\uff09\u3001DI pc=0039\u00d71\uff08handler \u6bcf\u5e27\u4ec5\u8fdb 1 \u6b21\uff09\u3002\u74f6\u9888=timer A \u6ea2\u51fa\u7387\uff1alin tload=256+TSTEP=192\u21920.75 \u6b21/\u5e27\u224845/s\uff08\u5b9e\u6d4b 34/s\uff09\uff1b\u91d1\u6807 ZIRQ 194/s\u22483.2 \u6b21/\u5e27\u3002\u91d1\u6807 r24 \u6570\u636e\u5168 00\uff08\u5468\u671f 256 tick \u4e0e lin \u540c\uff09\u2192 \u91d1\u6807 tick \u901f\u7387\u9ad8\u4e8e lin 4x \u6216 flag \u91cd\u7f6e\u673a\u5236\u4e0d\u540c\u3002CAPN \u65e0\u6548\u56e0 cap \u975e\u552f\u4e00\u74f6\u9888\uff08tflag \u7f6e\u4f4d\u7387\u672c\u8eab\u5c31\u4f4e\uff09\u3002TSTEP \u63d0\u5347\u4f1a\u7834\u574f vliner BIOS 18.2ms \u6821\u51c6\u2014\u2014\u9700\u6309\u5361/\u6309 BIOS \u671f\u533a\u5206"
    ],
    "checkpoints": [
     {
@@ -9060,11 +9061,17 @@
      "total": 3,
      "description": "ADPCM-A EOS \u8def\u5f84\u6392\u9664\u3002\u4e0b\u4e00\u6b65\uff1a\u8ffd lin Z80 IRQ \u63a5\u53d7\u7387\u2014\u2014handler \u7531\u4e3b\u5faa\u73af\u8c03\u7528\u94fe\u9a71\u52a8\uff08pc=217b\uff09\u4f46\u6bcf\u5e27\u5fc3\u8df3\u8fed\u4ee3 1 \u6b21 vs \u91d1\u6807 22 \u6b21/IRQ\u3002\u65b9\u5411\uff1a\u4e3b\u5faa\u73af 0x133 ei \u540e\u4e3a\u4f55 iff=0\uff08di \u7a97\u53e3\u8986\u76d6\uff1f\uff09\u6216\u5fc3\u8df3\u5faa\u73af\u8fed\u4ee3\u6df1\u5ea6",
      "timestamp": "2026-11-02T16:26:30Z"
+    },
+    {
+     "step": 2,
+     "total": 3,
+     "description": "\u74f6\u9888\u91cf\u5316\uff1alin timer A 0.75 \u6ea2\u51fa/\u5e27 vs \u91d1\u6807 ~3.2/\u5e27\uff08\u540c r24=0\uff09\u3002attempt3 \u65b9\u5411\uff1a\u67e5 ymfm \u771f\u5b9e tick \u7387\uff08clock/72?\uff09\u5bf9\u6bd4 lin TSTEP=192 \u7684 tick/\u5e27\uff0c\u6821\u51c6 lin tick \u7387\u5230 ymfm \u8bed\u4e49\u800c\u975e\u7ecf\u9a8c\u503c",
+     "timestamp": "2026-11-02T16:32:00Z"
     }
    ],
    "completed_at": null
   }
  ],
  "session_count": 273,
- "last_session": "2026-11-02T16:26:30Z"
+ "last_session": "2026-11-02T16:32:00Z"
 }

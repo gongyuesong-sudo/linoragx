@@ -2093,6 +2093,10 @@ int cpu_z80::Ei()
 	m_iff2 = 1;
 	iff_delay = 1;   // acceptance shadow: blocks the tail check of EI's own
 	                 // step and expires before the NEXT instruction's check
+	{ static int dd = -2;
+	  if (dd == -2) dd = getenv("DIDBG") ? atoi(getenv("DIDBG")) : -1;
+	  if (dd >= 0) { extern unsigned long long z80w_dbg_frame;
+	    if ((int)z80w_dbg_frame == dd) fprintf(stderr, "EI f=%llu pc=%04x\n", z80w_dbg_frame, z80pc); } }
 	return 0;
 }
 
@@ -2101,6 +2105,10 @@ void cpu_z80::Di()
 	m_iff1 = 0;
 	m_iff2 = 0;
 	iff_delay = 0;   // DI cancels any pending EI acceptance shadow
+	{ static int dd = -2;
+	  if (dd == -2) dd = getenv("DIDBG") ? atoi(getenv("DIDBG")) : -1;
+	  if (dd >= 0) { extern unsigned long long z80w_dbg_frame;
+	    if ((int)z80w_dbg_frame == dd) fprintf(stderr, "DI f=%llu pc=%04x\n", z80w_dbg_frame, z80pc); } }
 }
 
 // Latch the INT line + vector. The dispatch happens in mz80step() at the next

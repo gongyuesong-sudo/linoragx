@@ -1631,3 +1631,7 @@
 [2026-11-02T16:26:30Z] [SESSION-279] ERROR [task-257] [TASK_EXEC] attempt1：EOS 位正常翻转，缺口重定位到 Z80 handler 读频/IRQ 接受
 [2026-11-02T16:26:30Z] [SESSION-279] STATS tasks_total=255 completed=160 failed=95 pending=0
 [2026-11-02T16:26:30Z] [SESSION-279] LOCK released
+[2026-11-02T16:32:00Z] [SESSION-280] Starting [task-257] attempt2 DIDBG di/ei 轨迹 (base=eea729c)
+[2026-11-02T16:32:00Z] [SESSION-280] ERROR [task-257] [TASK_EXEC] attempt2：瓶颈=timer A 溢出率 0.75/帧 vs 金标 3.2/帧
+[2026-11-02T16:32:00Z] [SESSION-280] STATS tasks_total=255 completed=160 failed=95 pending=0
+[2026-11-02T16:32:00Z] [SESSION-280] LOCK released
