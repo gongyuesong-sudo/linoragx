@@ -9255,12 +9255,12 @@
     {
       "id": "task-262",
       "title": "samsho2 filler fd18-round hl source: golden (ix+07/08)=f794 vs lin=cd43 (self-sustaining task-table loop initial value)",
-      "status": "pending",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 1,
       "max_attempts": 3,
-      "started_at_commit": null,
+      "started_at_commit": "eb68f5f",
       "validation": {
         "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
         "timeout_seconds": 300
@@ -9268,8 +9268,23 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
-      "checkpoints": [],
+      "error_log": [
+        "[TASK_EXEC] caller-chain divergence narrowed: lin filler via 28fc chain (ix garbage), golden via 06e5/078a (ix=fd1c); 06e5 never reached in lin"
+      ],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "FILLDBG ix/iy dual-view: lin f258 pc=1024 ix=415e iy=fd18 (ROM garbage ix); f262+ pc=1262 ix=fce8/fcf8 iy=fabe. golden filler ix=fd1c (ld ix,fd1c @2262 in 2207 task-group walk). ix-load table: 2215-22e7 fcec..fd8c (12 blocks), 1afe-1b50 fd2c-fd8c, 218c-21fd fd9c-fe0c. Gap = filler caller chain: golden enters via 2207 walk (ix=fd1c set), lin enters 06e5 with unset ix. zs timeline: fd23/24 fill window t4.0-4.5 (zs2 zeros, zs3=94f7). lin f260 fd1c block garbage vs golden task-control block.",
+          "timestamp": "2026-11-02T19:05:40Z"
+        },
+        {
+          "step": 2,
+          "total": 3,
+          "description": "PCOUNT: lin 2262=681 (ix=fd1c IS set 681x by 2207 walk) but filler ix=garbage -> ix clobbered between walk and filler. 06e5/078a=0: lin NEVER reaches jp z,1216 call sites (prior 25136 was PEEK trap). lin filler real caller = 28fc->1013 chain (Z80STEP f258). golden filler caller = 06e5/078a chain with ix=fd1c preserved. Divergence = which caller reaches filler.",
+          "timestamp": "2026-11-02T19:06:32Z"
+        }
+      ],
       "completed_at": null
     }
   ],
