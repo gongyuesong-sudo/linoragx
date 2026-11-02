@@ -1677,3 +1677,7 @@
 [2026-11-02T17:32:19Z] [SESSION-289] CHECKPOINT [task-260] step=1/3 "ZW 探针装好，静态搜零直接编码，编译中"
 [2026-11-02T17:32:19Z] [SESSION-289] STATS tasks_total=258 completed=160 failed=97 pending=0
 [2026-11-02T17:32:19Z] [SESSION-289] LOCK released
+[2026-11-02T17:47:19Z] [SESSION-290] ERROR [task-260] [TASK_EXEC] 首编译失败 util::string_clone 不存在，改 strdup 重编
+[2026-11-02T17:47:19Z] [SESSION-290] CHECKPOINT [task-260] step=2/3 "strdup 修复，增量编译链接中，探针脚本就绪"
+[2026-11-02T17:47:19Z] [SESSION-290] STATS tasks_total=258 completed=160 failed=97 pending=0
+[2026-11-02T17:47:19Z] [SESSION-290] LOCK released
