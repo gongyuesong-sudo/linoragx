@@ -9038,12 +9038,12 @@
   {
    "id": "task-257",
    "title": "lin ADPCM-A \u64ad\u653e\u8def\u5f84\u6838\u67e5\uff1aae_pull \u662f\u5426\u9a71\u52a8 ymfm m_adpcm_a.clock\u3001attract \u671f\u9f13\u6837\u672c\u662f\u5426\u771f\u51fa\u58f0\u3001EOS \u4e3a\u4f55\u6052 0",
-   "status": "pending",
+   "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 0,
+   "attempts": 1,
    "max_attempts": 3,
-   "started_at_commit": null,
+   "started_at_commit": "cf2aaa7",
    "validation": {
     "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
     "timeout_seconds": 300
@@ -9051,11 +9051,20 @@
    "on_failure": {
     "cleanup": null
    },
-   "error_log": [],
-   "checkpoints": [],
+   "error_log": [
+    "[TASK_EXEC] attempt1\uff1alin vendored ymfm clock_split \u5df2\u542b m_adpcm_a.clock\u2192m_eos_status\uff08vendor/ymfm/ymfm_opn.cpp:2155\uff09\u3002EOSDBG \u63a2\u9488\u5b9e\u8bc1 attract \u671f rsh=04/20/01/02/10 \u6b63\u5e38\u7ffb\u8f6c\uff08f743 \u8d77\uff09\u3002ADPCM-A EOS \u673a\u5236\u65e0\u7f3a\u9677\u3002\u771f\u7f3a\u53e3\u91cd\u5b9a\u4f4d\uff1alin Z80 \u8bfb IN(06) \u4ec5 151 \u6b21/3000f vs \u91d1\u6807 ~85k \u6b21\u2014\u2014\u56e0 lin IRQ taken=0\uff08iff=0\uff0chandler \u4e0d\u7ecf IRQ \u9a71\u52a8\uff09\uff0chandler fc37 bit0\u21920837 \u5206\u652f\u5230\u8fbe\u7387\u4e0d\u8db3\u3002EOS \u72b6\u6001\u4f4d\u672c\u8eab\u4e0d\u662f\u7f3a\u53e3"
+   ],
+   "checkpoints": [
+    {
+     "step": 1,
+     "total": 3,
+     "description": "ADPCM-A EOS \u8def\u5f84\u6392\u9664\u3002\u4e0b\u4e00\u6b65\uff1a\u8ffd lin Z80 IRQ \u63a5\u53d7\u7387\u2014\u2014handler \u7531\u4e3b\u5faa\u73af\u8c03\u7528\u94fe\u9a71\u52a8\uff08pc=217b\uff09\u4f46\u6bcf\u5e27\u5fc3\u8df3\u8fed\u4ee3 1 \u6b21 vs \u91d1\u6807 22 \u6b21/IRQ\u3002\u65b9\u5411\uff1a\u4e3b\u5faa\u73af 0x133 ei \u540e\u4e3a\u4f55 iff=0\uff08di \u7a97\u53e3\u8986\u76d6\uff1f\uff09\u6216\u5fc3\u8df3\u5faa\u73af\u8fed\u4ee3\u6df1\u5ea6",
+     "timestamp": "2026-11-02T16:26:30Z"
+    }
+   ],
    "completed_at": null
   }
  ],
  "session_count": 273,
- "last_session": "2026-11-02T16:10:27Z"
+ "last_session": "2026-11-02T16:26:30Z"
 }

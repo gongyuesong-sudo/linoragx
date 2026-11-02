@@ -632,7 +632,14 @@ uint8_t ym_read(ym2610 *y, int chipno)
          (ymfm ym2610::read_status_hi = m_eos_status & m_flag_mask; the A-side
          drum EOS comes from m_adpcm_a.clock). lin never exposed them, so the
          m1 handler's fc37 bit0 branch (0837 ADPCM-B music init) never fired. */
-      if (eosdbg && chipno == 1) st |= (y->chip.read_status_hi() & 0x3f); }
+      if (eosdbg && chipno == 1) {
+          extern int g_ym_frame;
+          static int ecount = 0;
+          uint8_t rsh = y->chip.read_status_hi();
+          if (rsh && ecount++ < 40) fprintf(stderr, "EOSDBG f=%d rsh=%02x\n", g_ym_frame, rsh);
+          else if (!rsh) ecount |= 0; 
+          if ((ecount & 0x40000000) == 0 && rsh == 0 && g_ym_frame > 2000 && g_ym_frame < 2003) fprintf(stderr, "EOSDBG f=%d rsh=00 (attract)\n", g_ym_frame);
+          st |= (rsh & 0x3f); } }
     y->tflag[c] = 0;
     if (!c) y->opm_flag = 0;   /* MAME ym2151 status_r is read-clear: the
                                   bank-A status read ACKs the OPM timer flag
