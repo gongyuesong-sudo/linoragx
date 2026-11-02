@@ -9410,6 +9410,12 @@
           "total": 3,
           "description": "CIRCULAR-DEPENDENCY MODEL FINALIZED: lin timer A is one-shot (tcnt=0 after overflow, needs 0x27 re-arm - ymfm parity). Chain: music task emits r27 re-arms -> overflow -> IRQ -> handler runs music task -> more r27. lin: r27 55/s ~= overflow 45/s ~= IRQ accept 37.5/s ~= task rate 56/s (all 1:1, one task per IRQ). golden: r27 1306/s, overflow ~1306/s, IRQ accept 109/s (8% - Z80 busy), task rate 1306/s = ~12 r27 per IRQ acceptance. So golden handler services a BATCH of ~12 task ticks per IRQ while lin services 1. SESSION-282 proved lin heartbeat linear segment fully traversed per entry, so the batch must come from golden handler LOOPING the heartbeat N times per entry (N~12) - likely a tick-counter/elapsed loop keyed on a counter lin keeps at 0 (candidate: fc38 heartbeat counter or a frame-tick counter incremented by 68K-side/IRQ cadence). Next: diff golden vs lin handler entry->exit instruction span (Z80STEP golden unavailable; use golden ZPCH per-PC counts ratio: heartbeat PCs 21xx counts / IRQ accept count).",
           "timestamp": "2026-11-02T21:01:55Z"
+        },
+        {
+          "step": 17,
+          "total": 3,
+          "description": "PARTIAL REVERSAL: lin DOES build the rhythm table at fac0+30 (71 71/31 31/01 01... same stride-4 structure, different values = different track playing) and music cursor advances (fac6+14: lin b9 vs gold c0). So lin's engine IS running. BUT golden zs7 f967 handle table persists at t9s (entries stride 8: 01 00 00 5d f5 / 01 00 00 c0 f5 / 01 00 00 d1 f5 / 01 00 00 9e... = 4+ track handles with RAM ptrs f5xx) while lin f967 stays all-zero. Real remaining gap narrowed to: track-ARM path never registers handles in lin. fcdd task arrays near-identical both sides (few byte diffs). golden ZTRACE t<4.3s: sm1 idle 0133-015d throughout (matches lin). Next: find handle writer - search m1 for stores of 0x01 then 16-bit RAM ptr with stride 8 from base f967 (likely via ix walk starting ld ix,f960-ish or via the 22f8 TCB executor); compare arm path (2831) reachability lin vs golden.",
+          "timestamp": "2026-11-02T21:04:16Z"
         }
       ],
       "completed_at": null
