@@ -1577,3 +1577,8 @@
 [2026-11-02T14:29:44Z] [SESSION-268] ERROR [task-253] [TASK_EXEC] attempt2 bank 窗口内容两侧全同（轨道数据假设死）；缺口=音乐任务推进条件
 [2026-11-02T14:29:44Z] [SESSION-268] STATS tasks_total=251 completed=160 failed=91 pending=0
 [2026-11-02T14:29:44Z] [SESSION-268] LOCK released
+[2026-11-02T14:39:53Z] [SESSION-269] LOCK acquired (pid=3927007)
+[2026-11-02T14:39:53Z] [SESSION-269] Starting [task-253] attempt 3 金标推进时刻定位+lin 24b0退出条件 (base=606c00e)
+[2026-11-02T14:49:18Z] [SESSION-269] ERROR [task-253] [TASK_EXEC] attempt3 ix 分歧定位：lin ix=6ea8(ROM) vs 金标 ix=RAM轨道表
+[2026-11-02T14:49:18Z] [SESSION-269] STATS tasks_total=251 completed=160 failed=91 pending=0
+[2026-11-02T14:49:18Z] [SESSION-269] LOCK released

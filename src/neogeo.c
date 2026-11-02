@@ -3716,12 +3716,20 @@ void linoragx_z80_step(unsigned int pc)
                           zst_lo = e ? atoi(e) : -1; zst_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }
       if (zst_lo >= 0 && f >= zst_lo && f <= zst_hi)
           fprintf(stderr, "ZS %d %04x\n", f, pc); }
+    { static int ixx = -2;
+      if (ixx == -2) ixx = getenv("IXXDBG") ? 1 : 0;
+      if (ixx && g_ng && (pc == 0x1386 || pc == 0x138c || pc == 0x138f)) {
+          extern uint16_t z80w_ix(void*), z80w_iy(void*); extern uint8_t z_read(uint32_t, void*);
+          uint16_t ix = z80w_ix(g_ng->z), iy = z80w_iy(g_ng->z);
+          fprintf(stderr, "IXX f=%llu pc=%04x ix=%04x iy=%04x ix15=%02x ix16=%02x\n",
+                  (unsigned long long)g_ng->frame, pc, ix, iy,
+                  z_read((uint16_t)(ix + 15), g_ng), z_read((uint16_t)(ix + 16), g_ng)); } }
     { static int zrd_f = -2;
       if (zrd_f == -2) { const char *e = getenv("ZREADDBG"); zrd_f = e ? atoi(e) : -1; }
       if (zrd_f >= 0 && f == zrd_f && g_ng && g_ng->snd) {
           extern uint8_t z_read(uint32_t, void*);
           fprintf(stderr, "ZRD f=%d pc=%04x", f, pc);
-          static const unsigned addrs[6] = {0xf780, 0xf7ba, 0x7877, 0x77ee, 0xf000, 0xf040};
+          static const unsigned addrs[6] = {0xf526, 0xf53a, 0xf794, 0xf7a6, 0xf540, 0xf556};
           for (int q = 0; q < 6; q++) {
               fprintf(stderr, " %04x:", addrs[q]);
               for (int i = 0; i < 8; i++) fprintf(stderr, " %02x", z_read(addrs[q] + i, g_ng));
