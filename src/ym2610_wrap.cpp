@@ -595,6 +595,14 @@ uint8_t ym_read(ym2610 *y, int chipno)
 {
     int c = chipno ? 1 : 0;
     uint8_t st = (uint8_t)(y->tflag[c] & 3);
+    /* ymfm parity: the OPM (YM2151) half of YM2610 implements NO timers, so
+       bank-A status bit1 (timer B flag) is always 0 in MAME. samsho2's m1
+       IRQ handler gates its heartbeat loop on IN(04) bit1 (bit 1,a; jp nz) —
+       lin's phantom timer B set bit1, flipping that branch and skipping the
+       heartbeat loop entirely. Env-gated experiment: OPM_B0=1 masks bit1. */
+    { static int opm_b0 = -2;
+      if (opm_b0 == -2) opm_b0 = getenv("OPM_B0") ? 1 : 0;
+      if (opm_b0 && c == 0) st &= ~2; }
     if (y->busy[c] && y->clk >= y->busy_at[c]) y->busy[c] = 0;  /* D7 self-clears with time */
     if (y->busy[c]) st |= 0x80;   /* NOT read-cleared: BUSY is a hardware timing
                                      window, not a flag. mslug-family m1 heartbeats

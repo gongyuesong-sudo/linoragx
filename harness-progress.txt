@@ -1587,3 +1587,8 @@
 [2026-11-02T15:08:05Z] [SESSION-270] ERROR [task-254] [TASK_EXEC] attempt1：lin 心跳循环从未进入，1386 从 IRQ 链进入致 ix=ROM 垃圾
 [2026-11-02T15:08:05Z] [SESSION-270] STATS tasks_total=252 completed=160 failed=92 pending=0
 [2026-11-02T15:08:05Z] [SESSION-270] LOCK released
+[2026-11-02T15:10:06Z] [SESSION-271] LOCK acquired (pid=3950527)
+[2026-11-02T15:10:06Z] [SESSION-271] Starting [task-254] samsho2 2155 门相位（attempt 2）(base=0550d48)
+[2026-11-02T15:18:03Z] [SESSION-271] ERROR [task-254] [TASK_EXEC] attempt2：ymfm OPM 无 timer 证实；OPM_B0 分支翻转但 handler 卡 2106-214d
+[2026-11-02T15:18:03Z] [SESSION-271] STATS tasks_total=252 completed=160 failed=92 pending=0
+[2026-11-02T15:18:03Z] [SESSION-271] LOCK released
