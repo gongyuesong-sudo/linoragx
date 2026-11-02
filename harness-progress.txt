@@ -1597,3 +1597,8 @@
 [2026-11-02T15:23:38Z] [SESSION-272] ERROR [task-254] [TASK_EXEC] attempt3：真缺口=IRQ 频率 34/s vs 金标 1428Hz（irqen=00+legacy cap）
 [2026-11-02T15:23:38Z] [SESSION-272] STATS tasks_total=252 completed=160 failed=92 pending=0
 [2026-11-02T15:23:38Z] [SESSION-272] LOCK released
+[2026-11-02T15:24:51Z] [SESSION-273] LOCK acquired (pid=3967580)
+[2026-11-02T15:24:51Z] [SESSION-273] Starting [task-255] legacy IRQ cap 放开实验 (base=67903af)
+[2026-11-02T15:27:02Z] [SESSION-273] ERROR [task-255] [TASK_EXEC] attempt1：CAPN 无效；金标 IRQ 双频=OPM 61Hz+OPN timerA 1428Hz(load=0)
+[2026-11-02T15:27:02Z] [SESSION-273] STATS tasks_total=253 completed=160 failed=93 pending=0
+[2026-11-02T15:27:02Z] [SESSION-273] LOCK released

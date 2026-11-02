@@ -8942,8 +8942,43 @@
     }
    ],
    "completed_at": null
+  },
+  {
+   "id": "task-255",
+   "title": "samsho2 IRQ \u6cf5\u901f\uff1alegacy \u8def\u5f84\u653e\u5f00 once-per-frame cap\uff08\u6bcf overflow \u4e00\u6b21 + irq_latch read-clear\uff09\uff0c\u76ee\u6807 FM \u5bc6\u5ea6 >500/3000f \u4e14 kof98/vliner/kof2000/mslug4 \u96f6\u56de\u5f52",
+   "status": "failed",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 1,
+   "max_attempts": 3,
+   "started_at_commit": "67903af",
+   "validation": {
+    "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+    "timeout_seconds": 300
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [
+    "[TASK_EXEC] attempt1\uff1aCAPN=1/4/8/16 \u5168\u90e8 loud=41 \u65e0\u53d8\u5316\u2014\u2014samsho2 IRQ \u5b9e\u9645\u8d70 legacy tflag[0] \u8def\u5f84\uff08opm_mask=0 \u4f7f opm_flag \u7ea7\u8054\u8def\u5f84\u6b7b\uff09\u3002OPMDBG\uff1asamsho2 r1c=0x80 latch=0 \u2192 lin OPM \u5468\u671f=latch+1=1 tick(0.064ms) \u65b9\u5411\u53cd\u4e86\uff1b\u91d1\u6807 r1c \u5206\u5e03 0x00\u00d710524(mask=0 \u4e3a\u4e3b)/0x80\u00d7374\u3002\u91d1\u6807 IRQ \u53cc\u9891\u7ed3\u6784\u5b9a\u6848\uff1a56Hz\u2248OPM timer A(latch=0\u219216.4ms) + 1428Hz \u4e3b\u9891=bank B OPN timer A(load=0 \u81ea\u7531\u8fd0\u884c\uff0csamsho2 bank B timer \u5bc4\u5b58\u5668\u5199=0)"
+   ],
+   "checkpoints": [
+    {
+     "step": 0,
+     "total": 3,
+     "description": "\u8d77\u70b9\uff1atask-254 attempt3 \u5b9a\u6848\u2014\u2014lin timer A \u5468\u671f\u6b63\u786e(0.512ms)\u4f46 irqen=00 \u8d70 legacy cap \u2192 34/s vs \u91d1\u6807 1428Hz",
+     "timestamp": "2026-11-02T15:24:51Z"
+    },
+    {
+     "step": 1,
+     "total": 3,
+     "description": "\u91d1\u6807 IRQ \u53cc\u9891\u6765\u6e90\u5b9a\u4f4d\u3002\u4e0b\u4e00\u6b65\uff1a\u5b9e\u73b0 bank B OPN timer A \u81ea\u7531\u8fd0\u884c(load \u9ed8\u8ba4 0\uff0c\u5468\u671f~0.7ms)\u53ea\u9a71\u52a8 IRQ \u7ebf\u4e0d\u7f6e IN(06) \u72b6\u6001\u4f4d\uff08\u7ed5\u5f00 kof98 \u56de\u5f52\u6839\u56e0\u2014\u2014IN(06) bit \u7ffb\u8f6c\uff09\uff0cenv \u95e8\u63a7 OPNA=1 \u5b9e\u9a8c\uff1b\u540c\u65f6\u4fee OPM \u5468\u671f\u65b9\u5411 (256-latch)\u00d7512",
+     "timestamp": "2026-11-02T15:27:02Z"
+    }
+   ],
+   "completed_at": null
   }
  ],
- "session_count": 268,
- "last_session": "2026-11-02T15:23:38Z"
+ "session_count": 269,
+ "last_session": "2026-11-02T15:27:02Z"
 }
