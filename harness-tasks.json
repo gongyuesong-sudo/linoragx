@@ -9362,6 +9362,12 @@
           "total": 3,
           "description": "fe39 semantics decoded: command dispatcher at 0x164 reads command number from queue (0x172 ld a,(hl); ld (fe39),a) then jump table: 0->0eef,1->01c4,3->048e(HW-DETECT block),4->087a. lin fe39=0 = queue empty during BIOS phase; golden ran detect (fe40=4) inside first frame => golden 68K sent cmd=03 at f<1, lin 68K first cmd=01 at f25. Official NEO-GEO.ROM BIOS test: fe39 still 00 - BIOS-selection hypothesis dead for samsho2. Divergence is 68K-side BIOS self-test command emission (cmd 03 hw-detect) missing in lin. Next: trace lin 68K BIOS self-test path vs golden (68K writes cmd queue at 0x10F800+ then soundlatch).",
           "timestamp": "2026-11-02T20:21:56Z"
+        },
+        {
+          "step": 8,
+          "total": 3,
+          "description": "FALSIFICATION: golden SL1 first soundlatch cmd also at t=4.0092 d=01 (identical stream to lin: 01/03/03/02/03/03/07/2d) - golden 68K does NOT send cmd=03 early. Yet golden sm1 idles by frame 1 without self-halt and lin self-halts at f25. fe39-dispatch hypothesis dead (NMI can't fire before t=4 on either side). Remaining explanation: golden sm1 init path skips the 09bc/0c25 YM-test-halt block entirely (init completes in <1 frame with empty queue) while lin executes it - investigate what gates 0xfd call 09bc region or whether golden Z80 reset vector entry differs (golden Z80 may start executing later with different initial regs/RAM state). lin 68K f0-25 PCs: c11c54/58 x130938 main poll, c1defc x30208.",
+          "timestamp": "2026-11-02T20:25:07Z"
         }
       ],
       "completed_at": null
