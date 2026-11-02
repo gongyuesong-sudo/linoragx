@@ -1681,3 +1681,6 @@
 [2026-11-02T17:47:19Z] [SESSION-290] CHECKPOINT [task-260] step=2/3 "strdup 修复，增量编译链接中，探针脚本就绪"
 [2026-11-02T17:47:19Z] [SESSION-290] STATS tasks_total=258 completed=160 failed=97 pending=0
 [2026-11-02T17:47:19Z] [SESSION-290] LOCK released
+[2026-11-02T17:51:49Z] [SESSION-290] Completed [task-260] (commit pending) ZW 探针命中：fd26 填充者=1264-1273（jp z,1216@06e5/078a 调用，06cd 音乐任务区），lin 零执行——与 kof10th 同根因
+[2026-11-02T17:51:49Z] [SESSION-290] STATS tasks_total=258 completed=161 failed=97 pending=0
+[2026-11-02T17:51:49Z] [SESSION-290] LOCK released
