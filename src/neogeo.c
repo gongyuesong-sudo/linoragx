@@ -288,6 +288,7 @@ DBGFLAG("LATCH_TR",f_latch_tr)
 DBGFLAG("WDTR",    f_wdtr)
 DBGFLAG("NOCARTAUDIO", f_nocartaudio)
 DBGFLAG("MAMEVIEW", f_mameview)
+DBGFLAG("MVREDIR", f_mvredir)
 DBGFLAG("NORESET", f_noreset)
 DBGFLAG("M1BOOT1", f_m1boot1)
 DBGFLAG("ZTRAIL",  f_ztrail)
@@ -1438,7 +1439,14 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                         if (ng->ym && !ng->k98cb && ng->snd && ng->snd_size)
                             ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
                     } else { ng->cart_audio = f_mameview() ? 1 : 0;   /* MAME parity (env-gated): ch5=1 swaps bank view immediately, Z80 NOT reset — sm1 PC falls into m1 code at same address */
-                        ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
+                        ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame;
+                        if (f_mameview() && f_mvredir() && z80w_pc(ng->z) >= 0xff00) {
+                            /* lin's sm1 self-halts (jp fffd) earlier than golden's; when the
+                               view swaps while the Z80 is parked in the RAM halt, redirect to
+                               the m1 main-loop wait entry so m1 can service the command ring. */
+                            extern void z80w_force_jmp(void*, uint16_t);
+                            z80w_force_jmp(ng->z, 0x0133);
+                            if (f_latch_tr()) fprintf(stderr, "MAMEVIEW-REDIR f=%d\n", ng->frame); } }
                 }
             }
             if (f_latch_tr()) fprintf(stderr, "LATCH ch5 now=%d f=%d\n", ng->cart_audio, ng->frame);
