@@ -683,6 +683,56 @@ public:
 	uint32_t ssg_effective_clock(uint32_t input_clock) const { return input_clock / 4; }
 	void invalidate_caches() { m_fm.invalidate_caches(); }
 
+	// LINORAGX GOLDPORT: MAME-parity host wiring for the engine timers,
+	// busy window and IRQ level (ymfm_mame.h ymfm_set_timer /
+	// ymfm_set_busy_end / ymfm_is_busy / ymfm_update_irq equivalents).
+	// The host advances a 4 MHz YM-clock counter via lin_tick(); timers
+	// scheduled with lin_set_timer() fire engine_timer_expired() exactly
+	// like MAME's device timers; the IRQ level is reported through
+	// ymfm_interface::ymfm_update_irq by the core itself.
+	void lin_set_timer(int tnum, int32_t clocks)
+	{
+		if (clocks < 0)
+			m_lin_timer_due[tnum] = -1;
+		else
+			m_lin_timer_due[tnum] = m_lin_clock + clocks;
+	}
+	void lin_set_busy_end(int32_t clocks) { m_lin_busy_due = m_lin_clock + clocks; }
+	bool lin_is_busy() const { return m_lin_busy_due >= 0 && m_lin_clock < m_lin_busy_due; }
+	void lin_tick(int64_t clocks)
+	{
+		m_lin_clock += clocks;
+		/* engine_timer_expired re-enters update_timer -> ymfm_set_timer, which
+		   re-arms m_lin_timer_due to a value still <= m_lin_clock (the core's
+		   duration unit is coarser than this tick). Without the guard the same
+		   timer refires recursively inside one lin_tick and blows the stack.
+		   One expiry per timer per tick; the next tick delivers the next. */
+		uint32_t fired = 0;
+		for (int t = 0; t < 2; t++)
+			if (m_lin_timer_due[t] >= 0 && m_lin_clock >= m_lin_timer_due[t] && !(fired & (1u << t)))
+			{
+				fired |= (1u << t);
+				m_lin_timer_due[t] = -1;
+				m_fm.engine_timer_expired(t);
+			}
+		if (m_lin_busy_due >= 0 && m_lin_clock >= m_lin_busy_due)
+			m_lin_busy_due = -1;
+	}
+	void lin_reset()
+	{
+		m_lin_clock = 0;
+		m_lin_timer_due[0] = m_lin_timer_due[1] = -1;
+		m_lin_busy_due = -1;
+	}
+	// LINORAGX GOLDPORT: the ymfm ym2610 default IRQ mask is 0x03 (timer A+B),
+	// but on real YM2610 hardware bank A is the YM2151 (no OPN timer status)
+	// and no observed Neo Geo driver ever clears a bank-A timer B flag - with
+	// mask bit1 set the IRQ line latches high after B's first overflow and the
+	// Z80 livelocks (kof98 attract: peak 0). Mask timer A only, matching the
+	// legacy layer's proven "timer B must not drive the line" finding.
+	void lin_set_irq_mask(int mask) { m_fm.set_irq_mask(mask); }
+
+
 	// read access
 	uint8_t read_status();
 	uint8_t read_data();
@@ -726,6 +776,10 @@ protected:
 	uint8_t m_fm_samples_per_output;    // how many samples to repeat
 	uint8_t m_eos_status;               // end-of-sample signals
 	uint8_t m_flag_mask;                // flag mask control
+	// LINORAGX GOLDPORT host timer state
+	int64_t m_lin_clock = 0;
+	int64_t m_lin_timer_due[2] = {-1, -1};
+	int64_t m_lin_busy_due = -1;
 	fm_engine::output_data m_last_fm;   // last FM output
 	fm_engine::output_data m_split_fm, m_split_a, m_split_b; // split stream staging
 	fm_engine m_fm;                     // core FM engine

@@ -53,7 +53,7 @@ build/audio_engine.o: src/audio_engine.cpp
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -Isrc -c src/audio_engine.cpp -o $@
 
-build/ymfm_opn.o: vendor/ymfm/ymfm_opn.cpp vendor/ymfm/ymfm_fm.ipp
+build/ymfm_opn.o: vendor/ymfm/ymfm_opn.cpp vendor/ymfm/ymfm_fm.ipp vendor/ymfm/ymfm_opn.h vendor/ymfm/ymfm.h
 	@mkdir -p build
 	$(CXX) $(CXXFLAGS) -Ivendor/ymfm -c vendor/ymfm/ymfm_opn.cpp -o $@
 

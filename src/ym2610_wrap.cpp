@@ -52,12 +52,29 @@ struct ym2610 {
     struct LinIntf : public ymfm::ymfm_interface {
         ym2610 *y = nullptr;
         virtual uint8_t ymfm_external_read(ymfm::access_class type, uint32_t address) override;
-        virtual void ymfm_update_irq(bool asserted) override { (void)asserted; }
+        /* GOLDPORT (task-265): MAME-parity host wiring. ymfm_mame.h schedules
+           engine timers on device timers at the YM clock (4 MHz); we count the
+           same domain in lin_tick() (fed from ym_advance). busy_end/is_busy map
+           onto the core's own busy window (32*prescale clocks per write).
+           update_irq records the LEVEL the core computes in
+           engine_check_interrupts (status & irq_mask) - the exact signal MAME
+           wires to the audiocpu IRQ line. All gated by y->gold (GOLDMODE=0
+           restores the legacy hand-written layer for A/B). */
+        virtual void ymfm_set_timer(uint32_t tnum, int32_t clocks) override;
+        virtual void ymfm_set_busy_end(uint32_t clocks) override;
+        virtual bool ymfm_is_busy() override;
+        virtual void ymfm_update_irq(bool asserted) override;
         void fire_timer(uint32_t tnum) { if (m_engine) m_engine->engine_timer_expired(tnum); }
     };
 
     LinIntf intf;
     ymfm::ym2610 chip;                       /* OPM FM (YM2151) + SSG + ADPCM-A/B */
+
+    /* GOLDPORT (task-265): 1 = ymfm-core gold model (engine timers, core busy
+       window, level IRQ from engine_check_interrupts, status via
+       read_status/read_status_hi). 0 = legacy hand-written layer. */
+    int gold;
+    int irq_level;
 
     /* YM2610 timers (driver-init handshakes poll these) */
     int busy[2];
@@ -189,10 +206,51 @@ static void ym_ssg_silence(ym2610 *y)
     y->chip.write(1, 0xff); y->sh_lo[0x0f] = 0xff;
 }
 
+/* GOLDPORT interface bodies (struct ym2610 complete here) */
+void ym2610::LinIntf::ymfm_set_timer(uint32_t tnum, int32_t clocks)
+{
+    if (y && y->gold && tnum < 2) y->chip.lin_set_timer((int)tnum, clocks);
+}
+void ym2610::LinIntf::ymfm_set_busy_end(uint32_t clocks)
+{
+    if (y && y->gold) y->chip.lin_set_busy_end(clocks);
+}
+bool ym2610::LinIntf::ymfm_is_busy()
+{
+    return (y && y->gold) ? y->chip.lin_is_busy() : false;
+}
+void ym2610::LinIntf::ymfm_update_irq(bool asserted)
+{
+    if (y && y->gold)
+    {
+        y->irq_level = asserted ? 1 : 0;
+        static int iq = -1;
+        if (iq < 0) iq = getenv("IRQDBG") ? 1 : 0;
+        if (iq) { extern int g_ym_frame;
+                  fprintf(stderr, "IRQDBG f=%d a=%d st=%02x\n", g_ym_frame, (int)asserted,
+                          y->chip.read_status()); }
+    }
+}
+
+/* GOLDPORT: opt-in for now (GOLDMODE=1 enables the core gold model). The
+   legacy hand-written layer stays default until the 208-card batch on
+   GOLDMODE=1 shows zero regressions (kof98 attract went silent in the
+   first spot-check: bank-A timer-B flag semantics differ from the MAME
+   YM2151-on-bank-A reality; see task-265 checkpoints). */
+static int gold_mode(void)
+{
+    static int g = -1;
+    if (g < 0) { const char *e = getenv("GOLDMODE"); g = (e && atoi(e) != 0) ? 1 : 0; }
+    return g;
+}
+
 ym2610 *ym_create(void)
 {
     ym2610 *y = new ym2610();
+    y->gold = gold_mode();
     y->chip.reset();   /* ymfm write paths read internal state; never touch the chip before it is reset */
+    y->chip.lin_reset();
+    if (y->gold) y->chip.lin_set_irq_mask(1);   /* timer A only, see ymfm_opn.h note */
     y->irqmask[0] = y->irqmask[1] = 3;   /* ymfm reset IRQ mask (task-196) */
     ym_ssg_silence(y);
     return y;
@@ -203,6 +261,9 @@ void ym_reset(ym2610 *y)
 {
     y->wq.clear();
     y->chip.reset();
+    y->chip.lin_reset();
+    if (y->gold) y->chip.lin_set_irq_mask(1);
+    y->irq_level = 0;
     ym_ssg_silence(y);
     ae_reset(y->ae);
     memset(&y->busy, 0, (char *)(y->irqmask + 2) - (char *)&y->busy);
@@ -291,6 +352,10 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
            and the 40-4D SSG alias only produced a DC rail. */
         y->chip.write(2, reg); y->sh_hreg = reg; y->chip.write(3, val); y->sh_hi[reg] = val;
     }
+    /* GOLDPORT: in gold mode the core owns busy (ymfm_set_busy_end on every
+       write) and the timers (ymfm_set_timer via write_data 0x24-0x27); the
+       hand-written busy/timer bookkeeping below is legacy-layer only. */
+    if (!y->gold) {
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
@@ -363,6 +428,7 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     if (reg == 0x1f) { if (val & 0x08) y->opm_cnt = y->opm_latch + 1;
                        if (val & 0x10) { y->tflag[c] &= ~1; y->opm_flag = 0; } }
     }
+    } /* !gold */
 }
 
 void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
@@ -375,6 +441,12 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 
 void ym_advance(ym2610 *y, int zcycles)
 {
+    /* GOLDPORT: zcycles is the YM device-clock domain (YM_CLOCK 8 MHz, same
+       domain ymfm's duration_in_clocks uses). The core timers armed via
+       ymfm_set_timer fire inside lin_tick(); engine_timer_expired -> status
+       flag -> engine_check_interrupts -> ymfm_update_irq drives the Z80 IRQ
+       level exactly like MAME's device timers + inputline. */
+    if (y->gold) { y->clk += (unsigned long)zcycles; y->chip.lin_tick(zcycles); return; }
     static int f_notimerb = -1;
     if (f_notimerb < 0) f_notimerb = getenv("NOTIMERB") ? 1 : 0;
     /* ymfm fm_engine_base::update_timer (ymfm_fm.ipp:1480): timer B period =
@@ -546,6 +618,10 @@ int ym_load_state(ym2610 *y, const void *buf)
 extern "C" int ym_irq_pending_dbg(void *y) { return ym_irq_pending((ym2610 *)y); }
 int ym_irq_pending(ym2610 *y)
 {
+    /* GOLDPORT: the core's engine_check_interrupts already computed the exact
+       level MAME wires to the audiocpu IRQ line (status & irq_mask, edge
+       reported through ymfm_update_irq). Nothing else to model. */
+    if (y->gold) return y->irq_level;
     /* HYBRID, timer-A only: level IRQ = timer A flag (persistent, cleared by
        the 0x27 bit4 reset) AND active-low IRQA (0x27 bit6) — empirically what
        sm1/m1 drivers act on (they write 0x1f/0x35 with bit6=0 then wait).
@@ -606,6 +682,20 @@ uint8_t ym_read_data(ym2610 *y, int chipno, uint8_t reg)
 
 uint8_t ym_read(ym2610 *y, int chipno)
 {
+    /* GOLDPORT: ymfm core status, exactly what MAME's status_lo_r /
+       status_hi_r return. Bank A (lower port) = OPN timer flags + core busy
+       window (ymfm_is_busy -> lin_is_busy, advanced by lin_tick); bank B
+       (upper port) = ADPCM EOS bits gated by the flag mask. No read-clear:
+       flags are cleared by the driver's 0x27 reset bits, per the core. */
+    if (y->gold) {
+        if (chipno) return y->chip.read_status_hi();
+        uint8_t st = y->chip.read_status();
+        /* ADPCM-B EOS on the bank-A status bit6 (legacy-layer semantics the
+           mslug4 BGM pump depends on; ymfm keeps it out of read_status). */
+        if (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)
+            { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
+        return st;
+    }
     int c = chipno ? 1 : 0;
     uint8_t st = (uint8_t)(y->tflag[c] & 3);
     /* ymfm parity: the OPM (YM2151) half of YM2610 implements NO timers, so

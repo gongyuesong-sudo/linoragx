@@ -9461,13 +9461,39 @@
           "total": 3,
           "description": "KEY REVERSAL: golden ZTRACE shows golden sm1 PC stays in idle loop 0x133-0x158 for the ENTIRE t0-4.17 window (never self-halts at fffd). lin sm1 self-halts at f25 (SESSION-493 'self-halt is normal design' conclusion is WRONG - golden never reaches 0c25). The idle loop 0x133-0x158 IS the task pump: golden fe35=ff written at t=4.0723 from within this loop's task chain (sm1 0x11894 block: ld a,(fe35); add a,64; ld (fe35),a; call c,18a0; ret). lin's divergence: NMI handler at f25 falls through djnz-exhaust to 0c25 self-halt instead of returning to idle loop. Next attempt: diff lin NMI handler exit path vs golden - why does lin's djnz at 0bb5 exhaust (48 iters) while golden's returns early? Likely djnz waits on a condition (YM busy/status read) that lin satisfies differently.",
           "timestamp": "2026-11-02T21:29:55Z"
+        },
+        {
+          "step": 2,
+          "total": 3,
+          "description": "lin sm1 fe40/fe42/fe43/fe44 all 0 at f25-200 (hw detect failed -> self-halt path). sm1 09bc detect task: ld a,(fe40); cp 4; ret z else YM test writes regs 8/9/a via 2936; 09d5 block reads back via 2941 helper (de=87/88/90/a0) to set fe42/43/44 capability flags. sm1 fe40 writers: 0x4a7/0x4be/0x8ae/0x2588 (+bank mirrors). Root of detect failure = YM status/data readback divergence - exactly the layer the user now wants replaced by MAME gold-standard port.",
+          "timestamp": "2026-11-02T21:33:09Z"
         }
       ],
       "completed_at": null,
       "claimed_by": "hermes",
       "lease_expires_at": "2026-11-02T21:29:13Z"
+    },
+    {
+      "id": "task-265",
+      "title": "移植 MAME 金标准 YM2610 音频包装层：用 ymfm 内建 timer/IRQ 电平模型/read_status 替换 lin 手写层",
+      "status": "pending",
+      "priority": "P0",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "bash -lc \"cd /home/gill/linoragx && reawork/rewrite/build/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 3000 --headless --dump-audio /tmp/t265_s.wav >/dev/null 2>&1; python3 -c \\\"import wave,struct;w=wave.open('/tmp/t265_s.wav');n=w.getnframes();fr=w.getframerate();d=w.readframes(n);L=[struct.unpack_from('<h',d,4*i)[0] for i in range(n)];loud=sum(1 for s in range(n//fr) if sum(1 for i in range(1,fr) if (L[s*fr+i-1]<0)!=(L[s*fr+i]<0))>200);print('samsho2 loud',loud);exit(0 if loud>=30 else 1)\\\"\"",
+        "timeout_seconds": 600
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
     }
   ],
-  "session_count": 276,
-  "last_session": "2026-11-02T21:09:04Z"
+  "session_count": 277,
+  "last_session": "2026-11-02T21:30:34Z"
 }
