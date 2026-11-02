@@ -1697,3 +1697,6 @@
 [2026-11-02T18:33:50Z] [SESSION-293] ERROR [task-261] [TASK_EXEC] attempt3 完成，golden fd23/24 写入路径未定位
 [2026-11-02T18:33:50Z] [SESSION-293] STATS tasks_total=259 completed=161 failed=98 pending=0
 [2026-11-02T18:33:50Z] [SESSION-293] LOCK released
+[2026-11-02T19:02:40Z] [SESSION-489] LOCK acquired (pid=cli)
+[2026-11-02T19:02:40Z] [SESSION-489] task-262 BREAKTHROUGH: filler runs TWO rounds same timestamp (iy=fd18 writes fd21-24 + iy=fd1c writes fd25-28); hl source is (ix+07/08) NOT iy (dd 6e 07 = ld l,ix+07 - prior decode error); golden t4.1752 fd18-round writes fd23/24=f794 (ZW fd23-handler captured off=0 f7 zpc=126c, off=1 94 zpc=126f); lin f258 fd18-round writes fd23/24=cd43 (source fd1f/20 via iy=fd18 view). Self-sustaining loop: filler reads AND writes fd23/24 - initial value decides. 68K shared-RAM hypothesis DEAD (neither side writes 0x2fd23, lin RAMWA + MAME FD97W both silent). ZW zpc offset varies 0..+3 per DRC block boundary - unreliable. ZRAMWA zpc = sampling-step PC. lin runtime 10xx view = disk 12xx shifted 0x24D (bank view, ZBYTES proved).
+[2026-11-02T19:02:40Z] [SESSION-489] STATS tasks_total=260 completed=160 failed=99 pending=1 attempts_total=450 checkpoints=564
