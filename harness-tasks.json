@@ -9441,12 +9441,12 @@
     {
       "id": "task-264",
       "title": "samsho2 sm1 唤醒路径缺段：golden sm1 在 cmd=01 唤醒时执行 fe35+=0x64 音乐初始化块(sm1 0x11894)，lin sm1 同唤醒不执行",
-      "status": "pending",
+      "status": "in_progress",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 0,
+      "attempts": 1,
       "max_attempts": 3,
-      "started_at_commit": null,
+      "started_at_commit": "3ada710",
       "validation": {
         "command": "bash -lc \"cd /home/gill/linoragx && Z80DUMP=/tmp/t264v.bin reawork/rewrite/build/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 2510 --headless >/dev/null 2>&1; python3 -c \\\"import os;d=open('/tmp/t264v.bin','rb').read();off=(min(2500,os.path.getsize('/tmp/t264v.bin')//2048-1))*2048;v=d[off+0xfe35-0xf800];print('fe35',hex(v));exit(0 if v!=0 else 1)\\\"\"",
         "timeout_seconds": 300
@@ -9455,8 +9455,17 @@
         "cleanup": null
       },
       "error_log": [],
-      "checkpoints": [],
-      "completed_at": null
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "KEY REVERSAL: golden ZTRACE shows golden sm1 PC stays in idle loop 0x133-0x158 for the ENTIRE t0-4.17 window (never self-halts at fffd). lin sm1 self-halts at f25 (SESSION-493 'self-halt is normal design' conclusion is WRONG - golden never reaches 0c25). The idle loop 0x133-0x158 IS the task pump: golden fe35=ff written at t=4.0723 from within this loop's task chain (sm1 0x11894 block: ld a,(fe35); add a,64; ld (fe35),a; call c,18a0; ret). lin's divergence: NMI handler at f25 falls through djnz-exhaust to 0c25 self-halt instead of returning to idle loop. Next attempt: diff lin NMI handler exit path vs golden - why does lin's djnz at 0bb5 exhaust (48 iters) while golden's returns early? Likely djnz waits on a condition (YM busy/status read) that lin satisfies differently.",
+          "timestamp": "2026-11-02T21:29:55Z"
+        }
+      ],
+      "completed_at": null,
+      "claimed_by": "hermes",
+      "lease_expires_at": "2026-11-02T21:29:13Z"
     }
   ],
   "session_count": 276,

@@ -1737,3 +1737,5 @@
 [2026-11-02T21:09:04Z] [SESSION-276] LOCK acquired; resuming task-263 attempt 3 step19 (golden AUDWR fe3d/fe35 after MAME rebuild)
 [2026-11-02T21:15:01Z] [SESSION-502] task-263 step19: fe35=ff inject builds f967 handles but audio unchanged - handle table not the bottleneck; 0530 caller is indirect table w@1c32.
 [2026-11-02T21:16:46Z] [SESSION-502] task-263 step20: golden fe35=ff written in SM1 phase (sm1 0x11894: fe35+=0x64) before handoff; lin sm1 self-halts at f25 never reaches it. fe35 is dynamic (ff->00 at t12.13). task-263 marked failed 3/3 with full causal chain documented.
+[2026-11-02T21:17:06Z] [SESSION-502] STATS tasks_total=262 completed=160 failed=101 pending=1
+[2026-11-02T21:29:13Z] [SESSION-502] Starting [task-264] samsho2 sm1 wake-path fe35 block (base=3ada710)
