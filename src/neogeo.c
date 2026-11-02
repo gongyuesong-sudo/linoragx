@@ -3718,7 +3718,7 @@ void linoragx_z80_step(unsigned int pc)
           fprintf(stderr, "ZS %d %04x\n", f, pc); }
     { static int ixx = -2;
       if (ixx == -2) ixx = getenv("IXXDBG") ? 1 : 0;
-      if (ixx && g_ng && (pc == 0x1386 || pc == 0x138c || pc == 0x138f)) {
+      if (ixx && g_ng && (pc == 0x1386 || pc == 0x138c || pc == 0x138f || pc == 0x218f || pc == 0x21f4 || pc == 0x0133)) {
           extern uint16_t z80w_ix(void*), z80w_iy(void*); extern uint8_t z_read(uint32_t, void*);
           uint16_t ix = z80w_ix(g_ng->z), iy = z80w_iy(g_ng->z);
           fprintf(stderr, "IXX f=%llu pc=%04x ix=%04x iy=%04x ix15=%02x ix16=%02x\n",

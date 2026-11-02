@@ -8893,8 +8893,43 @@
     }
    ],
    "completed_at": null
+  },
+  {
+   "id": "task-254",
+   "title": "samsho2 \u97f3\u4e50\u4efb\u52a1 ix \u6c61\u67d3\uff1alin ix=6ea8(ROM) vs \u91d1\u6807 RAM \u8f68\u9053\u8868\u6307\u9488\u2014\u2014\u8ffd 22f8 \u904d\u5386\u5668 ix \u88c5\u8f7d\u94fe",
+   "status": "failed",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 1,
+   "max_attempts": 3,
+   "started_at_commit": "8f2ed06",
+   "validation": {
+    "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+    "timeout_seconds": 300
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [
+    "[TASK_EXEC] attempt1\uff1a\u4e3b\u5faa\u73af ix=ffff(43922\u6b21,\u4ece\u672a\u8bbe)\u2014\u2014lin 1386 handler \u4ece IRQ/11bb \u94fe\u8fdb\u5165(ix=ROM\u5783\u573e6ea8/e8c2)\uff0c\u91d1\u6807\u4ece\u5fc3\u8df3\u5faa\u73af(2189)\u8fdb\u5165(ix=RAM\u8f68\u9053\u8868f525)\u3002\u547d\u4ee4\u6d41\u4e24\u4fa7\u5b8c\u5168\u540c\u6b65(01/03/03/02/03/03/07/2d/1e/57)\u3002fd8d\uff1alin=c1(bit0=1) \u91d1\u6807=c0(bit0=0)\uff0c\u5199\u8005 zpc=1386\u3002\u91d1\u6807\u961f\u5217\u4e5f\u7a7a(feb0==feb1)\u2014\u2014Z80 \u90fd\u5728 idle\uff0c\u7f3a\u53e3=1386 \u7684\u8fdb\u5165\u8def\u5f84\u4e0e\u72b6\u6001\u5b57\u8282\u5199\u5165\u503c"
+   ],
+   "checkpoints": [
+    {
+     "step": 0,
+     "total": 3,
+     "description": "\u8d77\u70b9\uff1aIXXDBG \u8bc1\u5b9e lin 11bb \u94fe handler \u6267\u884c\u65f6 ix=6ea8(ROM)\uff0c\u91d1\u6807 ix \u6307\u5411 RAM \u8f68\u9053\u8868(f525/f539)\u3002\u5fc3\u8df3\u5faa\u73af\u5404\u7ec4 ix \u5747\u4e3a RAM \u503c(fd9c/fdac/...)\uff0c22f8 \u904d\u5386\u5668\u662f ix \u53d8\u5316\u552f\u4e00\u4e2d\u95f4\u5c42",
+     "timestamp": "2026-11-02T14:50:25Z"
+    },
+    {
+     "step": 1,
+     "total": 3,
+     "description": "IXXDBG \u6269\u5c55(218f/21f4/0133)\uff1alin \u5fc3\u8df3\u5faa\u73af\u5165\u53e3 218f/21f4 \u4ece\u672a\u5230\u8fbe(0 \u8f93\u51fa)\uff1b\u4e3b\u5faa\u73af ix \u5206\u5e03 ffff/e8c2/6ea8 \u5168 ROM\u3002\u91d1\u6807 fd80-ff00 \u5168\u6bd4\u5bf9\uff1a\u4ec5 fd85=b6f7\u3001fd95=baf7 \u6307\u9488 + fe22=0a/fe24=ee + feb0/1=01/01\u3002\u4e0b\u4e00\u6b65\uff1a\u67e5 lin \u4e3a\u4f55\u4e0d\u8fdb\u5fc3\u8df3\u5faa\u73af 2189\uff082155 \u95e8 jp nz,2207 \u7684 l \u503c\u6765\u6e90 IN(04) bit1\u2014\u2014\u56de\u5230 timer \u76f8\u4f4d\uff09\uff0c\u4ee5\u53ca 1386 \u5199 c1 vs c0 \u7684\u6761\u4ef6\u5206\u652f",
+     "timestamp": "2026-11-02T15:08:05Z"
+    }
+   ],
+   "completed_at": null
   }
  ],
- "session_count": 265,
- "last_session": "2026-11-02T14:49:18Z"
+ "session_count": 266,
+ "last_session": "2026-11-02T15:08:05Z"
 }

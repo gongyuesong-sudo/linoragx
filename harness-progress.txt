@@ -1582,3 +1582,8 @@
 [2026-11-02T14:49:18Z] [SESSION-269] ERROR [task-253] [TASK_EXEC] attempt3 ix 分歧定位：lin ix=6ea8(ROM) vs 金标 ix=RAM轨道表
 [2026-11-02T14:49:18Z] [SESSION-269] STATS tasks_total=251 completed=160 failed=91 pending=0
 [2026-11-02T14:49:18Z] [SESSION-269] LOCK released
+[2026-11-02T14:50:25Z] [SESSION-270] LOCK acquired (pid=3940182)
+[2026-11-02T14:50:25Z] [SESSION-270] Starting [task-254] samsho2 ix 污染链追踪 (base=8f2ed06)
+[2026-11-02T15:08:05Z] [SESSION-270] ERROR [task-254] [TASK_EXEC] attempt1：lin 心跳循环从未进入，1386 从 IRQ 链进入致 ix=ROM 垃圾
+[2026-11-02T15:08:05Z] [SESSION-270] STATS tasks_total=252 completed=160 failed=92 pending=0
+[2026-11-02T15:08:05Z] [SESSION-270] LOCK released
