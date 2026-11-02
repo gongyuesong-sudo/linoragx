@@ -1510,3 +1510,16 @@
 [2026-11-01T23:47:50Z] [SESSION-258] STATS tasks_total=245 completed=156 failed=90 pending=0 blocked=0
 [2026-11-01T23:47:50Z] [SESSION-258] LOCK released
 [2026-11-01T23:50:36Z] [SESSION-258] STATS final: tasks_total=245 completed=156 failed=90 pending=0 blocked=0 — lastbld2 12k=69色确认 task-247 修复有效，图形基线 191/208、音频 194/208 维持
+[2026-11-02T11:07:10Z] [SESSION-259] LOCK acquired (pid=3773367)
+[2026-11-02T11:07:10Z] [SESSION-259] Starting [task-249] samsho2 对战音频 YM2151 timer 移植 (base=5c8e89e)
+[2026-11-02T11:10:27Z] [SESSION-259] CHECKPOINT [task-249] step=3/3 IRQ分布定位：taken集中f300-600(+299)，f640战斗命令后mask=0归零死锁；fd17消费经ix间接寻址，TCB arming层移交新任务；批测proc_2f5272aac249进行中
+[2026-11-02T11:42:28Z] [SESSION-259] CHECKPOINT [task-249] step=3/3 批测完成 voiced 191/208(基线190) lost=0 gain=kof96ae20(0->31s)
+[2026-11-02T11:42:28Z] [SESSION-259] Completed [task-249] (commit 3c31c84)
+[2026-11-02T11:42:28Z] [SESSION-259] STATS tasks_total=247 completed=157 failed=90 pending=0 blocked=0
+[2026-11-02T11:42:28Z] [SESSION-259] LOCK released
+[2026-11-02T11:45:25Z] [SESSION-260] LOCK acquired (pid=3790592)
+[2026-11-02T11:45:25Z] [SESSION-260] Starting [task-250] samsho2 任务链调度器 fd17→TCB arming (base=3c31c84)
+[2026-11-02T11:54:49Z] [SESSION-260] CHECKPOINT [task-250] step=1/3 任务链全图反推完成；根因收窄至 2207 入口相位门 bit 1,l（lin 接受点锁死等待循环 l=b4）；金标 fe3c=0e vs lin 00；RAMPOKE 注入证伪
+[2026-11-02T11:54:49Z] [SESSION-260] ERROR [task-250] [TASK_EXEC] 相位门未修复，留 2 次重试；下一步：lin IRQ 接受相位对比 / MAME ZPCH 抓金标 handler 到达分布
+[2026-11-02T11:54:49Z] [SESSION-260] STATS tasks_total=248 completed=157 failed=91 pending=0 blocked=0
+[2026-11-02T11:54:49Z] [SESSION-260] LOCK released
