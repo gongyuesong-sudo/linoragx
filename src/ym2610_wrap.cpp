@@ -626,6 +626,13 @@ uint8_t ym_read(ym2610 *y, int chipno)
        the current segment ended; a PLAYING-semantics bit would be inverted and
        make the driver punch each segment short (logo sound played too fast). */
     if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)) { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
+    { static int eosdbg = -2;
+      if (eosdbg == -2) eosdbg = getenv("EOSDBG") ? 1 : 0;
+      /* task-256: golden IN(06) bit0/bit1 are ADPCM-A channel EOS bits
+         (ymfm ym2610::read_status_hi = m_eos_status & m_flag_mask; the A-side
+         drum EOS comes from m_adpcm_a.clock). lin never exposed them, so the
+         m1 handler's fc37 bit0 branch (0837 ADPCM-B music init) never fired. */
+      if (eosdbg && chipno == 1) st |= (y->chip.read_status_hi() & 0x3f); }
     y->tflag[c] = 0;
     if (!c) y->opm_flag = 0;   /* MAME ym2151 status_r is read-clear: the
                                   bank-A status read ACKs the OPM timer flag

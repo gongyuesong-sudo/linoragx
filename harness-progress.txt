@@ -1623,3 +1623,6 @@
 [2026-11-02T16:06:46Z] [SESSION-277] ERROR [task-256] [TASK_EXEC] attempt2：IN(06)=ADPCM-A EOS 状态非 timer（ymfm ym2610::read_status_hi）
 [2026-11-02T16:06:46Z] [SESSION-277] STATS tasks_total=254 completed=160 failed=94 pending=0
 [2026-11-02T16:06:46Z] [SESSION-277] LOCK released
+[2026-11-02T16:10:27Z] [SESSION-278] ERROR [task-256] [TASK_EXEC] attempt3：EOSDBG 无增益，lin ADPCM-A EOS 恒 0
+[2026-11-02T16:10:27Z] [SESSION-278] STATS tasks_total=255 completed=160 failed=95 pending=1
+[2026-11-02T16:10:27Z] [SESSION-278] LOCK released

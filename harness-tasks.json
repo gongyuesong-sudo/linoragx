@@ -8998,7 +8998,7 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
    "started_at_commit": "db1f21c",
    "validation": {
@@ -9010,7 +9010,8 @@
    },
    "error_log": [
     "[TASK_EXEC] attempt1\uff1a\u91d1\u6807 bank B r26/r27 \u5199=0\uff08YMPC \u5168\u91cf\u6838\u5bf9\uff09\u4f46 IN(06) bit0\u00d76504/bit1\u00d75663 \u7ffb\u8f6c\u3002ymfm_fm.ipp:1510 timer \u9700 0x27 bit2/3 enable\uff08\u6301\u4e45\u4f4d\uff09\u2192 \u91d1\u6807 bank B timer enable \u5fc5\u5728 BIOS \u671f(sm1)\u8bbe\u7f6e\u3002lin handoff \u91cd\u7f6e YM \u6001\u4e22\u5931 enable \u2192 IN(06) \u6052 00\u3002bank B r24/25 \u91d1\u6807\u5927\u91cf\u5199(0x25=4e/bf/c4/94\u00d7\u6570\u767e)\u5b9e\u4e3a ADPCM-A \u5bc4\u5b58\u5668\u975e timer",
-    "[TASK_EXEC] attempt2\uff1aBIOS \u671f\u5047\u8bbe\u8bc1\u4f2a\uff08\u91d1\u6807 YMPC \u4ece t=0.0108s \u5168\u5f55\uff0cbank B r27 \u6052 0\uff09\u3002ymfm_opn.cpp:1942 ym2610::read_status_hi = m_eos_status & m_flag_mask\u2014\u2014IN(06) \u6839\u672c\u4e0d\u662f timer \u72b6\u6001\uff01m_eos_status |= m_adpcm_a.clock(0x3f)\uff08\u884c 2174\uff09\uff1aADPCM-A \u901a\u9053 EOS \u4f4d\u3002\u91d1\u6807 IN(06) bit0\u00d76504/bit1\u00d75663 = ADPCM-A \u9f13\u7ec4\u64ad\u653e\u5b8c\u6210\u901a\u77e5\u3002lin bank B \u72b6\u6001\u65e0 ADPCM-A EOS \u4f4d \u2192 IN(06) \u6052 00 \u2192 handler fc37 bit0\u21920837(ADPCM-B \u97f3\u4e50 init) \u6c38\u4e0d\u89e6\u53d1 = \u97f3\u4e50\u4efb\u52a1\u6cf5\u7f3a\u53e3\u771f\u56e0"
+    "[TASK_EXEC] attempt2\uff1aBIOS \u671f\u5047\u8bbe\u8bc1\u4f2a\uff08\u91d1\u6807 YMPC \u4ece t=0.0108s \u5168\u5f55\uff0cbank B r27 \u6052 0\uff09\u3002ymfm_opn.cpp:1942 ym2610::read_status_hi = m_eos_status & m_flag_mask\u2014\u2014IN(06) \u6839\u672c\u4e0d\u662f timer \u72b6\u6001\uff01m_eos_status |= m_adpcm_a.clock(0x3f)\uff08\u884c 2174\uff09\uff1aADPCM-A \u901a\u9053 EOS \u4f4d\u3002\u91d1\u6807 IN(06) bit0\u00d76504/bit1\u00d75663 = ADPCM-A \u9f13\u7ec4\u64ad\u653e\u5b8c\u6210\u901a\u77e5\u3002lin bank B \u72b6\u6001\u65e0 ADPCM-A EOS \u4f4d \u2192 IN(06) \u6052 00 \u2192 handler fc37 bit0\u21920837(ADPCM-B \u97f3\u4e50 init) \u6c38\u4e0d\u89e6\u53d1 = \u97f3\u4e50\u4efb\u52a1\u6cf5\u7f3a\u53e3\u771f\u56e0",
+    "[TASK_EXEC] attempt3\uff1aEOSDBG=1\uff08ym_read(1) \u5408\u5e76 chip.read_status_hi()&0x3f\uff09\u65e0\u589e\u76ca\u2014\u2014FM \u5bc6\u5ea6 254 \u4e0d\u53d8\u3001loud=41 \u540c\u57fa\u7ebf\u3001IN(06) \u8bfb\u503c\u5206\u5e03 00\u00d7151 \u4e3a\u4e3b\uff08EOS bit0-5 \u6052 0\uff1alin \u7684 ymfm ADPCM-A \u901a\u9053 EOS \u4ece\u672a\u7f6e\u4f4d\uff0c\u53ef\u80fd attract \u671f ADPCM-A \u672a\u5b9e\u9645\u64ad\u653e\u6216 clock \u8def\u5f84\u672a\u8d70\u5230 m_adpcm_a.clock\uff09\u3002\u9644\u5e26\u53d1\u73b0\uff1aZIO 06 \u8bfb\u503c 4e/4d/4a/49/a5 \u4e3a FM \u5bc4\u5b58\u5668 shadow \u503c\u6df7\u5165"
    ],
    "checkpoints": [
     {
@@ -9024,11 +9025,37 @@
      "total": 3,
      "description": "\u771f\u56e0\u5b9a\u6848\uff1alin bank B \u72b6\u6001\u7f3a ADPCM-A EOS \u4f4d\u3002\u4e0b\u4e00\u6b65\uff1alin ADPCM-A \u901a\u9053\u64ad\u5b8c\uff08\u5230\u8fbe end\uff09\u7f6e EOS \u4f4d\uff0cym_read(1) \u8fd4\u56de\u5408\u5e76 EOS \u72b6\u6001\uff0c\u53c2\u7167 ymfm m_flag_mask \u673a\u5236\uff08r27 \u5199 ~data&mask \u6e05\u4f4d\uff09\u3002\u91d1\u6807 m_flag_mask \u521d\u503c EOS_FLAGS_MASK",
      "timestamp": "2026-11-02T16:06:46Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "3/3 \u7528\u5c3d\u3002IN(06) EOS \u4f4d\u5047\u8bbe\u5728 lin \u4fa7\u65e0\u6cd5\u751f\u6548\u56e0 ADPCM-A EOS \u6052 0\u3002\u4e0b\u4e00\u6b65\u65b0\u4efb\u52a1\u65b9\u5411\uff1a\u67e5 lin ADPCM-A \u64ad\u653e\u8def\u5f84\uff08ae_pull \u662f\u5426\u8d70 ymfm m_adpcm_a.clock\uff09+ samsho2 attract \u671f ADPCM-A \u662f\u5426\u771f\u5728\u64ad\u653e\uff08\u91d1\u6807 bank B r00\u00d715547 \u9f13\u5199\u6709\u64ad\uff09",
+     "timestamp": "2026-11-02T16:10:27Z"
     }
    ],
+   "completed_at": null
+  },
+  {
+   "id": "task-257",
+   "title": "lin ADPCM-A \u64ad\u653e\u8def\u5f84\u6838\u67e5\uff1aae_pull \u662f\u5426\u9a71\u52a8 ymfm m_adpcm_a.clock\u3001attract \u671f\u9f13\u6837\u672c\u662f\u5426\u771f\u51fa\u58f0\u3001EOS \u4e3a\u4f55\u6052 0",
+   "status": "pending",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 0,
+   "max_attempts": 3,
+   "started_at_commit": null,
+   "validation": {
+    "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+    "timeout_seconds": 300
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [],
+   "checkpoints": [],
    "completed_at": null
   }
  ],
  "session_count": 273,
- "last_session": "2026-11-02T16:06:46Z"
+ "last_session": "2026-11-02T16:10:27Z"
 }
