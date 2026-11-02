@@ -1639,3 +1639,7 @@
 [2026-11-02T16:33:47Z] [SESSION-281] ERROR [task-257] [TASK_EXEC] attempt3：tick 率已对齐 40.7Hz≈45/s，缺口=每溢出接受数 0.75 vs 4.8
 [2026-11-02T16:33:47Z] [SESSION-281] STATS tasks_total=256 completed=160 failed=95 pending=1
 [2026-11-02T16:33:47Z] [SESSION-281] LOCK released
+[2026-11-02T16:36:11Z] [SESSION-282] Starting [task-258] attempt1 心跳段解码 (base=77cd01f)
+[2026-11-02T16:36:11Z] [SESSION-282] ERROR [task-258] [TASK_EXEC] attempt1：心跳直线段完整走完，缺口收窄到 22f8 任务块激活
+[2026-11-02T16:36:11Z] [SESSION-282] STATS tasks_total=256 completed=160 failed=96 pending=0
+[2026-11-02T16:36:11Z] [SESSION-282] LOCK released
