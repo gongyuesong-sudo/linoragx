@@ -8778,9 +8778,9 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
-   "started_at_commit": "5dfea44",
+   "started_at_commit": "45aa54c",
    "validation": {
     "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
     "timeout_seconds": 240
@@ -8790,7 +8790,8 @@
    },
    "error_log": [
     "[TEST_FAIL] FM \u5bc6\u5ea6 254/3000f < 500\uff08\u97f3\u9891\u7248\u5b9e\u6d4b\uff0cno-audio \u5047\u8c61\u5df2\u6392\u9664\uff09\uff1b\u7f3a\u53e3=\u4efb\u52a1\u5faa\u73af\u7387 56/s vs \u91d1\u6807 1306/s",
-    "[TASK_EXEC] attempt2\uff1a\u7f3a\u53e3\u6536\u7a84\u4e3a\u6bcf IRQ \u4efb\u52a1\u94fe\u6df1\u5ea6\uff08\u91d1\u6807 22 \u6b65 vs lin 1 \u6b65\uff09\uff1b\u95e8 fe1c/fbf3/fbfd \u7f6e\u4f4d\u70b9\u5df2\u5b9a\u4f4d\uff08fbf3@26e9\u3001fbfd@2701\u3001fe1c@a5a/1036/13f9/145c/27c4\uff09\u4f46\u5747\u7ecf call(hl) \u95f4\u63a5\u8868\u5230\u8fbe\uff0c\u9700\u8ffd\u6d3e\u53d1\u8868\u6784\u5efa"
+    "[TASK_EXEC] attempt2\uff1a\u7f3a\u53e3\u6536\u7a84\u4e3a\u6bcf IRQ \u4efb\u52a1\u94fe\u6df1\u5ea6\uff08\u91d1\u6807 22 \u6b65 vs lin 1 \u6b65\uff09\uff1b\u95e8 fe1c/fbf3/fbfd \u7f6e\u4f4d\u70b9\u5df2\u5b9a\u4f4d\uff08fbf3@26e9\u3001fbfd@2701\u3001fe1c@a5a/1036/13f9/145c/27c4\uff09\u4f46\u5747\u7ecf call(hl) \u95f4\u63a5\u8868\u5230\u8fbe\uff0c\u9700\u8ffd\u6d3e\u53d1\u8868\u6784\u5efa",
+    "[TASK_EXEC] attempt3\uff1a\u91d1\u6807\u95e8 fe1c/fbf3/fbfd \u540c\u4e3a 0\uff08\u95e8\u5047\u8bbe\u6b7b\uff09\uff1bZ80STEP \u8bc1\u5b9e lin \u4efb\u52a1\u94fe\u5b8c\u6574\uff08IRQ\u219211bb\u219211c2\u21921202\u2192124a\u21921277\u219212a3\u219212c3\u219212d2\u219212f5\u21921314\u21921350\u2192137a\u21921395 \u5199 fd97\uff0c\u6bcf\u4efb\u52a1 handler \u591a\u6b21\u8c03 bank A \u52a9\u624b 2b27-2b38\uff09\u3002\u7f3a\u53e3\u6700\u7ec8=\u6bcf IRQ \u4efb\u52a1\u904d\u5386\u6b21\u6570\uff08\u91d1\u6807 22 \u6b65 vs lin 1 \u6b65\uff09\uff0c\u5373\u4efb\u52a1\u961f\u5217\u6761\u76ee\u6570/\u8c03\u5ea6\u6df1\u5ea6\uff0c\u975e\u94fe\u7ed3\u6784\u3002fd97 \u91d1\u6807 f7ba vs lin 7877=\u8f68\u9053\u6570\u636e bank \u5185\u5bb9\u5dee\u5f02\uff08\u540c kof10th zbank \u7c7b\uff09"
    ],
    "checkpoints": [
     {
@@ -8822,11 +8823,17 @@
      "total": 3,
      "description": "\u95e8\u7f6e\u4f4d\u70b9\u5b9a\u4f4d\uff1afbf3@26e9\u3001fbfd@2701\uff08\u5404\u552f\u4e00\uff09\u3001fe1c@a5a/1036/13f9/145c/27c4\uff1b\u65e0\u76f4\u63a5 call \u5230 26c0-2710 \u533a\u2014\u2014\u4efb\u52a1 handler \u7ecf call(hl) \u95f4\u63a5\u8868\u8c03\u7528\uff0c\u4e0b\u4e00\u6b65\u8ffd\u8868\u6784\u5efa\uff08\u901a\u5e38\u5728 init \u671f ld hl,(table) \u6a21\u5f0f\uff09",
      "timestamp": "2026-11-02T13:17:39Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "\u4efb\u52a1\u94fe\u7ed3\u6784\u5b8c\u6574\u8bc1\u5b9e\uff08Z80STEP f2466 \u5168\u94fe 11bb\u21921395\uff09\uff1bfd97 \u6307\u9488\u503c\u5dee\u5f02\u6307\u5411\u8f68\u9053\u6570\u636e bank \u5185\u5bb9\uff1b\u5269\u4f59\u65b9\u5411=bank \u7a97\u53e3\u5185\u5bb9\u6bd4\u5bf9\uff08zbank_base \u7c7b\uff09\u6216\u4efb\u52a1\u961f\u5217\u6df1\u5ea6",
+     "timestamp": "2026-11-02T13:29:14Z"
     }
    ],
    "completed_at": null
   }
  ],
  "session_count": 263,
- "last_session": "2026-11-02T13:17:39Z"
+ "last_session": "2026-11-02T13:29:14Z"
 }

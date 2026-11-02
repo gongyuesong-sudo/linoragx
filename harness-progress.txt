@@ -1558,3 +1558,8 @@
 [2026-11-02T13:17:39Z] [SESSION-265] STATS tasks_total=250 completed=160 failed=90 pending=0
 [2026-11-02T13:17:39Z] [SESSION-265] WARN 批测 180/208 零回归（lost=0 gain=kof96ae20），等完成
 [2026-11-02T13:17:39Z] [SESSION-265] LOCK released
+[2026-11-02T13:18:40Z] [SESSION-266] Starting [task-252] attempt 3 任务门间接表 (base=45aa54c)
+[2026-11-02T13:29:14Z] [SESSION-266] ERROR [task-252] [TASK_EXEC] attempt3 门假设死（金标同0）；链结构完整；缺口=遍历次数/fd97 bank 内容
+[2026-11-02T13:29:14Z] [SESSION-266] STATS tasks_total=250 completed=160 failed=90 pending=0
+[2026-11-02T13:29:14Z] [SESSION-266] WARN 批测 200/208 lost=0 gain=kof96ae20
+[2026-11-02T13:29:14Z] [SESSION-266] LOCK released
