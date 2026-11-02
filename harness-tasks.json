@@ -9392,6 +9392,12 @@
           "total": 3,
           "description": "m1 0x1105 block decoded: di; fe3d=cmd push; gates fe34/fe33/fc38; bank-B YM writes via 2b71 (de=1001/1000); sub 0x20 -> table 2exx -> call 01aa; in(08..0b) bank ports; jump table 3800; call 0b38 (f837 zero); f967 handle-table zero; call 2b39 + call 2b27(a=1,b=7) = music engine start. BUT samsho2 command stream (01/03/03/02/03/03/07/2d/1e/57) has NO cmd>=0x20 - so 0x1105 is NOT the golden t4.5 table builder; fe3d may also be written internally by m1. Next: ZRAMWA=0xfe3d on lin to see who writes fe3d post-handoff, and PCOUNT on 1105/11b8/11bf (2b39/2b27 call sites) to test whether engine-start ever executes in lin.",
           "timestamp": "2026-11-02T20:39:20Z"
+        },
+        {
+          "step": 13,
+          "total": 3,
+          "description": "1105 call chain fully decoded: m1 dispatcher -> 0x1c4 handler: ld hl,6c4a; add hl,de; ld a,(hl); ld (fe3f),a; then fe3f dispatch 1->0ca0 / 2->01ec->jp 1105 (engine start) / 3->0299 / 4->0609 / 5->0a0f. lin f655 ZREADDBG: bank window 6c4a reads 01 01 01... == m1 disk content (bank regs 0=1e,1=0e,2=06,3=02 via 0x1aa helper, mapping CORRECT). So lin takes fe3f=1 -> 0ca0 branch, NEVER 2 -> 1105. Golden must see 2 at 6c4a+de: either golden bank window maps elsewhere at that moment OR the table is runtime-written (self-modifying/RAM alias at 6c4a - ROM window normally read-only so writes dropped in lin). Next: MAME BANKSEL/ZW probe on golden around t4.2-4.5 for bank reg values when 0x1c4 runs, and check whether golden ever writes 6c4a region (write handler on audiocpu 0x6c40-0x6c5f).",
+          "timestamp": "2026-11-02T20:56:10Z"
         }
       ],
       "completed_at": null

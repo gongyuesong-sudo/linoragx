@@ -3774,7 +3774,7 @@ void linoragx_z80_step(unsigned int pc)
       if (zrd_f >= 0 && f == zrd_f && g_ng && g_ng->snd) {
           extern uint8_t z_read(uint32_t, void*);
           fprintf(stderr, "ZRD f=%d pc=%04x", f, pc);
-          static const unsigned addrs[6] = {0xf526, 0xf53a, 0xf794, 0xf7a6, 0xf540, 0xf556};
+          static const unsigned addrs[6] = {0x6c4a, 0x6c4b, 0x6c4c, 0x6c4d, 0x6c4e, 0x6c4f};
           for (int q = 0; q < 6; q++) {
               fprintf(stderr, " %04x:", addrs[q]);
               for (int i = 0; i < 8; i++) fprintf(stderr, " %02x", z_read(addrs[q] + i, g_ng));
