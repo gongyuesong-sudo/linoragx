@@ -9258,7 +9258,7 @@
       "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 1,
+      "attempts": 3,
       "max_attempts": 3,
       "started_at_commit": "eb68f5f",
       "validation": {
@@ -9269,7 +9269,9 @@
         "cleanup": null
       },
       "error_log": [
-        "[TASK_EXEC] caller-chain divergence narrowed: lin filler via 28fc chain (ix garbage), golden via 06e5/078a (ix=fd1c); 06e5 never reached in lin"
+        "[TASK_EXEC] caller-chain divergence narrowed: lin filler via 28fc chain (ix garbage), golden via 06e5/078a (ix=fd1c); 06e5 never reached in lin",
+        "[TASK_EXEC] attempt2: filler via jp; lin ix-walk base fce8 misaligned by 4 vs golden fcec - never visits fd1c block",
+        "[TASK_EXEC] attempt3: RAMPOKEB golden-table inject regressed (FM 157->0); state-consistency required, static injection falsified"
       ],
       "checkpoints": [
         {
@@ -9283,6 +9285,18 @@
           "total": 3,
           "description": "PCOUNT: lin 2262=681 (ix=fd1c IS set 681x by 2207 walk) but filler ix=garbage -> ix clobbered between walk and filler. 06e5/078a=0: lin NEVER reaches jp z,1216 call sites (prior 25136 was PEEK trap). lin filler real caller = 28fc->1013 chain (Z80STEP f258). golden filler caller = 06e5/078a chain with ix=fd1c preserved. Divergence = which caller reaches filler.",
           "timestamp": "2026-11-02T19:06:32Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "FILLDBG ret=0000: filler entered via jp not call. lin ix walk sequence fce8/fcf8 stride 0x10 (add ix,de @13e8) - MISSES fd1c block (fd1c-fce8=0x34 not multiple of 0x10). golden walk includes fd1c (2262 ld ix,fd1c or fcec start: fd1c-fcec=0x30=3*0x10). Gap = walk start base: lin fce8 vs golden fcec/fd1c. ld ix,(nn) indirect sites 55d3/55de/55e9/55f4 read RAM tables 59d0/58ca/5033/50c7.",
+          "timestamp": "2026-11-02T19:20:24Z"
+        },
+        {
+          "step": 4,
+          "total": 3,
+          "description": "RAMPOKEB block-inject (golden zs7 fd1c-fdc0 164B at f262): loud 41->35, FM notes 157->0 - static table inject inconsistent with Z80 internal regs (fa99/fd97 point old state), music task dies. Baseline FM notes recount: r4d/r49/r4a/r4e ~40 each = 157/3000f vs golden 11000. Filler entry has NO direct call/jp sites (jp(hl) indirect only).",
+          "timestamp": "2026-11-02T19:22:44Z"
         }
       ],
       "completed_at": null

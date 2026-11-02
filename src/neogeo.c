@@ -3711,6 +3711,15 @@ void linoragx_z80_step(unsigned int pc)
           extern void z80w_poke(void*, uint32_t, uint8_t);
           for (int i = 0; i < rp_n; i++) z80w_poke(g_ng->z, rp_addr[i], (uint8_t)rp_val[i]);
           fprintf(stderr, "RAMPOKE fired f=%d n=%d\n", f, rp_n); } }
+    { static int rpb = -2; static int rpb_f = -1; static char rpb_path[256] = "";
+      if (rpb == -2) { const char *e = getenv("RAMPOKEB"); rpb_f = e ? (int)strtol(e, (char**)&e, 0) : -1;
+          if (e && *e == ':') { strncpy(rpb_path, e + 1, 255); rpb_path[255] = 0; rpb = 1; } else rpb = 0; }
+      if (rpb && g_ng && f == rpb_f) {
+          extern void z80w_poke(void*, uint32_t, uint8_t);
+          FILE *fp = fopen(rpb_path, "rb");
+          if (fp) { uint8_t buf[0x100]; size_t n = fread(buf, 1, 0x100, fp); fclose(fp);
+              for (size_t i = 0; i < n; i++) z80w_poke(g_ng->z, (uint32_t)(0xfd1c + i), buf[i]);
+              fprintf(stderr, "RAMPOKEB fired f=%d n=%zu\n", f, n); } } }
     { static int zst_lo = -2, zst_hi = -2;
       if (zst_lo == -2) { const char *e = getenv("Z80STEP"); const char *d = e ? strchr(e, '-') : 0;
                           zst_lo = e ? atoi(e) : -1; zst_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }
@@ -3724,12 +3733,12 @@ void linoragx_z80_step(unsigned int pc)
     { static int fld = -2;
       if (fld == -2) fld = getenv("FILLDBG") ? 1 : 0;
       if (fld && g_ng && (pc == 0x1262 || pc == 0x1024)) {
-          extern uint16_t z80w_ix(void*), z80w_iy(void*); extern uint8_t z_read(uint32_t, void*);
-          uint16_t ix = z80w_ix(g_ng->z), iy = z80w_iy(g_ng->z);
-          fprintf(stderr, "FILL f=%llu pc=%04x ix=%04x iy=%04x ix07=%02x ix08=%02x iy07=%02x iy08=%02x\n",
-                  (unsigned long long)g_ng->frame, pc, ix, iy,
-                  z_read((uint16_t)(ix + 0x07), g_ng), z_read((uint16_t)(ix + 0x08), g_ng),
-                  z_read((uint16_t)(iy + 0x07), g_ng), z_read((uint16_t)(iy + 0x08), g_ng)); } }
+          extern uint16_t z80w_ix(void*), z80w_iy(void*), z80w_sp(void*); extern uint8_t z_read(uint32_t, void*);
+          uint16_t ix = z80w_ix(g_ng->z), iy = z80w_iy(g_ng->z), sp = z80w_sp(g_ng->z);
+          uint16_t ret = (uint16_t)(z_read(sp, g_ng) | (z_read((uint16_t)(sp + 1), g_ng) << 8));
+          fprintf(stderr, "FILL f=%llu pc=%04x ix=%04x iy=%04x ret=%04x ix07=%02x ix08=%02x\n",
+                  (unsigned long long)g_ng->frame, pc, ix, iy, ret,
+                  z_read((uint16_t)(ix + 0x07), g_ng), z_read((uint16_t)(ix + 0x08), g_ng)); } }
     { static int ixx = -2;
       if (ixx == -2) ixx = getenv("IXXDBG") ? 1 : 0;
       if (ixx && g_ng && (pc == 0x1386 || pc == 0x138c || pc == 0x138f || pc == 0x218f || pc == 0x21f4 || pc == 0x0133 || pc == 0x217f || pc == 0x21e8 || pc == 0x2164 || pc == 0x217c || pc == 0x20ef || pc == 0x214d || pc == 0x2152 || pc == 0x03ce || pc == 0x0837)) {

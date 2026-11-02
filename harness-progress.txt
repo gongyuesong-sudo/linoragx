@@ -1705,3 +1705,10 @@
 [2026-11-02T19:05:40Z] [SESSION-490] CHECKPOINT [task-262] step=1/3 "FILLDBG ix/iy dual-view + ix-load table + zs fill window t4.0-4.5"
 [2026-11-02T19:06:32Z] [SESSION-490] CHECKPOINT [task-262] step=2/3 "PCOUNT 2262=681 ix-set-but-clobbered; 06e5/078a=0 never reached; lin filler caller=28fc chain"
 [2026-11-02T19:06:32Z] [SESSION-490] STATS tasks_total=260 completed=160 failed=99 pending=0 attempts_total=451 checkpoints=566
+[2026-11-02T19:20:24Z] [SESSION-491] LOCK acquired (pid=cli)
+[2026-11-02T19:20:24Z] [SESSION-491] task-262 attempt2: filler entered via jp (ret=0000); lin ix-walk fce8/fcf8 stride10 misses fd1c (offset 0x34 not mult of 0x10); golden walk visits fd1c. Walk base divergence fce8 vs fcec.
+[2026-11-02T19:20:24Z] [SESSION-491] Marked [task-262] failed (2/3)
+[2026-11-02T19:20:24Z] [SESSION-491] STATS tasks_total=260 completed=160 failed=100 pending=0 attempts_total=452 checkpoints=567
+[2026-11-02T19:22:44Z] [SESSION-491] task-262 attempt3: RAMPOKEB inject falsified (FM 157->0, state inconsistency). Baseline FM notes=157/3000f vs golden 11000.
+[2026-11-02T19:22:44Z] [SESSION-491] Marked [task-262] failed (3/3)
+[2026-11-02T19:22:44Z] [SESSION-491] STATS tasks_total=260 completed=160 failed=100 pending=0 attempts_total=453 checkpoints=568
