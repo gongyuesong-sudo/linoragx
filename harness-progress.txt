@@ -1720,3 +1720,6 @@
 [2026-11-02T19:42:18Z] [SESSION-491] CHECKPOINT [task-263] step=2/3 saved
 [2026-11-02T19:44:39Z] [SESSION-491] task-263 step3: UNIRAM alias + REDIR nmi_en=1 - NMI(0x66) still 0. NMI acceptance chain = next gap. All env-gated, baseline safe.
 [2026-11-02T19:44:39Z] [SESSION-491] CHECKPOINT [task-263] step=3/3 saved
+[2026-11-02T19:52:48Z] [SESSION-491] MAMEVIEW batch aborted 60/208: 5 regressions - view-swap-as-default FALSIFIED, stays env-gated off. Upstream gap: sm1 early self-halt f25-27.
+[2026-11-02T19:52:48Z] [SESSION-491] Marked [task-263] failed (2/3)
+[2026-11-02T19:52:48Z] [SESSION-491] STATS tasks_total=261 completed=160 failed=101 pending=0 attempts_total=455 checkpoints=572

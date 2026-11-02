@@ -9304,10 +9304,10 @@
     {
       "id": "task-263",
       "title": "samsho2 ix=fce8 writer trace: who clobbers ix before filler (golden keeps fd1c)",
-      "status": "in_progress",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 1,
+      "attempts": 2,
       "max_attempts": 3,
       "started_at_commit": "4c5af8b",
       "validation": {
@@ -9317,7 +9317,9 @@
       "on_failure": {
         "cleanup": null
       },
-      "error_log": [],
+      "error_log": [
+        "[TASK_EXEC] MAMEVIEW=1 batch aborted at 60/208: 5 regressions (dragonsh/fatfursp/fatfury2/fatfury3/ghostlop lost audio) - global view-swap falsified as default"
+      ],
       "checkpoints": [
         {
           "step": 1,
@@ -9336,6 +9338,12 @@
           "total": 3,
           "description": "UNIRAM env (Z80 F800+ aliased to smem, MAME single-audioram parity): FM 265 unchanged. REDIR now also forces z80_nmi_en=1 but PCOUNT NMI(0x66)=0 persists - NMI asserted at soundlatch write (en gate passed) yet Z80 never vectors to 0x66. Next unresolved: NMI acceptance chain under MAMEVIEW (mz80int_dispatch / iff / core NMI latch). All experiments env-gated default-off: baseline untouched.",
           "timestamp": "2026-11-02T19:44:39Z"
+        },
+        {
+          "step": 4,
+          "total": 3,
+          "description": "MAMEVIEW=1 60-card batch: 5 regressions (dragonsh/fatfursp/fatfury2/fatfury3/ghostlop, baseline voiced all verified: dragonsh peak 2316, ghostlop 8714). View swap at ch5=1 catches Z80 at incompatible PC in m1 view for these cards. MAMEVIEW stays env-gated OFF. Upstream gap: lin sm1 self-halts (jp fffd) at f25-27 while golden sm1 idles waiting commands - fix sm1 halt-condition parity is the true path for samsho2.",
+          "timestamp": "2026-11-02T19:52:48Z"
         }
       ],
       "completed_at": null
