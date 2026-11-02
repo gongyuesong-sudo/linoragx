@@ -8778,7 +8778,7 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 1,
+   "attempts": 2,
    "max_attempts": 3,
    "started_at_commit": "5dfea44",
    "validation": {
@@ -8789,7 +8789,8 @@
     "cleanup": null
    },
    "error_log": [
-    "[TEST_FAIL] FM \u5bc6\u5ea6 254/3000f < 500\uff08\u97f3\u9891\u7248\u5b9e\u6d4b\uff0cno-audio \u5047\u8c61\u5df2\u6392\u9664\uff09\uff1b\u7f3a\u53e3=\u4efb\u52a1\u5faa\u73af\u7387 56/s vs \u91d1\u6807 1306/s"
+    "[TEST_FAIL] FM \u5bc6\u5ea6 254/3000f < 500\uff08\u97f3\u9891\u7248\u5b9e\u6d4b\uff0cno-audio \u5047\u8c61\u5df2\u6392\u9664\uff09\uff1b\u7f3a\u53e3=\u4efb\u52a1\u5faa\u73af\u7387 56/s vs \u91d1\u6807 1306/s",
+    "[TASK_EXEC] attempt2\uff1a\u7f3a\u53e3\u6536\u7a84\u4e3a\u6bcf IRQ \u4efb\u52a1\u94fe\u6df1\u5ea6\uff08\u91d1\u6807 22 \u6b65 vs lin 1 \u6b65\uff09\uff1b\u95e8 fe1c/fbf3/fbfd \u7f6e\u4f4d\u70b9\u5df2\u5b9a\u4f4d\uff08fbf3@26e9\u3001fbfd@2701\u3001fe1c@a5a/1036/13f9/145c/27c4\uff09\u4f46\u5747\u7ecf call(hl) \u95f4\u63a5\u8868\u5230\u8fbe\uff0c\u9700\u8ffd\u6d3e\u53d1\u8868\u6784\u5efa"
    ],
    "checkpoints": [
     {
@@ -8809,11 +8810,23 @@
      "total": 3,
      "description": "\u5207\u5165\u70b9\u9501\u5b9a\uff1a22f8 \u904d\u5386\u21922310\u2192call 24b0 \u97f3\u4e50\u7b49\u5f85\u5faa\u73af\uff0clin fe3c=0x0e\uff08\u5fc3\u8df3\u56de\u663e\uff09\uff1bSESSION-260 \u8bb0\u5f55 24b0 \u9000\u51fa\u503c={0,0x31,0x60,bit7}\u4e0d\u542b 0x0e\u2014\u2014\u4f46\u91d1\u6807 fe3c \u540c\u4e3a 0x0e \u5374\u4e0d\u6ede\u7559\uff0c\u9700\u91cd\u6838 24b0 \u5bf9 0x0e \u7684\u771f\u5b9e\u5904\u7406\uff08SESSION-260 \u66fe\u5224 zdis \u53d8\u957f\u524d\u7f00\u53cd\u6c47\u7f16\u6709\u9519\uff09",
      "timestamp": "2026-11-02T13:06:04Z"
+    },
+    {
+     "step": 1,
+     "total": 3,
+     "description": "24b0 \u91cd\u6838\uff1a\u5faa\u73af\u4f53\u6d4b (hl) \u8f68\u9053\u5b57\u8282\uff08\u975e fe3c\uff09\uff0clin \u672a\u6ede\u7559\uff08\u70ed\u70b9\u5728\u4e3b\u73af\uff09\u3002\u91d1\u6807 ZPCH \u5e27\u91c7\u6837\u8bc1\u5b9e\u91d1\u6807\u4e3b\u73af\u540c\u4e3a 0x133-0x13c \u7b49\u5f85\u73af\u3002\u7f3a\u53e3\u6700\u7ec8\u5f62\u6001\uff1a\u91d1\u6807\u6bcf IRQ \u6267\u884c\u4efb\u52a1\u6d3e\u53d1\u94fe 2189-21fa \u5168\u94fe\uff08fe3c=0b/0c/0d/0e \u56db\u4efb\u52a1\uff0c\u6bcf\u4efb\u52a1 handler \u591a\u6b21\u8c03 bank A \u52a9\u624b 2b75\u2192r27\u00d722/IRQ\uff09\uff0clin \u6bcf IRQ \u4ec5 ~1 \u6b65\u3002\u4e0b\u4e00\u6b65\uff1a\u4efb\u52a1\u95e8 fe1c/fbf3/fbfd\uff08lin \u6052 0\uff0c\u91d1\u6807\u5f00\uff09\u7684\u7f6e\u4f4d\u6765\u6e90",
+     "timestamp": "2026-11-02T13:17:01Z"
+    },
+    {
+     "step": 2,
+     "total": 3,
+     "description": "\u95e8\u7f6e\u4f4d\u70b9\u5b9a\u4f4d\uff1afbf3@26e9\u3001fbfd@2701\uff08\u5404\u552f\u4e00\uff09\u3001fe1c@a5a/1036/13f9/145c/27c4\uff1b\u65e0\u76f4\u63a5 call \u5230 26c0-2710 \u533a\u2014\u2014\u4efb\u52a1 handler \u7ecf call(hl) \u95f4\u63a5\u8868\u8c03\u7528\uff0c\u4e0b\u4e00\u6b65\u8ffd\u8868\u6784\u5efa\uff08\u901a\u5e38\u5728 init \u671f ld hl,(table) \u6a21\u5f0f\uff09",
+     "timestamp": "2026-11-02T13:17:39Z"
     }
    ],
    "completed_at": null
   }
  ],
  "session_count": 263,
- "last_session": "2026-11-02T13:06:04Z"
+ "last_session": "2026-11-02T13:17:39Z"
 }

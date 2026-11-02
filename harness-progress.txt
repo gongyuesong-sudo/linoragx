@@ -1552,3 +1552,9 @@
 [2026-11-02T13:06:04Z] [SESSION-264] STATS tasks_total=250 completed=160 failed=90 pending=0
 [2026-11-02T13:06:04Z] [SESSION-264] WARN 批测 140/208 时零回归+gain kof96ae20，等完成通知
 [2026-11-02T13:06:04Z] [SESSION-264] LOCK released
+[2026-11-02T13:17:01Z] [SESSION-265] Starting [task-252] attempt 2 任务派发链深度 (base=e3327a8)
+[2026-11-02T13:17:01Z] [SESSION-265] CHECKPOINT [task-252] step=1/3 24b0 排除（测(hl)非fe3c）；金标主环同构；缺口=每IRQ任务链深度 22 vs 1；下一步=任务门 fe1c/fbf3/fbfd 置位源
+[2026-11-02T13:17:39Z] [SESSION-265] ERROR [task-252] [TASK_EXEC] attempt2 缺口=每IRQ任务链深度；门置位经间接表
+[2026-11-02T13:17:39Z] [SESSION-265] STATS tasks_total=250 completed=160 failed=90 pending=0
+[2026-11-02T13:17:39Z] [SESSION-265] WARN 批测 180/208 零回归（lost=0 gain=kof96ae20），等完成
+[2026-11-02T13:17:39Z] [SESSION-265] LOCK released
