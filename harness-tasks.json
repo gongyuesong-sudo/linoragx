@@ -9304,10 +9304,10 @@
     {
       "id": "task-263",
       "title": "samsho2 ix=fce8 writer trace: who clobbers ix before filler (golden keeps fd1c)",
-      "status": "in_progress",
+      "status": "failed",
       "priority": "P1",
       "depends_on": [],
-      "attempts": 2,
+      "attempts": 3,
       "max_attempts": 3,
       "started_at_commit": "4c5af8b",
       "validation": {
@@ -9422,11 +9422,43 @@
           "total": 3,
           "description": "DECISIVE: golden fe35=ff, lin fe35=00. Task-registration block 0x530 (registers music tasks 0b/0c/0d with iy=f947/f937 handle bases via call 2b27) is gated by fe35 (ret z when 0) - lin PCOUNT 0530=0 never passes. fe35 setters in m1: 0xf70 and 0xf89 set ff; 0xf96/0xfab set 0. Reached via jp chain at 0xcbc-0xcc8 = tail of the 0cad fe3d-indexed cmd table: entry5->0f79, entry6->0f89 (SET ff), entry7->0f96 (CLR). lin PCOUNT: 0f79=1, 0f96=1 (CLR ran), 0f89=0 (SET never ran) => lin never received/dispatched the fe3d cmd value 6 that arms music init. golden must see fe3d=6 somewhere. Next: MAME AUDWR/ZW on golden fe3d to capture the value-6 write timing and writer zpc; compare with lin fe3d write stream (07/2d/1e/21/1c/cc/cf - no 6).",
           "timestamp": "2026-11-02T21:06:46Z"
+        },
+        {
+          "step": 19,
+          "total": 3,
+          "description": "RAMPOKE fe35=ff at f660 experiment: f967 handle table DID get built (01 00 00 17 e9 x2 - but ptrs point to ROM e9xx, golden's point to RAM f5xx) yet L loud unchanged 41/50s and PCOUNT 0530 still 0 (fe35 gate not the blocker for the registration block - its caller is the indirect task dispatch table entry w@0x1c32). => f967 handle table is NOT the audio density bottleneck; it is a side artifact. Golden AUDWR fe3d/fe35 probe rebuilt and running (proc_927dd88f3e8a). Remaining hypothesis space for FM density: golden's engine tick source delivers ~22 helper calls/frame vs lin 4 - likely tied to golden's higher IRQ accept rate (109/s vs 37.5/s) driving heartbeat more often; prior CAPN/OPNA/TSTEP experiments falsified simple variants.",
+          "timestamp": "2026-11-02T21:15:01Z"
+        },
+        {
+          "step": 20,
+          "total": 3,
+          "description": "Golden AUDWR captured: fe35=ff at t=4.0723 (BEFORE handoff t=4.1759!) - so written during SM1 phase, not m1. m1-side setters (0f89 etc) unreachable then (lin PCOUNT f599: 0f89/0f70/0f96/0fab all 0). True sm1 writer found: sm1 0x11894 block: ld a,(fe35); add a,64; ld (fe35),a; call c,18a0; pop af; ret - fe35 accumulates +0x64 (0x9b+0x64=ff). First AUDWR poll t=0.0108 fe35=00; by t=4.0723 fe35=ff. lin sm1 never reaches this block (self-halt at f25 while golden sm1 keeps running until 4.07). fe3d stream golden: 02@4.17, 00@11.96, 07@12.13 (fe35=00 again at 12.13!), 2d@12.37, 1e@66 - matches lin latch stream. NOTE golden fe35 goes ff->00 at t=12.13 - it is a dynamic state var (music playing flag), not one-shot init. Next: find sm1 0x11894 caller + what gates it in lin (this is the true sm1-phase divergence: golden sm1 does music-init work between f25 and handoff, lin sm1 self-halts early).",
+          "timestamp": "2026-11-02T21:16:46Z"
         }
       ],
       "completed_at": null
+    },
+    {
+      "id": "task-264",
+      "title": "samsho2 sm1 唤醒路径缺段：golden sm1 在 cmd=01 唤醒时执行 fe35+=0x64 音乐初始化块(sm1 0x11894)，lin sm1 同唤醒不执行",
+      "status": "pending",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 0,
+      "max_attempts": 3,
+      "started_at_commit": null,
+      "validation": {
+        "command": "bash -lc \"cd /home/gill/linoragx && Z80DUMP=/tmp/t264v.bin reawork/rewrite/build/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 2510 --headless >/dev/null 2>&1; python3 -c \\\"import os;d=open('/tmp/t264v.bin','rb').read();off=(min(2500,os.path.getsize('/tmp/t264v.bin')//2048-1))*2048;v=d[off+0xfe35-0xf800];print('fe35',hex(v));exit(0 if v!=0 else 1)\\\"\"",
+        "timeout_seconds": 300
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [],
+      "completed_at": null
     }
   ],
-  "session_count": 275,
-  "last_session": "2026-11-02T19:02:40Z"
+  "session_count": 276,
+  "last_session": "2026-11-02T21:09:04Z"
 }

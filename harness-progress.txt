@@ -1734,3 +1734,6 @@
 [2026-11-02T21:01:55Z] [SESSION-499] task-263 step16: circular dependency quantified - golden ~12 task ticks per IRQ accept vs lin 1; heartbeat batch-count gap is last unknown.
 [2026-11-02T21:04:16Z] [SESSION-500] task-263 step17: lin engine runs (rhythm table built, cursor advances); true gap = f967 track-handle registration missing in lin.
 [2026-11-02T21:06:46Z] [SESSION-501] task-263 step18: fe35 golden=ff lin=00 - music task registration gate. lin ran CLR block (0f96) but never SET block (0f89) = fe3d cmd 6 never dispatched in lin.
+[2026-11-02T21:09:04Z] [SESSION-276] LOCK acquired; resuming task-263 attempt 3 step19 (golden AUDWR fe3d/fe35 after MAME rebuild)
+[2026-11-02T21:15:01Z] [SESSION-502] task-263 step19: fe35=ff inject builds f967 handles but audio unchanged - handle table not the bottleneck; 0530 caller is indirect table w@1c32.
+[2026-11-02T21:16:46Z] [SESSION-502] task-263 step20: golden fe35=ff written in SM1 phase (sm1 0x11894: fe35+=0x64) before handoff; lin sm1 self-halts at f25 never reaches it. fe35 is dynamic (ff->00 at t12.13). task-263 marked failed 3/3 with full causal chain documented.
