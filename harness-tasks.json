@@ -9386,6 +9386,12 @@
           "total": 3,
           "description": "golden zs5 (t4.5, m1 cold-start+0.3s) vs lin f260 (MAMEVIEW handoff+9f): 177 diffs - golden already has music-engine runtime structures: f967-f99b track handle table (stride 0x10 entries 01|ptr_lo|f5-f7) + fadf-fb13 rhythm pair table (33 33/74 74/78 78/30 30/15 15/40 40/14 1e/0f 0f/0c 0c stride 4). lin all zeros there. Rhythm pattern NOT in m1 ROM (0 hits) - tables are engine runtime products, not loaded data. => golden m1 engine executes within 0.3s of cold start; lin engine never produces them. Divergence is m1 main-loop execution, not data loading. Next: identify m1 routine that builds f967 handle table (search m1 for writes to f967 via hl=967x setup: ld hl,967f/ld de,967f/imm patterns or ldir dest f967) and its entry gate.",
           "timestamp": "2026-11-02T20:37:12Z"
+        },
+        {
+          "step": 12,
+          "total": 3,
+          "description": "m1 0x1105 block decoded: di; fe3d=cmd push; gates fe34/fe33/fc38; bank-B YM writes via 2b71 (de=1001/1000); sub 0x20 -> table 2exx -> call 01aa; in(08..0b) bank ports; jump table 3800; call 0b38 (f837 zero); f967 handle-table zero; call 2b39 + call 2b27(a=1,b=7) = music engine start. BUT samsho2 command stream (01/03/03/02/03/03/07/2d/1e/57) has NO cmd>=0x20 - so 0x1105 is NOT the golden t4.5 table builder; fe3d may also be written internally by m1. Next: ZRAMWA=0xfe3d on lin to see who writes fe3d post-handoff, and PCOUNT on 1105/11b8/11bf (2b39/2b27 call sites) to test whether engine-start ever executes in lin.",
+          "timestamp": "2026-11-02T20:39:20Z"
         }
       ],
       "completed_at": null
