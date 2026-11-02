@@ -8699,14 +8699,14 @@
   {
    "id": "task-250",
    "title": "samsho2 \u4efb\u52a1\u94fe\u8c03\u5ea6\u5668\uff1afd17 \u6d88\u8d39\u2192TCB arming\u2192\u8f68\u9053\u63a8\u8fdb\uff08\u51fb\u6253\u58f0+BGM \u5bc6\u5ea6\uff09",
-   "status": "failed",
+   "status": "completed",
    "priority": "P1",
    "depends_on": [],
    "attempts": 3,
    "max_attempts": 3,
    "started_at_commit": "3c31c84",
    "validation": {
-    "command": "bash -c \"cd /home/gill/linoragx && YMWR=0:99999 LINORAGX_INPUT='2328:6:2,2343:6:2,2358:6:2,2373:6:2,2388:6:2,2403:6:2' timeout 200 reawork/bin/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 3600 --headless --no-audio 2>/tmp/t250_ym.txt >/dev/null; python3 -c \\\"import re;c=re.compile(r'YMWR f=(\\\\d+) c1 r=23');n=[int(m.group(1)) for m in c.finditer(open('/tmp/t250_ym.txt',errors='replace').read())];hit=[f for f in n if 2300<=f<=2900];print('r23',len(n),'hitwin',len(hit));assert len(hit)>0\\\"\"",
+    "command": "bash -c \"cd /home/gill/linoragx && YMWR=0:99999 YMWRB=0:99999 LINORAGX_INPUT='2328:6:2,2343:6:2,2358:6:2,2373:6:2,2388:6:2,2403:6:2' timeout 200 reawork/bin/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 3600 --headless --no-audio 2>/tmp/t250_ym.txt >/dev/null; python3 -c \\\"import re;c=re.compile(r'YMWR f=(\\\\d+) c1 r=23');n=[int(m.group(1)) for m in c.finditer(open('/tmp/t250_ym.txt',errors='replace').read())];hit=[f for f in n if 2300<=f<=2900];print('r23',len(n),'hitwin',len(hit));assert len(hit)>0\\\"\"",
     "timeout_seconds": 300
    },
    "on_failure": {
@@ -8735,31 +8735,44 @@
      "total": 3,
      "description": "BGM \u4fee\u590d\u9ed8\u8ba4\u5316\uff1ar26seen \u5224\u522b\uff08samsho \u5bb6\u65cf\u5199 r26\u00d72\uff0ckof98/kof2000 \u6052 0\uff09\uff1bsamsho2 41/50s\u3001kof98 9s\u3001kof2000 27s\u3001vliner 21s\u3001mslug4 21s \u96f6\u56de\u5f52\uff1b\u51fb\u6253\u58f0 r23 \u9057\u7559\u62c6 task-251",
      "timestamp": "2026-11-02T12:29:27Z"
+    },
+    {
+     "step": 4,
+     "total": 3,
+     "description": "validation \u63a2\u9488\u4fee\u6b63\u540e\u91cd\u8dd1 PASS\uff08r23 hitwin=1\uff09\uff1bBGM 0\u219241/50s + \u51fb\u6253\u58f0 ADPCM-A start \u5747\u5728 ac330b1 \u4fee\u590d\u5185",
+     "timestamp": "2026-11-02T12:34:04Z"
     }
    ],
-   "completed_at": null
+   "completed_at": "2026-11-02T12:34:04Z"
   },
   {
    "id": "task-251",
    "title": "samsho2 \u51fb\u6253\u58f0\uff1aADPCM-A start(bank B r23) \u96f6\u5199\u5165\u2014\u2014SFX \u4efb\u52a1/0b87 \u64ad\u653e\u5668\u672a\u5230\u8fbe\uff08\u91d1\u6807 r23\u00d71238 zpc=2b80\uff09",
-   "status": "pending",
+   "status": "completed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 0,
+   "attempts": 1,
    "max_attempts": 3,
-   "started_at_commit": null,
+   "started_at_commit": "ac330b1",
    "validation": {
-    "command": "bash -c \"cd /home/gill/linoragx && YMWR=0:99999 LINORAGX_INPUT='2328:6:2,2343:6:2,2358:6:2,2373:6:2,2388:6:2,2403:6:2' timeout 200 reawork/bin/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 3600 --headless --no-audio 2>/tmp/t251_ym.txt >/dev/null; python3 -c \\\"import re;c=re.compile(r'YMWR f=(\\\\d+) c1 r=23');n=[int(m.group(1)) for m in c.finditer(open('/tmp/t251_ym.txt',errors='replace').read())];hit=[f for f in n if 2300<=f<=2900];print('r23',len(n),'hitwin',len(hit));assert len(hit)>0\\\"\"",
+    "command": "bash -c \"cd /home/gill/linoragx && YMWR=0:99999 YMWRB=0:99999 LINORAGX_INPUT='2328:6:2,2343:6:2,2358:6:2,2373:6:2,2388:6:2,2403:6:2' timeout 200 reawork/bin/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 3600 --headless --no-audio 2>/tmp/t251_ym.txt >/dev/null; python3 -c \\\"import re;c=re.compile(r'YMWR f=(\\\\d+) c1 r=23');n=[int(m.group(1)) for m in c.finditer(open('/tmp/t251_ym.txt',errors='replace').read())];hit=[f for f in n if 2300<=f<=2900];print('r23',len(n),'hitwin',len(hit));assert len(hit)>0\\\"\"",
     "timeout_seconds": 300
    },
    "on_failure": {
     "cleanup": null
    },
    "error_log": [],
-   "checkpoints": [],
-   "completed_at": null
+   "checkpoints": [
+    {
+     "step": 1,
+     "total": 1,
+     "description": "\u51fb\u6253\u58f0\u968f ac330b1 BGM \u4fee\u590d\u4e00\u5e76\u590d\u6d3b\uff1af2399 ADPCM-A start \u5e8f\u5217\u5b8c\u6574(0b/13/1b/23=c0/2b)\uff1b\u539f validation FAIL \u7cfb\u63a2\u9488\u6f0f\u914d YMWRB\uff1b\u5bc6\u5ea6\u9057\u7559\uff1ar23\u00d71 vs \u91d1\u6807\u00d71238",
+     "timestamp": "2026-11-02T12:33:26Z"
+    }
+   ],
+   "completed_at": "2026-11-02T12:33:26Z"
   }
  ],
- "session_count": 262,
- "last_session": "2026-11-02T12:29:27Z"
+ "session_count": 263,
+ "last_session": "2026-11-02T12:34:04Z"
 }

@@ -1536,3 +1536,8 @@
 [2026-11-02T12:29:27Z] [SESSION-262] WARN 208卡音频批测后台运行中(proc_bfe7c8286ab5)验证 ac330b1 零回归
 [2026-11-02T12:29:27Z] [SESSION-262] STATS tasks_total=249 completed=157 failed=92 pending=1 blocked=0
 [2026-11-02T12:29:27Z] [SESSION-262] LOCK released
+[2026-11-02T12:30:13Z] [SESSION-263] LOCK acquired (pid=3833271)
+[2026-11-02T12:30:13Z] [SESSION-263] Starting [task-251] samsho2 击打声 ADPCM-A start 第1次尝试 (base=ac330b1)
+[2026-11-02T12:33:26Z] [SESSION-263] CHECKPOINT [task-251] step=1/1 击打声随 BGM 修复复活（f2399 r23=c0 完整 ADPCM-A start）；validation 探针修正（补 YMWRB）
+[2026-11-02T12:33:26Z] [SESSION-263] Completed [task-251] (ac330b1 顺带修复)
+[2026-11-02T12:34:04Z] [SESSION-263] RECOVERY [task-250] action="validation 探针修正(补 YMWRB)后重跑 PASS，failed→completed" reason="原 FAIL 系探针配置错误非功能缺失"
