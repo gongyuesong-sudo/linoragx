@@ -1613,3 +1613,8 @@
 [2026-11-02T15:57:16Z] [SESSION-275] CHECKPOINT [task-255] step=3/3 修复路径=bank B timer 门+r26seen，转 task-256
 [2026-11-02T15:57:16Z] [SESSION-275] STATS tasks_total=254 completed=160 failed=94 pending=1
 [2026-11-02T15:57:16Z] [SESSION-275] LOCK released
+[2026-11-02T15:59:34Z] [SESSION-276] LOCK acquired (pid=3991499)
+[2026-11-02T15:59:34Z] [SESSION-276] Starting [task-256] bank B timer 门实验 (base=cfc461e)
+[2026-11-02T15:59:34Z] [SESSION-276] ERROR [task-256] [TASK_EXEC] attempt1：金标 bank B r27=0 但 timer flag 翻转 → BIOS 期使能假设
+[2026-11-02T15:59:34Z] [SESSION-276] STATS tasks_total=254 completed=160 failed=94 pending=0
+[2026-11-02T15:59:34Z] [SESSION-276] LOCK released

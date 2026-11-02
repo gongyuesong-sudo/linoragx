@@ -8995,12 +8995,12 @@
   {
    "id": "task-256",
    "title": "bank B OPN timer \u95e8\u5f00 c<=1 + r26seen \u5224\u522b\u5668\uff08samsho2 \u5f00/kof98 \u5173\uff09\uff0c\u91d1\u6807 IN(06) bit0\u00d76504+bit1\u00d75663 \u5bf9\u7167\uff0c\u76ee\u6807 FM>500/3000f \u4e14\u56de\u5f52\u77e9\u9635\u96f6\u635f\u5931",
-   "status": "pending",
+   "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 0,
+   "attempts": 1,
    "max_attempts": 3,
-   "started_at_commit": null,
+   "started_at_commit": "cfc461e",
    "validation": {
     "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
     "timeout_seconds": 300
@@ -9008,11 +9008,20 @@
    "on_failure": {
     "cleanup": null
    },
-   "error_log": [],
-   "checkpoints": [],
+   "error_log": [
+    "[TASK_EXEC] attempt1\uff1a\u91d1\u6807 bank B r26/r27 \u5199=0\uff08YMPC \u5168\u91cf\u6838\u5bf9\uff09\u4f46 IN(06) bit0\u00d76504/bit1\u00d75663 \u7ffb\u8f6c\u3002ymfm_fm.ipp:1510 timer \u9700 0x27 bit2/3 enable\uff08\u6301\u4e45\u4f4d\uff09\u2192 \u91d1\u6807 bank B timer enable \u5fc5\u5728 BIOS \u671f(sm1)\u8bbe\u7f6e\u3002lin handoff \u91cd\u7f6e YM \u6001\u4e22\u5931 enable \u2192 IN(06) \u6052 00\u3002bank B r24/25 \u91d1\u6807\u5927\u91cf\u5199(0x25=4e/bf/c4/94\u00d7\u6570\u767e)\u5b9e\u4e3a ADPCM-A \u5bc4\u5b58\u5668\u975e timer"
+   ],
+   "checkpoints": [
+    {
+     "step": 1,
+     "total": 3,
+     "description": "\u65b0\u5047\u8bbe\uff1a\u91d1\u6807 BIOS \u671f\u5199 bank B r27 \u4f7f\u80fd timer\uff0clin handoff \u6e05 YM \u6001\u4e22\u5931\u3002\u4e0b\u4e00\u6b65\uff1a\u2460MAME YMPC \u4ece t=0 \u5168\u5f55\u6293 BIOS \u671f bank B r27 \u5199 \u2461lin \u4fa7 handoff \u4fdd\u7559 YM bank B \u5bc4\u5b58\u5668\u6001\u5b9e\u9a8c",
+     "timestamp": "2026-11-02T15:59:34Z"
+    }
+   ],
    "completed_at": null
   }
  ],
- "session_count": 271,
- "last_session": "2026-11-02T15:57:16Z"
+ "session_count": 272,
+ "last_session": "2026-11-02T15:59:34Z"
 }
