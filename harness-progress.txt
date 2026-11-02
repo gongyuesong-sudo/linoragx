@@ -1651,3 +1651,8 @@
 [2026-11-02T16:40:39Z] [SESSION-284] ERROR [task-258] [TASK_EXEC] attempt3：双等待圈实锤，音乐执行段零进入，队列生产者缺口=最终形态，PARK
 [2026-11-02T16:40:39Z] [SESSION-284] STATS tasks_total=256 completed=160 failed=96 pending=0
 [2026-11-02T16:40:39Z] [SESSION-284] LOCK released
+[2026-11-02T17:05:10Z] [SESSION-285] LOCK acquired
+[2026-11-02T17:05:10Z] [SESSION-285] Starting [task-259] fd26 RAM 指针填充者 (base=7b75ba0)
+[2026-11-02T17:05:10Z] [SESSION-285] ERROR [task-259] [TASK_EXEC] attempt1：队列假设证伪，fd20=静态任务表，缺口=fd26 f7xx 指针填充路径
+[2026-11-02T17:05:10Z] [SESSION-285] STATS tasks_total=257 completed=160 failed=97 pending=0
+[2026-11-02T17:05:10Z] [SESSION-285] LOCK released
