@@ -3716,6 +3716,17 @@ void linoragx_z80_step(unsigned int pc)
                           zst_lo = e ? atoi(e) : -1; zst_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }
       if (zst_lo >= 0 && f >= zst_lo && f <= zst_hi)
           fprintf(stderr, "ZS %d %04x\n", f, pc); }
+    { static int zrd_f = -2;
+      if (zrd_f == -2) { const char *e = getenv("ZREADDBG"); zrd_f = e ? atoi(e) : -1; }
+      if (zrd_f >= 0 && f == zrd_f && g_ng && g_ng->snd) {
+          extern uint8_t z_read(uint32_t, void*);
+          fprintf(stderr, "ZRD f=%d pc=%04x", f, pc);
+          static const unsigned addrs[6] = {0xf780, 0xf7ba, 0x7877, 0x77ee, 0xf000, 0xf040};
+          for (int q = 0; q < 6; q++) {
+              fprintf(stderr, " %04x:", addrs[q]);
+              for (int i = 0; i < 8; i++) fprintf(stderr, " %02x", z_read(addrs[q] + i, g_ng));
+          }
+          fprintf(stderr, "\n"); } }
     if (g_z80flow_lo < 0) return;
     if (f >= g_z80flow_lo && f <= g_z80flow_hi) {
         if (getenv("ZBYTES") && pc < 0x8000 && g_ng->snd) {

@@ -1572,3 +1572,8 @@
 [2026-11-02T13:54:42Z] [SESSION-267] ERROR [task-253] [TASK_EXEC] attempt1 轨道数据非明文拷贝；装载例程待定位
 [2026-11-02T13:54:42Z] [SESSION-267] STATS tasks_total=251 completed=160 failed=91 pending=0
 [2026-11-02T13:54:42Z] [SESSION-267] LOCK released
+[2026-11-02T13:58:05Z] [SESSION-268] Starting [task-253] attempt 2 金标多次 dump 定位轨道填充者 (base=6040f60)
+[2026-11-02T14:00:54Z] [SESSION-268] CHECKPOINT [task-253] step=1/3 任务块 11 个两侧逐字节全同（假设死）；2207 解码完成；等金标 t3-4.2 多次 dump
+[2026-11-02T14:29:44Z] [SESSION-268] ERROR [task-253] [TASK_EXEC] attempt2 bank 窗口内容两侧全同（轨道数据假设死）；缺口=音乐任务推进条件
+[2026-11-02T14:29:44Z] [SESSION-268] STATS tasks_total=251 completed=160 failed=91 pending=0
+[2026-11-02T14:29:44Z] [SESSION-268] LOCK released
