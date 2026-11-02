@@ -287,6 +287,7 @@ DBGFLAG("SCRW",    f_scrw)
 DBGFLAG("LATCH_TR",f_latch_tr)
 DBGFLAG("WDTR",    f_wdtr)
 DBGFLAG("NOCARTAUDIO", f_nocartaudio)
+DBGFLAG("MAMEVIEW", f_mameview)
 DBGFLAG("NORESET", f_noreset)
 DBGFLAG("M1BOOT1", f_m1boot1)
 DBGFLAG("ZTRAIL",  f_ztrail)
@@ -1379,7 +1380,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         case 4: ng->mc_regsel  = v; break;
         case 5: {
             int want = f_nocartaudio() ? 0 : v;
-            if (f_latch_tr()) fprintf(stderr, "LATCH ch5 v=%d pc=%08x f=%d\n", v, m68k_get_reg(NULL,M68K_REG_PC), ng->frame);
+            if (f_latch_tr()) fprintf(stderr, "LATCH ch5 v=%d want=%d pc=%08x f=%d\n", v, want, m68k_get_reg(NULL,M68K_REG_PC), ng->frame);
             if (!v) ng->ch5_bios_pend = 0;   /* BIOS self-test pulse returning to 0
                                                 cancels any pending handoff: only a
                                                 SUSTAINED ch5=1 at end of BIOS is the
@@ -1436,7 +1437,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                            at every handoff so B reads never fall to zero. */
                         if (ng->ym && !ng->k98cb && ng->snd && ng->snd_size)
                             ym_set_rom_b(ng->ym, ng->snd, ng->snd_size);
-                    } else { ng->cart_audio = 0;   /* keep SM1 visible through BIOS phase */
+                    } else { ng->cart_audio = f_mameview() ? 1 : 0;   /* MAME parity (env-gated): ch5=1 swaps bank view immediately, Z80 NOT reset — sm1 PC falls into m1 code at same address */
                         ng->ch5_bios_pend = 1; ng->ch5_on_frame = ng->frame; }
                 }
             }
@@ -3730,6 +3731,14 @@ void linoragx_z80_step(unsigned int pc)
       { static int dump_left = 0; static int fired = 0;
         if (hnd && g_ng && !fired && g_ng->frame > 600 && pc == 0x20ef) { dump_left = 400; fired = 1; }
         if (dump_left > 0) { fprintf(stderr, "HND %04x\n", pc); dump_left--; } } }
+    { static int ixw_lo = -2, ixw_hi = -1; static uint16_t ix_prev = 0xFFFF;
+      if (ixw_lo == -2) { const char *e = getenv("IXWA"); const char *c = e ? strchr(e, '-') : 0;
+          ixw_lo = e ? atoi(e) : -1; ixw_hi = (e && c) ? atoi(c + 1) : (e ? atoi(e) : -1); }
+      if (ixw_lo >= 0 && g_ng && (int)g_ng->frame >= ixw_lo && (int)g_ng->frame <= ixw_hi) {
+          extern uint16_t z80w_ix(void*);
+          uint16_t ix = z80w_ix(g_ng->z);
+          if (ix != ix_prev) { fprintf(stderr, "IXWA f=%llu prev=%04x new=%04x pc=%04x\n",
+                  (unsigned long long)g_ng->frame, ix_prev, ix, pc); ix_prev = ix; } } }
     { static int fld = -2;
       if (fld == -2) fld = getenv("FILLDBG") ? 1 : 0;
       if (fld && g_ng && (pc == 0x1262 || pc == 0x1024)) {

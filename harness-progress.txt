@@ -1712,3 +1712,7 @@
 [2026-11-02T19:22:44Z] [SESSION-491] task-262 attempt3: RAMPOKEB inject falsified (FM 157->0, state inconsistency). Baseline FM notes=157/3000f vs golden 11000.
 [2026-11-02T19:22:44Z] [SESSION-491] Marked [task-262] failed (3/3)
 [2026-11-02T19:22:44Z] [SESSION-491] STATS tasks_total=260 completed=160 failed=100 pending=0 attempts_total=453 checkpoints=568
+[2026-11-02T19:24:02Z] [SESSION-490] LOCK acquired (pid=cli)
+[2026-11-02T19:24:02Z] [SESSION-490] Starting [task-263] samsho2 ix=fce8 writer trace (base=4c5af8b)
+[2026-11-02T19:33:17Z] [SESSION-490] task-263 BREAKTHROUGH: in_bios sm1-view retention = root cause of ix garbage (392-frame sm1 residency pollutes RAM tables). MAMEVIEW=1 MAME-parity (view swap no reset at ch5=1): handoff f251 golden-aligned, fd23/24=f794 correct, 7-card zero regression. FM density 254 residual (music advance gap).
+[2026-11-02T19:33:17Z] [SESSION-490] CHECKPOINT [task-263] step=1/3 saved

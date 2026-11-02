@@ -9300,8 +9300,35 @@
         }
       ],
       "completed_at": null
+    },
+    {
+      "id": "task-263",
+      "title": "samsho2 ix=fce8 writer trace: who clobbers ix before filler (golden keeps fd1c)",
+      "status": "in_progress",
+      "priority": "P1",
+      "depends_on": [],
+      "attempts": 1,
+      "max_attempts": 3,
+      "started_at_commit": "4c5af8b",
+      "validation": {
+        "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+        "timeout_seconds": 300
+      },
+      "on_failure": {
+        "cleanup": null
+      },
+      "error_log": [],
+      "checkpoints": [
+        {
+          "step": 1,
+          "total": 3,
+          "description": "ROOT CAUSE FOUND: lin in_bios branch keeps sm1 view during BIOS ch5=1 (f251) -> sm1 runs 392 extra frames polluting RAM task tables (fce8-aligned sm1 table) -> cart m1 cold-start at f642 reads polluted tables -> filler ix=fce8 garbage. MAME parity: ch5=1 swaps bank view IMMEDIATELY without Z80 reset (sm1 PC falls into m1 code at same address, idle loops coincide at 0x133-0x13c). MAMEVIEW=1 env-gated fix: handoff f642->f251 (golden-aligned), task table fd23/24=f794 CORRECT at f260, command stream byte-identical to golden, Z80 lands in m1 main loop. Residual: FM density still 254 (music task advance gap). Regression spot-check 7 cards (kof98 loud7/7, kof2000/mslug3/pnyaa/kof2003/vliner peaks equal).",
+          "timestamp": "2026-11-02T19:33:17Z"
+        }
+      ],
+      "completed_at": null
     }
   ],
-  "session_count": 274,
+  "session_count": 275,
   "last_session": "2026-11-02T19:02:40Z"
 }
