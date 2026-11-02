@@ -431,6 +431,8 @@ static uint8_t z_read(uint32_t a, void *c)
         return (r && b < sz) ? r[b] : 0xFF; }
     if (a < 0xF800) { uint32_t b = zbank_base(ng,0,ng->zbank[0],sz) + (a-0xF000);
         return (r && b < sz) ? r[b] : 0xFF; }
+    { static int ur = -2; if (ur < 0) ur = getenv("UNIRAM") ? 1 : 0;
+      if (ur && a >= 0xF800) return ng->smem[a]; }
     return ng->sndram[a & 0x7FF];
 }
 static void z_write(uint32_t a, uint8_t v, void *c)
@@ -471,6 +473,8 @@ static void z_write(uint32_t a, uint8_t v, void *c)
                 (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
         if (f_ztrace() && (a >= 0xF800))
             fprintf(stderr, "ZW f=%d a=%04x v=%02x pc=%04x\n", ng->frame, a, v, z80w_pc(ng->z));
+        { static int ur = -2; if (ur < 0) ur = getenv("UNIRAM") ? 1 : 0;
+          if (ur && a >= 0xF800) { ng->smem[a] = v; return; } }
         ng->sndram[a & 0x7FF] = v;
     }
     /* 0x8000-0xF7FF is banked ADPCM ROM: writes ignored (MAME parity) */
@@ -1446,6 +1450,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                                the m1 main-loop wait entry so m1 can service the command ring. */
                             extern void z80w_force_jmp(void*, uint16_t);
                             z80w_force_jmp(ng->z, 0x0133);
+                            ng->z80_nmi_en = 1;   /* m1 expects NMI armed (its init out(08) was skipped by the redirect) */
                             if (f_latch_tr()) fprintf(stderr, "MAMEVIEW-REDIR f=%d\n", ng->frame); } }
                 }
             }

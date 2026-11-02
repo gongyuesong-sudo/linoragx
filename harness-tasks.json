@@ -9330,6 +9330,12 @@
           "total": 3,
           "description": "MAMEVIEW f27 swap catches Z80 at fffd: lin sm1 self-halts (jp fffd) at f25-27 while golden sm1 stays in idle loop. MVREDIR env redirects PC>=0xff00 to 0x133 at swap (fires f25) but filler still 0 hits: command ring broken - lin Z80 0xF800+ = sndram (private) while 68K writes 0x10FD20 -> smem[0xFD20]: TWO DIFFERENT ARRAYS. MAME: Z80 F800-FFFF audioram IS 68K 10F800-10FFFF same physical RAM. m1 ring fd20-fd5f lives in F800+ so 68K command writes never reach Z80 view under MAMEVIEW. Baseline worked because sm1 path used different intake. NMI(0x66)=0 hits under MAMEVIEW; 0133 idle x9.78M. FM 265/3000f. Next: unify sndram with smem[0xF800:] (structural, risky for 193 voiced cards).",
           "timestamp": "2026-11-02T19:42:18Z"
+        },
+        {
+          "step": 3,
+          "total": 3,
+          "description": "UNIRAM env (Z80 F800+ aliased to smem, MAME single-audioram parity): FM 265 unchanged. REDIR now also forces z80_nmi_en=1 but PCOUNT NMI(0x66)=0 persists - NMI asserted at soundlatch write (en gate passed) yet Z80 never vectors to 0x66. Next unresolved: NMI acceptance chain under MAMEVIEW (mz80int_dispatch / iff / core NMI latch). All experiments env-gated default-off: baseline untouched.",
+          "timestamp": "2026-11-02T19:44:39Z"
         }
       ],
       "completed_at": null
