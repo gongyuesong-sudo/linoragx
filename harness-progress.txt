@@ -1732,3 +1732,5 @@
 [2026-11-02T20:56:10Z] [SESSION-496] task-263 step13: engine-start gate = fe3f from table 6c4a+de; lin reads 01 (=disk, bank correct) -> 0ca0 branch; golden needs 2 -> 1105. 6c4a divergence: runtime-written table or bank map moment.
 [2026-11-02T20:58:27Z] [SESSION-497] task-263 step14: lin DOES reach 1105 engine-start (2x by f2399) - prior never-reached was sampling blind spot; MAMEVIEW full 80-card recheck lost=0 gain=0 (60/208 regressions were jitter). Gap moved inside 1105 block: executes but exits before building f967 tables.
 [2026-11-02T21:01:55Z] [SESSION-499] task-263 step16: circular dependency quantified - golden ~12 task ticks per IRQ accept vs lin 1; heartbeat batch-count gap is last unknown.
+[2026-11-02T21:04:16Z] [SESSION-500] task-263 step17: lin engine runs (rhythm table built, cursor advances); true gap = f967 track-handle registration missing in lin.
+[2026-11-02T21:06:46Z] [SESSION-501] task-263 step18: fe35 golden=ff lin=00 - music task registration gate. lin ran CLR block (0f96) but never SET block (0f89) = fe3d cmd 6 never dispatched in lin.

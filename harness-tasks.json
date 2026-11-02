@@ -9416,6 +9416,12 @@
           "total": 3,
           "description": "PARTIAL REVERSAL: lin DOES build the rhythm table at fac0+30 (71 71/31 31/01 01... same stride-4 structure, different values = different track playing) and music cursor advances (fac6+14: lin b9 vs gold c0). So lin's engine IS running. BUT golden zs7 f967 handle table persists at t9s (entries stride 8: 01 00 00 5d f5 / 01 00 00 c0 f5 / 01 00 00 d1 f5 / 01 00 00 9e... = 4+ track handles with RAM ptrs f5xx) while lin f967 stays all-zero. Real remaining gap narrowed to: track-ARM path never registers handles in lin. fcdd task arrays near-identical both sides (few byte diffs). golden ZTRACE t<4.3s: sm1 idle 0133-015d throughout (matches lin). Next: find handle writer - search m1 for stores of 0x01 then 16-bit RAM ptr with stride 8 from base f967 (likely via ix walk starting ld ix,f960-ish or via the 22f8 TCB executor); compare arm path (2831) reachability lin vs golden.",
           "timestamp": "2026-11-02T21:04:16Z"
+        },
+        {
+          "step": 18,
+          "total": 3,
+          "description": "DECISIVE: golden fe35=ff, lin fe35=00. Task-registration block 0x530 (registers music tasks 0b/0c/0d with iy=f947/f937 handle bases via call 2b27) is gated by fe35 (ret z when 0) - lin PCOUNT 0530=0 never passes. fe35 setters in m1: 0xf70 and 0xf89 set ff; 0xf96/0xfab set 0. Reached via jp chain at 0xcbc-0xcc8 = tail of the 0cad fe3d-indexed cmd table: entry5->0f79, entry6->0f89 (SET ff), entry7->0f96 (CLR). lin PCOUNT: 0f79=1, 0f96=1 (CLR ran), 0f89=0 (SET never ran) => lin never received/dispatched the fe3d cmd value 6 that arms music init. golden must see fe3d=6 somewhere. Next: MAME AUDWR/ZW on golden fe3d to capture the value-6 write timing and writer zpc; compare with lin fe3d write stream (07/2d/1e/21/1c/cc/cf - no 6).",
+          "timestamp": "2026-11-02T21:06:46Z"
         }
       ],
       "completed_at": null
