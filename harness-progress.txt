@@ -1723,3 +1723,5 @@
 [2026-11-02T19:52:48Z] [SESSION-491] MAMEVIEW batch aborted 60/208: 5 regressions - view-swap-as-default FALSIFIED, stays env-gated off. Upstream gap: sm1 early self-halt f25-27.
 [2026-11-02T19:52:48Z] [SESSION-491] Marked [task-263] failed (2/3)
 [2026-11-02T19:52:48Z] [SESSION-491] STATS tasks_total=261 completed=160 failed=101 pending=0 attempts_total=455 checkpoints=572
+[2026-11-02T20:21:17Z] [SESSION-492] task-263 step5-6: sm1 self-halt chain decoded (init 0xd0->09bc fe40-check->YM test->0c25 self-halt f25). golden in idle at frame1; ZW RAM-write blind spot found (DRC bypass). Detect block entry = next target.
+[2026-11-02T20:21:56Z] [SESSION-492] task-263 step7: fe39=cmd-dispatch (3->hw-detect 048e). lin queue empty in BIOS phase; official BIOS no change. Divergence = 68K BIOS self-test cmd=03 emission missing in lin.

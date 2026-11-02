@@ -9304,7 +9304,7 @@
     {
       "id": "task-263",
       "title": "samsho2 ix=fce8 writer trace: who clobbers ix before filler (golden keeps fd1c)",
-      "status": "failed",
+      "status": "in_progress",
       "priority": "P1",
       "depends_on": [],
       "attempts": 2,
@@ -9344,6 +9344,24 @@
           "total": 3,
           "description": "MAMEVIEW=1 60-card batch: 5 regressions (dragonsh/fatfursp/fatfury2/fatfury3/ghostlop, baseline voiced all verified: dragonsh peak 2316, ghostlop 8714). View swap at ch5=1 catches Z80 at incompatible PC in m1 view for these cards. MAMEVIEW stays env-gated OFF. Upstream gap: lin sm1 self-halts (jp fffd) at f25-27 while golden sm1 idles waiting commands - fix sm1 halt-condition parity is the true path for samsho2.",
           "timestamp": "2026-11-02T19:52:48Z"
+        },
+        {
+          "step": 5,
+          "total": 3,
+          "description": "sm1 self-halt chain decoded: sm1 init 0x00d0 -> call 09bc (hw-check task) -> fe40!=4 -> YM test-mode writes (regs 8/9/a via 2936) -> 0c25 -> 0c2b writes jp fffd at fffd + out(0c) ack + self-halt. lin f25 takes this path (Z80STEP). golden NEVER writes fffd/fe39/fe3a/fe40 (ZW probe, no log file = zero writes) - golden sm1 never reaches 09bc halt path. lin hw-detect block (0x48e/0x89a, writes fe3a/fe40=4/fe42-44 capability flags) PCOUNT=0 never runs in lin. fe40=4 writer is detect block; question: what triggers detect block in golden. MAME ZTRACE probe added (needs LINORAGX_ZRAM=1 too - known trap), capturing golden Z80 PC timeline t<4.3s.",
+          "timestamp": "2026-11-02T20:19:37Z"
+        },
+        {
+          "step": 6,
+          "total": 3,
+          "description": "golden ZTRACE (per-frame t<0.5s): golden Z80 already in 0133-015d idle loop at t=0.0167 (frame 1!) - sm1 init completed within first frame, never reaches 0c25 self-halt. lin reaches 0c25 at f25 (t=0.42s). ZW zero-write conclusion for fe40 UNRELIABLE: Z80 DRC RAM writes bypass space write handlers. Working hypothesis: golden sm1 runs hw-detect block (0x48e/0x89a, entry via jp(hl) table, writes fe3a/fe40=4/fe42-44) in the t<16.7ms window BEFORE first ZTRACE sample; lin never runs it (PCOUNT=0) so fe40=0 -> 09bc YM-test path -> 0c25 self-halt. Next: find detect-block entry (fe39 writers at 0x172/0x1a2 are vector-table area; decode 0x160-0x1b0 dispatch and what selects detect vs skip in golden vs lin).",
+          "timestamp": "2026-11-02T20:21:17Z"
+        },
+        {
+          "step": 7,
+          "total": 3,
+          "description": "fe39 semantics decoded: command dispatcher at 0x164 reads command number from queue (0x172 ld a,(hl); ld (fe39),a) then jump table: 0->0eef,1->01c4,3->048e(HW-DETECT block),4->087a. lin fe39=0 = queue empty during BIOS phase; golden ran detect (fe40=4) inside first frame => golden 68K sent cmd=03 at f<1, lin 68K first cmd=01 at f25. Official NEO-GEO.ROM BIOS test: fe39 still 00 - BIOS-selection hypothesis dead for samsho2. Divergence is 68K-side BIOS self-test command emission (cmd 03 hw-detect) missing in lin. Next: trace lin 68K BIOS self-test path vs golden (68K writes cmd queue at 0x10F800+ then soundlatch).",
+          "timestamp": "2026-11-02T20:21:56Z"
         }
       ],
       "completed_at": null
