@@ -1643,3 +1643,7 @@
 [2026-11-02T16:36:11Z] [SESSION-282] ERROR [task-258] [TASK_EXEC] attempt1：心跳直线段完整走完，缺口收窄到 22f8 任务块激活
 [2026-11-02T16:36:11Z] [SESSION-282] STATS tasks_total=256 completed=160 failed=96 pending=0
 [2026-11-02T16:36:11Z] [SESSION-282] LOCK released
+[2026-11-02T16:38:23Z] [SESSION-283] Starting [task-258] attempt2 任务块 gate 全对比 (base=心跳段解码)
+[2026-11-02T16:38:23Z] [SESSION-283] ERROR [task-258] [TASK_EXEC] attempt2：任务区 319 差异全在栈区，唯一任务差异=音乐游标 b9 vs c0（都推进）
+[2026-11-02T16:38:23Z] [SESSION-283] STATS tasks_total=256 completed=160 failed=96 pending=0
+[2026-11-02T16:38:23Z] [SESSION-283] LOCK released
