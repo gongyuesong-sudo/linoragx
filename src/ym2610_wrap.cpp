@@ -351,6 +351,8 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        0x1F = TEST: bit3 load, bit4 reset timer/flag. Auto-reload on expiry. */
     if (reg == 0x1c) { y->opm_latch = val & 0x7f; y->opm_mask = (val >> 7) & 1;
         y->opm_started = 1;
+        { static int c1c = -1; if (c1c < 0) c1c = getenv("R1CDBG") ? 1 : 0;
+          if (c1c) { extern int g_ym_frame; fprintf(stderr, "R1C f=%d v=%02x latch=%d mask=%d\n", g_ym_frame, val, y->opm_latch, y->opm_mask); } }
         if (y->opm_cnt <= 0) y->opm_cnt = y->opm_latch + 1; }
     if (reg == 0x1f) { if (val & 0x08) y->opm_cnt = y->opm_latch + 1;
                        if (val & 0x10) { y->tflag[c] &= ~1; y->opm_flag = 0; } }

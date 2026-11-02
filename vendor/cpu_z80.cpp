@@ -752,6 +752,8 @@ unsigned cpu_z80::mz80step()
 	if (m_irq_line)
 	{
 		unsigned before = cCycles;
+		{ static int idbg = -1; if (idbg < 0) idbg = getenv("IFFDBG") ? 1 : 0;
+		  if (idbg && (cCycles % 50000) < 3) fprintf(stderr, "IFFDBG pc=%04x iff1=%d dly=%d halt=%d\n", z80pc, m_iff1, iff_delay, (int)m_fHalt); }
 		mz80int_dispatch();                  // adds to cCycles internally
 		cyc += (cCycles - before);
 	}

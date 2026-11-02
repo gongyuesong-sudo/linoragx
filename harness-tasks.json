@@ -8771,6 +8771,39 @@
     }
    ],
    "completed_at": "2026-11-02T12:33:26Z"
+  },
+  {
+   "id": "task-252",
+   "title": "samsho2 \u97f3\u4e50\u4efb\u52a1\u94fe\u63a8\u8fdb\u5bc6\u5ea6\uff1aFM\u97f3\u7b2615 vs \u91d1\u680711000\u3001r27 14 vs 117521\uff08\u7ea61/1000\uff09\u2014\u2014BGM \u9760\u957f ADPCM-B \u6837\u672c\u6491 loudsecs \u4f46\u65cb\u5f8b\u7a00\u758f\u3001\u97f3\u8272\u5355\u8584",
+   "status": "in_progress",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 1,
+   "max_attempts": 3,
+   "started_at_commit": "5dfea44",
+   "validation": {
+    "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+    "timeout_seconds": 240
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [],
+   "checkpoints": [
+    {
+     "step": 1,
+     "total": 3,
+     "description": "\u6392\u9664 68K \u4fa7\uff1alin SL1 \u65f6\u5e8f\u4e0e\u91d1\u6807\u543b\u5408\uff08cmd 2d \u540e\u9759\u9ed8 29s\uff0c\u91d1\u6807\u540c\u6837 10 \u6761\uff09\uff1b\u6392\u9664 TCB \u5047\u8bbe\uff08\u91d1\u6807 fa22 \u4e5f\u5168\u96f6\uff09\uff1bZ80 f2001 \u70ed\u70b9=cart m1 \u4e3b\u73af 0x133-0x13c \u7a7a\u8f6c\uff08feb0==feb1 \u6b63\u5e38\u7a7a\u95f2\uff09\uff1b\u7f3a\u53e3\u6536\u7a84\u4e3a Z80 \u6bcf IRQ \u4efb\u52a1\u6267\u884c\u91cf\uff1a\u91d1\u6807 r27\u00d71306/s(zpc=2b75 bank A \u52a9\u624b) vs lin 0.28/s\uff0cfd97 \u8f68\u9053\u6307\u9488\u66f4\u65b0 lin \u4ec5 2 \u6b21(pc=1395=ld (iy+0x0c),a)",
+     "timestamp": "2026-11-02T12:53:35Z"
+    },
+    {
+     "step": 2,
+     "total": 3,
+     "description": "\u4e09\u5c42\u5047\u8c61\u8fde\u7834\uff1a\u2460--no-audio \u4e0b YM \u5199\u6ede\u7559\u961f\u5217\u4e0d\u6d88\u8d39\uff0cOPM/timer \u72b6\u6001\u673a\u4e0d\u9a71\u52a8\u2014\u2014\u6240\u6709 timer \u63a2\u9488\u5fc5\u987b\u5e26 --dump-audio \u8dd1\uff1b\u2461taken=0 \u5047\u62a5\u2014\u2014zpcstat_hook \u9700 ZPCSTAT env \u542f\u7528\uff0c\u5b9e\u6d4b IRQ taken=1575/1800f(0.87/\u5e27) IRQ \u4e00\u76f4\u88ab\u63a5\u53d7\uff1b\u2462\u91d1\u6807 fc3b=01 \u4e0d\u662f 2207 \u6267\u884c\u8bc1\u636e\u2014\u2014215d \u95e8\u4e0d\u8df3\u8def\u5f84\u5199 fc3b=IN(04)\uff0c\u91d1\u6807\u540c\u6837\u4e0d\u8fdb 2207\uff08bank B \u5b9a\u65f6\u5668\u53cc\u65b9\u90fd\u672a\u88c5\u8f7d\uff09\u3002\u771f\u5206\u6b67\uff1alin IN(04) bit0 \u6052 0\uff0868K \u6bcf\u5e27\u5199 r27=1f/2f bit4 \u6e05 timer A flag\uff0cZ80 handler \u8bfb IN(04) \u6070\u5728\u6e05\u9664\u540e\uff09\uff0c\u91d1\u6807\u8bfb\u7a97\u53e3\u843d\u5728 overflow \u540e bit0=1\u3002\u4fee\u590d\u65b9\u5411\uff1ar27 bit4 \u6e05\u9664\u4e0e Z80 \u8bfb\u4e4b\u95f4\u7684 overflow \u4fdd\u5e8f",
+     "timestamp": "2026-11-02T13:03:24Z"
+    }
+   ],
+   "completed_at": null
   }
  ],
  "session_count": 263,
