@@ -281,7 +281,12 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
-    if (c == 0) { /* timers belong to bank A only; bank B 24/27 are ADPCM-A regs */
+    if (c == 0) { /* timers belong to bank A only (bank B 24/27 are ADPCM-A
+                     regs in the ymfm routing). NOTE (task-250): opening this
+                     gate to c<=1 was tried and REGRESSED kof98 25→0 loud —
+                     bank-B ten/tflag activity flips IN(06) bits that the
+                     kof-family drivers branch on. samsho2's bank-B timer
+                     registers are never written anyway. */
     /* STRICT OPN semantics (matches ymfm REG_MODE accessors, vendor
        ymfm_opn.h:196-205, and the MAME golden trace):
        0x24 = timer A value lo, 0x25 bits0-1 = timer A value hi (10-bit total,
@@ -443,7 +448,18 @@ void ym_advance(ym2610 *y, int zcycles)
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
                 y->irq_latch[c] = 0;
-                y->tcntb[c] = 0;   /* one-shot: stop until next 0x27 arm (ymfm) */
+                /* BRELOAD=1: emulate the golden driver's dense 0x27 re-arm.
+                   Golden samsho2 writes r27 1306/s (YM helper heartbeat) so
+                   timer B is perpetually re-armed and overflows continuously
+                   (~854/s, paced to 109/s IRQ by status reads); lin's driver
+                   writes r27 ~1/s so the ymfm one-shot leaves B dead and the
+                   Z80 IRQ rate collapses to 37/s — too sparse to ever land on
+                   the main loop's processing window, so the 2207 task group
+                   (bit 1,l phase gate) never starts and attract BGM stalls. */
+                static int breload = -1;
+                if (breload < 0) breload = getenv("BRELOAD") ? 1 : 0;
+                if (breload) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
+                else y->tcntb[c] = 0;   /* one-shot: stop until next 0x27 arm (ymfm) */
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
                 { int v = 256 - (y->tloadb[c] & 0xFF); (void)v; }
                 if (c == 0) y->intf.fire_timer(1);

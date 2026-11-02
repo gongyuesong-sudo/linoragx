@@ -1523,3 +1523,9 @@
 [2026-11-02T11:54:49Z] [SESSION-260] ERROR [task-250] [TASK_EXEC] 相位门未修复，留 2 次重试；下一步：lin IRQ 接受相位对比 / MAME ZPCH 抓金标 handler 到达分布
 [2026-11-02T11:54:49Z] [SESSION-260] STATS tasks_total=248 completed=157 failed=91 pending=0 blocked=0
 [2026-11-02T11:54:49Z] [SESSION-260] LOCK released
+[2026-11-02T11:55:59Z] [SESSION-261] LOCK acquired (pid=3800145)
+[2026-11-02T11:55:59Z] [SESSION-261] Starting [task-250] samsho2 任务链调度器 第2次尝试 (base=c139700)
+[2026-11-02T12:17:10Z] [SESSION-261] CHECKPOINT [task-250] step=2/3 根因链闭合：r27稀疏→B one-shot死→IN(04)bit1恒0→TCB init 分支错；BRELOAD=1 治 samsho2 41/50s 但回归 kof98/kof2000
+[2026-11-02T12:17:10Z] [SESSION-261] ERROR [task-250] [TASK_EXEC] BRELOAD 副作用未解（金标 kof98 r27 也密集 312/s 但 lin BRELOAD 反坏 kof98——B 相位/OPM ACK 竞争），留 1 次重试
+[2026-11-02T12:17:10Z] [SESSION-261] STATS tasks_total=248 completed=157 failed=91 pending=0 blocked=0
+[2026-11-02T12:17:10Z] [SESSION-261] LOCK released
