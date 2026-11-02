@@ -1666,3 +1666,8 @@
 [2026-11-02T17:08:51Z] [SESSION-287] CHECKPOINT [task-259] step=3/3 "AUDWR 探针改监视 fd26/fd27/fd22/fd20，MAME 后台重编译中"
 [2026-11-02T17:08:51Z] [SESSION-287] STATS tasks_total=257 completed=160 failed=97 pending=0
 [2026-11-02T17:08:51Z] [SESSION-287] LOCK released (task-259 in_progress 待续，MAME 编译完成后跑探针)
+[2026-11-02T17:13:35Z] [SESSION-288] LOCK acquired (task-259 recovery: attempt3 in_progress 续)
+[2026-11-02T17:13:35Z] [SESSION-288] RECOVERY [task-259] action="续跑 MAME fd26 探针" reason="上 session 编译中断点续做"
+[2026-11-02T17:13:35Z] [SESSION-288] ERROR [task-259] [TASK_EXEC] attempt3：填充时刻 t4.1759 捕获，zpc 轮询假象，写者需 Z80 write handler
+[2026-11-02T17:13:35Z] [SESSION-288] STATS tasks_total=257 completed=160 failed=97 pending=0
+[2026-11-02T17:13:35Z] [SESSION-288] LOCK released
