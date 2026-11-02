@@ -71,6 +71,26 @@ struct ym2610 {
                        the Z80 INT was ever raised). Cleared by the status read
                        (ack) or once the window (~1 frame) expires. */
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
+    /* YM2151 (OPM) native timer — samsho2 task-206: the SNK m1 FM task arms
+       its tick through reg 0x1C (7-bit latch, bit7 = IRQ mask) and keeps it
+       running; MAME ym2151 auto-reloads on every expiry (~64us steps), so the
+       timer overflows ~2.2kHz and the Z80 status-read ACK paces the IRQ to
+       ~one per frame (golden attract FM task = 64/s). lin had no OPM timer at
+       all: the OPN-style timer A sat at tload=0 (73ms period) and the FM task
+       starved at 2.5/s vs golden 64/s. */
+    int opm_latch, opm_mask, opm_cnt, opm_frac;
+    int opm_started; /* 1 once the driver has written reg 0x1C: before that the
+                        latch is 0 and a free-running timer would storm status
+                        bit0 at 15.6kHz, wrecking the BIOS self-test cadence
+                        that OPN-style cards poll. */
+    int opm_flag;   /* YM2151 timer status bit0. Set on overflow together with
+                       the shared tflag bit0, cleared by the bank-A status
+                       read — but unlike tflag it survives the IN(04) that the
+                       IRQ handler itself performs, so the level IRQ stays
+                       asserted across the whole handler run (samsho2 task-206
+                       golden: IRQ cadence = overflow rate ~100/s, one accept
+                       per expiry; a tflag-only model gets its pulse eaten by
+                       the driver's high-rate status polling). */
     int irqmask[2];              /* reg 0x29 timer-IRQ enable (bit0=A,bit1=B);
                                     ymfm reset value is 0x03, NOT 0 (task-196) */
     int irqen5[2];               /* 1 while last 0x27 write had bit5 (YM2610 IRQ-EN) */
@@ -315,6 +335,13 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        every observed driver POLLS the status flags instead. linoragx's old
        active-low 0x27 interpretation fed the Z80 a phantom IRQ storm. */
     if (reg == 0x29) { y->irqmask[c] = val & 0x1f; y->irq29[c] = 1; }
+    /* YM2151 native timer (task-206): 0x1C = latch (bit0-6) + IRQ mask (bit7),
+       0x1F = TEST: bit3 load, bit4 reset timer/flag. Auto-reload on expiry. */
+    if (reg == 0x1c) { y->opm_latch = val & 0x7f; y->opm_mask = (val >> 7) & 1;
+        y->opm_started = 1;
+        if (y->opm_cnt <= 0) y->opm_cnt = y->opm_latch + 1; }
+    if (reg == 0x1f) { if (val & 0x08) y->opm_cnt = y->opm_latch + 1;
+                       if (val & 0x10) { y->tflag[c] &= ~1; y->opm_flag = 0; } }
     }
 }
 
@@ -346,6 +373,42 @@ void ym_advance(ym2610 *y, int zcycles)
                     fprintf(stderr, "TIM ten=%d tload=%d tcnt=%d tflag=%d irqen=%02x clk=%lu\n",
                             y->ten[0], y->tload[0], y->tcnt[0], y->tflag[0], y->irqen[0], y->clk); } }
     y->tfrac += zcycles;
+    /* YM2151 OPM timer tick (task-206): 64us per count at 4MHz Z80 = 256
+       clocks; auto-reload from latch on expiry (MAME ym2151 timer_callback).
+       Overflow sets the shared status bit0 and re-arms the IRQ latch, so the
+       level IRQ paces at one delivery per Z80 status read (~frame rate). */
+    { static int opm_on = -1;
+      if (opm_on < 0) opm_on = getenv("OPMTIMER") ? atoi(getenv("OPMTIMER")) : 1;
+      { static int od = -2; static long onc = 0;
+        if (od == -2) od = getenv("OPMDBG") ? 1 : 0;
+        if (od && (onc++ % 20000) == 0)
+            fprintf(stderr, "OPMDB started=%d mask=%d latch=%d cnt=%d frac=%d flag=%d\n",
+                    y->opm_started, y->opm_mask, y->opm_latch, y->opm_cnt, y->opm_frac, y->opm_flag); }
+      /* MAME ym2151 parity: the timer runs CONTINUOUSLY once armed (mask only
+         gates the IRQ assertion, never the counter). Gating the tick on mask
+         dead-locked samsho2: its r28 writes alternate f6(bit7=1)/06(bit7=0)
+         and the last write before a task gap left mask=0, so the timer froze
+         and the task that would re-arm it never ran. zcycles here is the YM
+         clock domain (8 MHz = 2x Z80, neogeo.c ym_advance), so the 64us OPM
+         timer step is 512 of these, not 256. */
+      if (opm_on && y->opm_started) {
+          y->opm_frac += zcycles;
+          while (y->opm_frac >= 512) {
+              y->opm_frac -= 512;
+              if (--y->opm_cnt <= 0) {
+                  y->tflag[0] |= 1;
+                  /* MAME ym2151: overflow ALWAYS latches status bit0; the mask
+                     only gates the IRQ assertion level (status & mask). Gating
+                     the set on mask lost samsho2 ~2/3 of its IRQs: the driver
+                     parks mask=0 between arming writes, and the flag that a
+                     later mask 0->1 write should immediately expose was never
+                     latched, so the Z80 had to wait for the next overflow. */
+                  y->opm_flag = 1;
+                  y->irq_latch[0] = 0;
+                  y->opm_cnt = y->opm_latch + 1;
+              }
+          }
+      } }
     /* Tick calibration (task-196 golden kof10th): timer A period measured in
        two independent golden phases — sm1 latch 0x51 (tcnt 256) -> 18.4ms and
        m1 latch 0xAC (tcnt 84) -> 6.0ms — both = 286 Z80 clocks per tick at
@@ -398,6 +461,7 @@ struct ym_blob {
     int tcnt[2], tload[2], ten[2], tflag[2], tfrac, tpend[2];
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
     int irqmask[2], irq29[2], irqen5[2];
+    int opm_latch, opm_mask, opm_cnt, opm_frac, opm_flag, opm_started;
     uint8_t sh_lo[256], sh_hi[256];
 };
 int ym_save_state(ym2610 *y, void *buf)
@@ -412,6 +476,9 @@ int ym_save_state(ym2610 *y, void *buf)
     memcpy(b->tfracb, y->tfracb, sizeof b->tfracb); memcpy(b->irqen, y->irqen, sizeof b->irqen);
     memcpy(b->irqmask, y->irqmask, sizeof b->irqmask); memcpy(b->irq29, y->irq29, sizeof b->irq29);
     memcpy(b->irqen5, y->irqen5, sizeof b->irqen5);
+    b->opm_latch = y->opm_latch; b->opm_mask = y->opm_mask;
+    b->opm_cnt = y->opm_cnt; b->opm_frac = y->opm_frac; b->opm_flag = y->opm_flag;
+    b->opm_started = y->opm_started;
     memcpy(b->sh_lo, y->sh_lo, 256); memcpy(b->sh_hi, y->sh_hi, 256);
     return (int)sizeof(ym_blob);
 }
@@ -427,6 +494,9 @@ int ym_load_state(ym2610 *y, const void *buf)
     memcpy(y->tfracb, b->tfracb, sizeof y->tfracb); memcpy(y->irqen, b->irqen, sizeof y->irqen);
     memcpy(y->irqmask, b->irqmask, sizeof y->irqmask); memcpy(y->irq29, b->irq29, sizeof y->irq29);
     memcpy(y->irqen5, b->irqen5, sizeof y->irqen5);
+    y->opm_latch = b->opm_latch; y->opm_mask = b->opm_mask;
+    y->opm_cnt = b->opm_cnt; y->opm_frac = b->opm_frac; y->opm_flag = b->opm_flag;
+    y->opm_started = b->opm_started;
     memcpy(y->sh_lo, b->sh_lo, 256); memcpy(y->sh_hi, b->sh_hi, 256);
     /* NOTE: the shadow is intentionally NOT replayed into ymfm: writing the
      * ADPCM-A/B start registers would fire phantom samples. Restoring the
@@ -458,6 +528,13 @@ int ym_irq_pending(ym2610 *y)
     static int fired_frame = -1, fired_n = 0;
     static int capn = -1; if (capn < 0) capn = getenv("CAPN") ? atoi(getenv("CAPN")) : 1;
     static int lvl = -1; if (lvl < 0) lvl = getenv("LEVELIRQ") ? 1 : 0;
+    /* YM2151 native timer level IRQ (task-206 samsho2 golden proof): the OPM
+       timer flag holds the line from expiry until the handler's own status
+       read ACKs it — one accept per expiry (~100/s golden attract). The
+       once-per-frame pulse cap below cannot express this: it delivered at most
+       60/s and its slot was usually consumed by a status-poll query that the
+       Z80 could not take (di window), so the FM task starved at 2.5/s. */
+    if (y->opm_flag && y->opm_mask && !(y->irqen[0] & 0x40)) return 1;
     if (lvl) {
         /* opt-in full ymfm level model (task-196 experiment): kept for A/B.
            Default pulse+cap below wins the 208-card batch: level model made
@@ -502,6 +579,9 @@ uint8_t ym_read(ym2610 *y, int chipno)
        make the driver punch each segment short (logo sound played too fast). */
     if (chipno == 1 && (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)) { st |= 0x40; y->chip.adpcm_b_clear_eos(); }
     y->tflag[c] = 0;
+    if (!c) y->opm_flag = 0;   /* MAME ym2151 status_r is read-clear: the
+                                  bank-A status read ACKs the OPM timer flag
+                                  (and with it the level IRQ line) */
     y->irq_latch[c] = 1;   /* status read ACKs the level IRQ: line stays low
                               until the NEXT timer overflow re-clears the latch
                               (ymfm read_status parity; without it the Z80
