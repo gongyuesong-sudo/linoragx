@@ -3585,6 +3585,7 @@ static int g_z80flow_lo = -1, g_z80flow_hi = -1;
 void linoragx_z80_step(unsigned int pc)
 {
     { extern unsigned g_cur_zpc; g_cur_zpc = pc; }
+    { extern uint32_t g_z_step; extern int ym_queue_on(void); if (ym_queue_on()) g_z_step++; }
     /* Instruction-level YM2610 timer IRQ delivery. The YM IRQ is a LEVEL
        signal: real hardware takes it at the next Z80 instruction boundary,
        before any status-polling heartbeat can ACK it. Chunk-granularity
@@ -4434,6 +4435,7 @@ void ng_destroy(neogeo *ng)
 extern uint16_t z80w_pc(void*);
 void ng_run_frame(neogeo *ng)
 {
+    { extern uint32_t g_z_step; g_z_step = 0; }   /* YM write-queue timeline: Z80 instrs since frame start */
 
     /* MAME watchdog: 3,244,030 master cycles (~16 frames) without a feed
        resets the whole system (CPU + audio CPU + latch state). Games use it
@@ -5425,7 +5427,8 @@ void ng_audio(neogeo *ng, int16_t *stereo, int frames) {
        m1_booted (the real handoff reset), NOT m1_view: BIOS pulses ch5
        periodically which flips m1_view transiently and would leak the cart
        region into the sm1 phase (garbage logo samples, chopped coin sound). */
-    if (ng->ym && ng->adpcm && ng->m1_booted && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1; }
+    if (ng->ym && ng->adpcm && ng->m1_booted && !ng->ym_rom_set) { ym_set_rom(ng->ym, ng->adpcm, ng->adpcm_size); ng->ym_rom_set = 1;
+        if (getenv("ADPDUMP")) { FILE *f = fopen("/tmp/lin_adpcm.bin","wb"); if (f) { fwrite(ng->adpcm, 1, ng->adpcm_size, f); fclose(f); } } }
     ym_stream(ng->ym, stereo, frames);
 }
 uint64_t ng_frame_no(neogeo *ng) { return ng->frame; }

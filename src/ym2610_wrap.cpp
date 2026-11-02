@@ -46,6 +46,8 @@ void ym_advance(ym2610 *y, int zcycles);
 void ym_set_rom(ym2610 *y, const uint8_t *rom, uint32_t size);
 }
 
+struct YMWrite { uint32_t step; uint8_t chip, reg, val; };
+
 struct ym2610 {
     struct LinIntf : public ymfm::ymfm_interface {
         ym2610 *y = nullptr;
@@ -85,6 +87,7 @@ struct ym2610 {
 
     audio_engine *ae;                        /* MAME-style stream mixer */
     std::vector<ymfm::ym2610::output_data> obuf_fm, obuf_a, obuf_b;
+    std::vector<YMWrite> wq;                /* YMQUEUE: pending register writes (frame-relative step) */
     std::vector<int32_t> tL, tR, tA, tB;     /* deinterleave staging */
 
     ym2610() : intf(), chip(intf, 0x7f) {
@@ -165,6 +168,7 @@ void ym_destroy(ym2610 *y) { ae_destroy(y->ae); delete y; }
 
 void ym_reset(ym2610 *y)
 {
+    y->wq.clear();
     y->chip.reset();
     ym_ssg_silence(y);
     ae_reset(y->ae);
@@ -187,9 +191,20 @@ extern "C" void ym_set_rom_b(ym2610 *y, const uint8_t *rom, uint32_t size)
     y->b_rom_size = size;
 }
 
-/* ---- register writes ---- */
+/* ---- YM write queue (YMQUEUE=1): stamp every Z80 YM register write with the
+ * Z80 instruction index within the frame, then generate audio in segments so
+ * keyon/keyoff pairs that land in the SAME frame no longer cancel each other
+ * (samsho2 battle SFX + FM notes were written and killed within one 66k-cycle
+ * frame: batch generation at frame end saw only the final register state). */
+extern "C" uint32_t g_z_step = 0;
+extern "C" int ym_queue_on(void)
+{
+    static int q = -2;
+    if (q == -2) { const char *e = getenv("YMQUEUE"); q = (e && e[0] == '0') ? 0 : 1; }
+    return q;
+}
 
-void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
+static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 {
     static int ymdbg = -1;
     extern int g_ym_frame;
@@ -301,6 +316,12 @@ void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
        active-low 0x27 interpretation fed the Z80 a phantom IRQ storm. */
     if (reg == 0x29) { y->irqmask[c] = val & 0x1f; y->irq29[c] = 1; }
     }
+}
+
+void ym_write(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
+{
+    if (ym_queue_on()) { extern uint32_t g_z_step; YMWrite w = { g_z_step, (uint8_t)chipno, reg, val }; y->wq.push_back(w); return; }
+    ym_write_core(y, chipno, reg, val);
 }
 
 /* ---- timers (host-owned: ymfm leaves timing to the caller) ---- */
@@ -434,7 +455,8 @@ int ym_irq_pending(ym2610 *y)
        (silent at f=450 while graphics stayed identical). Cap the crutch to
        one delivery per emulated frame. */
     extern int g_ym_frame;
-    static int fired_frame = -1;
+    static int fired_frame = -1, fired_n = 0;
+    static int capn = -1; if (capn < 0) capn = getenv("CAPN") ? atoi(getenv("CAPN")) : 1;
     static int lvl = -1; if (lvl < 0) lvl = getenv("LEVELIRQ") ? 1 : 0;
     if (lvl) {
         /* opt-in full ymfm level model (task-196 experiment): kept for A/B.
@@ -451,8 +473,9 @@ int ym_irq_pending(ym2610 *y)
        x12954, ADPCM-B start/stop, FM keyons) — the divergence is downstream:
        lin's task chain spins 268x/frame from the IRQ handler while golden's
        main loop emits bank B FM notes (golden bank B 3455 writes, lin 38). */
-    if (fired_frame == g_ym_frame) return 0;
-    fired_frame = g_ym_frame;
+    if (fired_frame != g_ym_frame) { fired_frame = g_ym_frame; fired_n = 0; }
+    if (fired_n >= capn) return 0;
+    fired_n++;
     return 1;
 }
 
@@ -523,7 +546,37 @@ void ym_stream(ym2610 *y, int16_t *stereo, int frames)
     int need = (int)(frames * STEP) + 96 - ae_avail(y->ae);
     if (need < 0) need = 0;
     y->obuf_fm.resize(need); y->obuf_a.resize(need); y->obuf_b.resize(need);
-    y->chip.generate_split(y->obuf_fm.data(), y->obuf_a.data(), y->obuf_b.data(), need);
+    if (ym_queue_on()) {
+        /* Segmented generation: apply queued writes at their instruction-time
+           proportion of the frame, generating samples between write points so
+           same-frame keyon/keyoff pairs each get audible samples. */
+        extern uint32_t g_z_step;
+        uint32_t total = g_z_step ? g_z_step : 1;
+        size_t produced = 0, i = 0; uint32_t prev = 0;
+        while (i <= y->wq.size() && (int)produced < need) {
+            uint32_t stop = (i < y->wq.size()) ? y->wq[i].step : total;
+            if (stop > total) stop = total;
+            size_t seg = (size_t)((uint64_t)(stop - prev) * (uint64_t)need / total);
+            if (i == y->wq.size()) seg = (size_t)need - produced;
+            if (seg > (size_t)need - produced) seg = (size_t)need - produced;
+            if (seg > 0) {
+                y->chip.generate_split(y->obuf_fm.data()+produced, y->obuf_a.data()+produced, y->obuf_b.data()+produced, seg);
+                produced += seg;
+            }
+            while (i < y->wq.size() && y->wq[i].step <= stop) {
+                YMWrite &w = y->wq[i];
+                ym_write_core(y, w.chip, w.reg, w.val);
+                i++;
+            }
+            prev = stop;
+        }
+        y->wq.clear();
+        if ((int)produced < need) {   /* tail safety: never under-produce */
+            y->chip.generate_split(y->obuf_fm.data()+produced, y->obuf_a.data()+produced, y->obuf_b.data()+produced, need-produced);
+        }
+    } else {
+        y->chip.generate_split(y->obuf_fm.data(), y->obuf_a.data(), y->obuf_b.data(), need);
+    }
 
     y->tL.resize(need); y->tR.resize(need); y->tA.resize(need); y->tB.resize(need);
     for (int i = 0; i < need; i++) {
