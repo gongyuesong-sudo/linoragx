@@ -1635,3 +1635,7 @@
 [2026-11-02T16:32:00Z] [SESSION-280] ERROR [task-257] [TASK_EXEC] attempt2：瓶颈=timer A 溢出率 0.75/帧 vs 金标 3.2/帧
 [2026-11-02T16:32:00Z] [SESSION-280] STATS tasks_total=255 completed=160 failed=95 pending=0
 [2026-11-02T16:32:00Z] [SESSION-280] LOCK released
+[2026-11-02T16:33:47Z] [SESSION-281] Starting [task-257] attempt3 ymfm tick 语义校准 (base=ea9c8a7)
+[2026-11-02T16:33:47Z] [SESSION-281] ERROR [task-257] [TASK_EXEC] attempt3：tick 率已对齐 40.7Hz≈45/s，缺口=每溢出接受数 0.75 vs 4.8
+[2026-11-02T16:33:47Z] [SESSION-281] STATS tasks_total=256 completed=160 failed=95 pending=1
+[2026-11-02T16:33:47Z] [SESSION-281] LOCK released

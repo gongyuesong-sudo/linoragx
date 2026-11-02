@@ -9041,7 +9041,7 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
    "started_at_commit": "cf2aaa7",
    "validation": {
@@ -9053,7 +9053,8 @@
    },
    "error_log": [
     "[TASK_EXEC] attempt1\uff1alin vendored ymfm clock_split \u5df2\u542b m_adpcm_a.clock\u2192m_eos_status\uff08vendor/ymfm/ymfm_opn.cpp:2155\uff09\u3002EOSDBG \u63a2\u9488\u5b9e\u8bc1 attract \u671f rsh=04/20/01/02/10 \u6b63\u5e38\u7ffb\u8f6c\uff08f743 \u8d77\uff09\u3002ADPCM-A EOS \u673a\u5236\u65e0\u7f3a\u9677\u3002\u771f\u7f3a\u53e3\u91cd\u5b9a\u4f4d\uff1alin Z80 \u8bfb IN(06) \u4ec5 151 \u6b21/3000f vs \u91d1\u6807 ~85k \u6b21\u2014\u2014\u56e0 lin IRQ taken=0\uff08iff=0\uff0chandler \u4e0d\u7ecf IRQ \u9a71\u52a8\uff09\uff0chandler fc37 bit0\u21920837 \u5206\u652f\u5230\u8fbe\u7387\u4e0d\u8db3\u3002EOS \u72b6\u6001\u4f4d\u672c\u8eab\u4e0d\u662f\u7f3a\u53e3",
-    "[TASK_EXEC] attempt2\uff1aDIDBG \u63a2\u9488\uff08cpu_z80 Ei/Di env \u95e8\u63a7\uff09f=2000 \u5b9e\u6d4b\uff1aEI pc=0134\u00d74145\uff08\u4e3b\u5faa\u73af\u7a7a\u8f6c\u6b63\u5e38\uff09\u3001DI pc=0039\u00d71\uff08handler \u6bcf\u5e27\u4ec5\u8fdb 1 \u6b21\uff09\u3002\u74f6\u9888=timer A \u6ea2\u51fa\u7387\uff1alin tload=256+TSTEP=192\u21920.75 \u6b21/\u5e27\u224845/s\uff08\u5b9e\u6d4b 34/s\uff09\uff1b\u91d1\u6807 ZIRQ 194/s\u22483.2 \u6b21/\u5e27\u3002\u91d1\u6807 r24 \u6570\u636e\u5168 00\uff08\u5468\u671f 256 tick \u4e0e lin \u540c\uff09\u2192 \u91d1\u6807 tick \u901f\u7387\u9ad8\u4e8e lin 4x \u6216 flag \u91cd\u7f6e\u673a\u5236\u4e0d\u540c\u3002CAPN \u65e0\u6548\u56e0 cap \u975e\u552f\u4e00\u74f6\u9888\uff08tflag \u7f6e\u4f4d\u7387\u672c\u8eab\u5c31\u4f4e\uff09\u3002TSTEP \u63d0\u5347\u4f1a\u7834\u574f vliner BIOS 18.2ms \u6821\u51c6\u2014\u2014\u9700\u6309\u5361/\u6309 BIOS \u671f\u533a\u5206"
+    "[TASK_EXEC] attempt2\uff1aDIDBG \u63a2\u9488\uff08cpu_z80 Ei/Di env \u95e8\u63a7\uff09f=2000 \u5b9e\u6d4b\uff1aEI pc=0134\u00d74145\uff08\u4e3b\u5faa\u73af\u7a7a\u8f6c\u6b63\u5e38\uff09\u3001DI pc=0039\u00d71\uff08handler \u6bcf\u5e27\u4ec5\u8fdb 1 \u6b21\uff09\u3002\u74f6\u9888=timer A \u6ea2\u51fa\u7387\uff1alin tload=256+TSTEP=192\u21920.75 \u6b21/\u5e27\u224845/s\uff08\u5b9e\u6d4b 34/s\uff09\uff1b\u91d1\u6807 ZIRQ 194/s\u22483.2 \u6b21/\u5e27\u3002\u91d1\u6807 r24 \u6570\u636e\u5168 00\uff08\u5468\u671f 256 tick \u4e0e lin \u540c\uff09\u2192 \u91d1\u6807 tick \u901f\u7387\u9ad8\u4e8e lin 4x \u6216 flag \u91cd\u7f6e\u673a\u5236\u4e0d\u540c\u3002CAPN \u65e0\u6548\u56e0 cap \u975e\u552f\u4e00\u74f6\u9888\uff08tflag \u7f6e\u4f4d\u7387\u672c\u8eab\u5c31\u4f4e\uff09\u3002TSTEP \u63d0\u5347\u4f1a\u7834\u574f vliner BIOS 18.2ms \u6821\u51c6\u2014\u2014\u9700\u6309\u5361/\u6309 BIOS \u671f\u533a\u5206",
+    "[TASK_EXEC] attempt3\uff08\u7528\u5c3d\uff09\uff1aymfm \u771f\u5b9e\u8bed\u4e49\u7b97\u51fa\uff08vendor/ymfm/ymfm_fm.ipp:1480 update_timer\uff09\uff1aTimerA \u5468\u671f=(1024-load)\u00d7OPERATORS(4)\u00d7prescale(24) YM\u65f6\u949f=(1024-load)\u00d724us@4MHz\u3002\u91d1\u6807 r24=0\u2192\u5468\u671f 24.6ms\u2192\u6ea2\u51fa 40.7Hz\u3002lin \u5b9e\u6d4b\u6ea2\u51fa 45/s\uff08tload=256,TSTEP=192\uff09\u2014\u2014tick \u7387\u5df2\u5bf9\u9f50 ymfm \u8bed\u4e49\uff0c\u6821\u51c6\u5047\u8bbe\u8bc1\u4f2a\u3002\u771f\u7f3a\u53e3\u91cd\u5b9a\u4f4d\uff1a\u91d1\u6807 IRQ 194/s=4.8 \u6b21\u63a5\u53d7/\u6ea2\u51fa\uff08ymfm \u7535\u5e73 read-clear \u518d\u65ad\u8a00\u73af\uff09\uff0clin 34/s=0.75 \u6b21/\u6ea2\u51fa\uff08once-per-frame cap + ym_read \u6e05 tflag \u540e\u7b49\u4e0b\u6b21\u6ea2\u51fa\uff09\u3002\u5dee\u8ddd\u5728 IRQ \u518d\u65ad\u8a00\u673a\u5236\u4e0d\u5728 tick \u7387\u3002task-255 CAPN \u65e0\u6548\u4e0e\u6b64\u4e00\u81f4\uff1acap \u63d0\u9ad8\u4f46 tflag \u7f6e\u4f4d\u7387\u5c01\u9876"
    ],
    "checkpoints": [
     {
@@ -9067,11 +9068,37 @@
      "total": 3,
      "description": "\u74f6\u9888\u91cf\u5316\uff1alin timer A 0.75 \u6ea2\u51fa/\u5e27 vs \u91d1\u6807 ~3.2/\u5e27\uff08\u540c r24=0\uff09\u3002attempt3 \u65b9\u5411\uff1a\u67e5 ymfm \u771f\u5b9e tick \u7387\uff08clock/72?\uff09\u5bf9\u6bd4 lin TSTEP=192 \u7684 tick/\u5e27\uff0c\u6821\u51c6 lin tick \u7387\u5230 ymfm \u8bed\u4e49\u800c\u975e\u7ecf\u9a8c\u503c",
      "timestamp": "2026-11-02T16:32:00Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "3/3 \u7528\u5c3d\u3002\u7ed3\u8bba\uff1atick \u7387\u5bf9\u9f50\uff0840.7Hz\u224845/s\uff09\uff0c\u7f3a\u53e3=\u6bcf\u6ea2\u51fa IRQ \u63a5\u53d7\u6570 0.75 vs 4.8\u3002\u540e\u7eed\u4efb\u52a1\u65b9\u5411\uff1a\u91d1\u6807 ymfm \u7535\u5e73 IRQ \u5728 flag \u7f6e\u4f4d\u671f\u95f4\u5141\u8bb8 Z80 \u591a\u6b21\u63a5\u53d7\uff08line \u4fdd\u6301\u9ad8\u76f4\u5230 status \u8bfb\uff0c\u8bfb\u540e timer \u82e5\u518d\u6b21\u6ea2\u51fa\u518d\u65ad\u8a00\uff09\u2014\u2014\u9700\u8981\u7cbe\u786e\u590d\u523b ymfm ymfm_set_timer \u7684 callback \u91cd\u6302\u8bed\u4e49\uff0c\u4e14\u5fc5\u987b\u4e0d\u56de\u5f52 vliner\uff08\u5176\u91d1\u6807 IRQ \u7ebf\u5e38\u4f4e\uff09",
+     "timestamp": "2026-11-02T16:33:47Z"
     }
    ],
+   "completed_at": null
+  },
+  {
+   "id": "task-258",
+   "title": "samsho2 IRQ \u518d\u65ad\u8a00\u73af\uff1a\u91d1\u6807 4.8 \u63a5\u53d7/\u6ea2\u51fa vs lin 0.75\u2014\u2014\u590d\u523b ymfm \u7535\u5e73\u4fdd\u6301+\u8bfb\u6e05\u518d\u65ad\u8a00\uff0cvliner \u9632\u56de\u5f52",
+   "status": "pending",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 0,
+   "max_attempts": 3,
+   "started_at_commit": null,
+   "validation": {
+    "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+    "timeout_seconds": 300
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [],
+   "checkpoints": [],
    "completed_at": null
   }
  ],
  "session_count": 273,
- "last_session": "2026-11-02T16:32:00Z"
+ "last_session": "2026-11-02T16:33:47Z"
 }
