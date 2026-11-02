@@ -9398,6 +9398,12 @@
           "total": 3,
           "description": "1105 call chain fully decoded: m1 dispatcher -> 0x1c4 handler: ld hl,6c4a; add hl,de; ld a,(hl); ld (fe3f),a; then fe3f dispatch 1->0ca0 / 2->01ec->jp 1105 (engine start) / 3->0299 / 4->0609 / 5->0a0f. lin f655 ZREADDBG: bank window 6c4a reads 01 01 01... == m1 disk content (bank regs 0=1e,1=0e,2=06,3=02 via 0x1aa helper, mapping CORRECT). So lin takes fe3f=1 -> 0ca0 branch, NEVER 2 -> 1105. Golden must see 2 at 6c4a+de: either golden bank window maps elsewhere at that moment OR the table is runtime-written (self-modifying/RAM alias at 6c4a - ROM window normally read-only so writes dropped in lin). Next: MAME BANKSEL/ZW probe on golden around t4.2-4.5 for bank reg values when 0x1c4 runs, and check whether golden ever writes 6c4a region (write handler on audiocpu 0x6c40-0x6c5f).",
           "timestamp": "2026-11-02T20:56:10Z"
+        },
+        {
+          "step": 14,
+          "total": 3,
+          "description": "MAJOR REVERSAL: PCOUNT f=2399 shows 01ec=1 1105=2 - lin DOES reach engine-start block (earlier 'never reached' was frame-sampling blind spot; also MAMEVIEW=1 full 80-card batch recheck: lost=0 gain=0, the 5 'regressions' at 60/208 were parallel-run jitter false positives). But f967 handle table still all-zero => engine-start block executes then exits before building tables. Path inside 1105: gates(fe34/fe33/fc38 open) -> 1124 bank-B YM -> sub 20 -> table 2exx -> call 01aa(bank setup) -> jump table 3800 -> call 0b38(f837 zero) -> f967 zero -> call 2b39 + 2b27(task reg fcdd). 2b27 writes fcdd+a. Next: Z80STEP around the frame where 1105 hit occurs (find exact frame via finer PCOUNT) and trace exit point inside 1105..11c2.",
+          "timestamp": "2026-11-02T20:58:27Z"
         }
       ],
       "completed_at": null
