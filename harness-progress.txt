@@ -1647,3 +1647,7 @@
 [2026-11-02T16:38:23Z] [SESSION-283] ERROR [task-258] [TASK_EXEC] attempt2：任务区 319 差异全在栈区，唯一任务差异=音乐游标 b9 vs c0（都推进）
 [2026-11-02T16:38:23Z] [SESSION-283] STATS tasks_total=256 completed=160 failed=96 pending=0
 [2026-11-02T16:38:23Z] [SESSION-283] LOCK released
+[2026-11-02T16:40:39Z] [SESSION-284] Starting [task-258] attempt3 游标语义+单帧全量轨迹 (base=attempt2)
+[2026-11-02T16:40:39Z] [SESSION-284] ERROR [task-258] [TASK_EXEC] attempt3：双等待圈实锤，音乐执行段零进入，队列生产者缺口=最终形态，PARK
+[2026-11-02T16:40:39Z] [SESSION-284] STATS tasks_total=256 completed=160 failed=96 pending=0
+[2026-11-02T16:40:39Z] [SESSION-284] LOCK released
