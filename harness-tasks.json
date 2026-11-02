@@ -8900,9 +8900,9 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
-   "started_at_commit": "0550d48",
+   "started_at_commit": "9ea1242",
    "validation": {
     "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
     "timeout_seconds": 300
@@ -8912,7 +8912,8 @@
    },
    "error_log": [
     "[TASK_EXEC] attempt1\uff1a\u4e3b\u5faa\u73af ix=ffff(43922\u6b21,\u4ece\u672a\u8bbe)\u2014\u2014lin 1386 handler \u4ece IRQ/11bb \u94fe\u8fdb\u5165(ix=ROM\u5783\u573e6ea8/e8c2)\uff0c\u91d1\u6807\u4ece\u5fc3\u8df3\u5faa\u73af(2189)\u8fdb\u5165(ix=RAM\u8f68\u9053\u8868f525)\u3002\u547d\u4ee4\u6d41\u4e24\u4fa7\u5b8c\u5168\u540c\u6b65(01/03/03/02/03/03/07/2d/1e/57)\u3002fd8d\uff1alin=c1(bit0=1) \u91d1\u6807=c0(bit0=0)\uff0c\u5199\u8005 zpc=1386\u3002\u91d1\u6807\u961f\u5217\u4e5f\u7a7a(feb0==feb1)\u2014\u2014Z80 \u90fd\u5728 idle\uff0c\u7f3a\u53e3=1386 \u7684\u8fdb\u5165\u8def\u5f84\u4e0e\u72b6\u6001\u5b57\u8282\u5199\u5165\u503c",
-    "[TASK_EXEC] attempt2\uff1aymfm \u7ed3\u6784\u4e8b\u5b9e\u2014\u20143rdparty/ymfm/src/ymfm_opm.cpp \u96f6 timer \u5b9e\u73b0 \u2192 \u91d1\u6807 bank A \u72b6\u6001 bit1 \u6052 0\uff0c\u91d1\u6807 2155 \u95e8\u6052 fallthrough \u8fdb\u5fc3\u8df3\u5faa\u73af\u3002OPM_B0=1 \u5b9e\u9a8c\uff08\u5c4f\u853d bank A bit1\uff09\uff1afc3b \u7ffb\u8f6c\u4e3a 1\uff08\u5206\u652f\u5982\u9884\u671f\u7ffb\u8f6c\uff09\u4f46 loud 41\u21929\u2014\u2014lin \u73b0\u6709 BGM \u6070\u7531\u5e7b\u5f71 timer B \u9a71\u52a8\uff1b\u4e14 handler \u8fdb\u5165 858 \u6b21\u5168\u90e8\u5361\u5728 2106(out 0c)-214d(IN 04) \u4e4b\u95f4\uff08214d/2152/03ce/0837 \u63a2\u9488\u5168 0\uff09\uff0cm1 handler \u5b9e\u9645\u53ea\u6267\u884c 2 \u6b21\uff08fc3b f642/f644\uff09\u3002\u91d1\u6807 fe1c \u4e5f=0\uff0805-07 \u7ec4\u4e24\u4fa7\u90fd\u8df3\u8fc7\uff09\uff1b0e \u97f3\u4e50\u7ec4\u95e8=fc38 \u72ec\u7acb"
+    "[TASK_EXEC] attempt2\uff1aymfm \u7ed3\u6784\u4e8b\u5b9e\u2014\u20143rdparty/ymfm/src/ymfm_opm.cpp \u96f6 timer \u5b9e\u73b0 \u2192 \u91d1\u6807 bank A \u72b6\u6001 bit1 \u6052 0\uff0c\u91d1\u6807 2155 \u95e8\u6052 fallthrough \u8fdb\u5fc3\u8df3\u5faa\u73af\u3002OPM_B0=1 \u5b9e\u9a8c\uff08\u5c4f\u853d bank A bit1\uff09\uff1afc3b \u7ffb\u8f6c\u4e3a 1\uff08\u5206\u652f\u5982\u9884\u671f\u7ffb\u8f6c\uff09\u4f46 loud 41\u21929\u2014\u2014lin \u73b0\u6709 BGM \u6070\u7531\u5e7b\u5f71 timer B \u9a71\u52a8\uff1b\u4e14 handler \u8fdb\u5165 858 \u6b21\u5168\u90e8\u5361\u5728 2106(out 0c)-214d(IN 04) \u4e4b\u95f4\uff08214d/2152/03ce/0837 \u63a2\u9488\u5168 0\uff09\uff0cm1 handler \u5b9e\u9645\u53ea\u6267\u884c 2 \u6b21\uff08fc3b f642/f644\uff09\u3002\u91d1\u6807 fe1c \u4e5f=0\uff0805-07 \u7ec4\u4e24\u4fa7\u90fd\u8df3\u8fc7\uff09\uff1b0e \u97f3\u4e50\u7ec4\u95e8=fc38 \u72ec\u7acb",
+    "[TASK_EXEC] attempt3\uff1aHNDDBG \u8bc1\u660e\u9ed8\u8ba4\u6a21\u578b\u4e0b handler\u21922160 \u5fc3\u8df3\u5faa\u73af\u4f53\u5b8c\u6574\u6267\u884c\uff08call 1cc8\u21920b51\u21922b71 YM helper \u5168\u901a\uff09\u2014\u2014attempt2 \u7684 2106-214d \u5361\u70b9\u662f OPM_B0 \u63a2\u9488\u5047\u8c61\u3002\u771f\u7f3a\u53e3\u9501\u5b9a\uff1alin TIMPROBE tload=256(\u5468\u671f0.512ms\u22481953Hz \u4e0e\u91d1\u6807 0.7ms \u4e3b\u9891\u5339\u914d)\u4f46 irqen=00 \u2192 legacy \u8def\u5f84 once-per-frame cap \u2192 IRQ \u4ec5 34/s\uff1b\u91d1\u6807 ymfm level IRQ read-clear \u518d\u65ad\u8a00\u5faa\u73af = 0.7ms\u00d71428Hz \u4e3b\u9891 + 17.7ms\u00d756Hz\u3002\u4fee\u590d\u9700\u653e\u5f00 cap/level \u6a21\u578b\uff0c\u4f46 level \u6a21\u578b\u66fe\u56de\u5f52 vliner\uff08\u9700\u65b0\u5224\u522b\u5668\uff09"
    ],
    "checkpoints": [
     {
@@ -8932,11 +8933,17 @@
      "total": 3,
      "description": "OPM_B0 env \u5b9e\u9a8c\uff08ym2610_wrap.cpp ym_read \u5c4f\u853d bank A bit1\uff09\u3002\u5206\u652f\u7ffb\u8f6c\u8bc1\u5b9e 2155 \u95e8\u8bed\u4e49\uff0c\u4f46\u66b4\u9732\u66f4\u6df1\u7f3a\u53e3\uff1aOPM_B0 \u4e0b IRQ handler(20ef) \u8fdb\u5165 858 \u6b21\u5168\u90e8\u672a\u8fbe 214d\u2014\u2014\u5361\u5728 2106 out(0c) \u4e4b\u540e\u3001bit \u5206\u53d1\u4e4b\u524d\u3002\u4e0b\u4e00\u6b65\uff1aZ80STEP \u5355\u5e27\u8ffd\u4e00\u6b21 handler \u6267\u884c\uff08f642 \u9644\u8fd1\uff09\uff0c\u5b9a\u4f4d 2106\u2192214d \u4e4b\u95f4\u7684\u5361\u70b9\uff08\u6000\u7591 call 0837/03ce \u672a\u8fd4\u56de\u6216 sm1/m1 bank \u89c6\u56fe\u5207\u6362\uff09",
      "timestamp": "2026-11-02T15:18:03Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "\u6839\u56e0\u5b9a\u6848\uff1aIRQ \u9891\u7387 34/s vs 1428Hz\u3002\u4e0b\u4e00\u6b65\uff08\u65b0\u4efb\u52a1\uff09\uff1aenv-gated \u5b9e\u9a8c TIMERA_FAST\u2014\u2014legacy \u8def\u5f84\u53bb\u6389 once-per-frame cap \u6539\u4e3a\u6bcf overflow \u4e00\u6b21\uff08irq_latch read-clear \u5df2\u5b58\u5728\u53ef\u590d\u7528\uff09\uff0c\u9a8c\u8bc1 samsho2 FM \u5bc6\u5ea6 + kof98/vliner/kof2000/mslug4 \u56de\u5f52\u77e9\u9635",
+     "timestamp": "2026-11-02T15:23:38Z"
     }
    ],
    "completed_at": null
   }
  ],
- "session_count": 267,
- "last_session": "2026-11-02T15:18:03Z"
+ "session_count": 268,
+ "last_session": "2026-11-02T15:23:38Z"
 }

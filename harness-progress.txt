@@ -1592,3 +1592,8 @@
 [2026-11-02T15:18:03Z] [SESSION-271] ERROR [task-254] [TASK_EXEC] attempt2：ymfm OPM 无 timer 证实；OPM_B0 分支翻转但 handler 卡 2106-214d
 [2026-11-02T15:18:03Z] [SESSION-271] STATS tasks_total=252 completed=160 failed=92 pending=0
 [2026-11-02T15:18:03Z] [SESSION-271] LOCK released
+[2026-11-02T15:20:49Z] [SESSION-272] LOCK acquired (pid=3963711)
+[2026-11-02T15:20:49Z] [SESSION-272] Starting [task-254] handler 2106-214d 卡点定位（attempt 3 最后一发）(base=9ea1242)
+[2026-11-02T15:23:38Z] [SESSION-272] ERROR [task-254] [TASK_EXEC] attempt3：真缺口=IRQ 频率 34/s vs 金标 1428Hz（irqen=00+legacy cap）
+[2026-11-02T15:23:38Z] [SESSION-272] STATS tasks_total=252 completed=160 failed=92 pending=0
+[2026-11-02T15:23:38Z] [SESSION-272] LOCK released

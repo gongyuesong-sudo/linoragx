@@ -3716,6 +3716,11 @@ void linoragx_z80_step(unsigned int pc)
                           zst_lo = e ? atoi(e) : -1; zst_hi = (e && d) ? atoi(d + 1) : (e ? atoi(e) : -1); }
       if (zst_lo >= 0 && f >= zst_lo && f <= zst_hi)
           fprintf(stderr, "ZS %d %04x\n", f, pc); }
+    { static int hnd = -2;
+      if (hnd == -2) hnd = getenv("HNDDBG") ? 1 : 0;
+      { static int dump_left = 0; static int fired = 0;
+        if (hnd && g_ng && !fired && g_ng->frame > 600 && pc == 0x20ef) { dump_left = 400; fired = 1; }
+        if (dump_left > 0) { fprintf(stderr, "HND %04x\n", pc); dump_left--; } } }
     { static int ixx = -2;
       if (ixx == -2) ixx = getenv("IXXDBG") ? 1 : 0;
       if (ixx && g_ng && (pc == 0x1386 || pc == 0x138c || pc == 0x138f || pc == 0x218f || pc == 0x21f4 || pc == 0x0133 || pc == 0x217f || pc == 0x21e8 || pc == 0x2164 || pc == 0x217c || pc == 0x20ef || pc == 0x214d || pc == 0x2152 || pc == 0x03ce || pc == 0x0837)) {
