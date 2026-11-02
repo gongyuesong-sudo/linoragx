@@ -1602,3 +1602,8 @@
 [2026-11-02T15:27:02Z] [SESSION-273] ERROR [task-255] [TASK_EXEC] attempt1：CAPN 无效；金标 IRQ 双频=OPM 61Hz+OPN timerA 1428Hz(load=0)
 [2026-11-02T15:27:02Z] [SESSION-273] STATS tasks_total=253 completed=160 failed=93 pending=0
 [2026-11-02T15:27:02Z] [SESSION-273] LOCK released
+[2026-11-02T15:27:56Z] [SESSION-274] LOCK acquired (pid=3971003)
+[2026-11-02T15:27:56Z] [SESSION-274] Starting [task-255] OPNA bank B timer A 自由运行实验 (base=88a3a1d)
+[2026-11-02T15:42:16Z] [SESSION-274] ERROR [task-255] [TASK_EXEC] attempt2：OPNA 无密度增益（254 不变）；bit0 分支非音乐任务
+[2026-11-02T15:42:16Z] [SESSION-274] STATS tasks_total=253 completed=160 failed=93 pending=0
+[2026-11-02T15:42:16Z] [SESSION-274] LOCK released

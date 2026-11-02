@@ -86,6 +86,12 @@ struct ym2610 {
        all: the OPN-style timer A sat at tload=0 (73ms period) and the FM task
        starved at 2.5/s vs golden 64/s. */
     int opm_latch, opm_mask, opm_cnt, opm_frac;
+    int opna_flag, opna_cnt; /* task-255 experiment (env OPNA=<ym_clocks_per_expiry>):
+                       golden samsho2 IRQ main rate 0.7ms cannot come from OPM
+                       (r1c mostly mask=0) — hypothesis: bank-B OPN timer A
+                       free-running at load=0. Drives ONLY the IRQ line; never
+                       sets IN(06) status bits (that regressed kof98). Read of
+                       bank-B status ACKs it (level IRQ read-clear parity). */
     int opm_started; /* 1 once the driver has written reg 0x1C: before that the
                         latch is 0 and a free-running timer would storm status
                         bit0 at 15.6kHz, wrecking the BIOS self-test cadence
@@ -423,6 +429,12 @@ void ym_advance(ym2610 *y, int zcycles)
               }
           }
       } }
+    { static int opna = -2;
+      if (opna == -2) opna = getenv("OPNA") ? (int)strtol(getenv("OPNA"), NULL, 0) : 0;
+      if (opna > 0) {
+          y->opna_cnt += zcycles;
+          while (y->opna_cnt >= opna) { y->opna_cnt -= opna; y->opna_flag = 1; y->tflag[1] |= 1; }
+      } }
     /* Tick calibration (task-196 golden kof10th): timer A period measured in
        two independent golden phases — sm1 latch 0x51 (tcnt 256) -> 18.4ms and
        m1 latch 0xAC (tcnt 84) -> 6.0ms — both = 286 Z80 clocks per tick at
@@ -561,6 +573,7 @@ int ym_irq_pending(ym2610 *y)
        once-per-frame pulse cap below cannot express this: it delivered at most
        60/s and its slot was usually consumed by a status-poll query that the
        Z80 could not take (di window), so the FM task starved at 2.5/s. */
+    if (y->opna_flag) return 1;   /* task-255 OPNA experiment: bank-B timer A level */
     if (y->opm_flag && y->opm_mask && !(y->irqen[0] & 0x40)) return 1;
     if (lvl) {
         /* opt-in full ymfm level model (task-196 experiment): kept for A/B.
@@ -617,6 +630,8 @@ uint8_t ym_read(ym2610 *y, int chipno)
     if (!c) y->opm_flag = 0;   /* MAME ym2151 status_r is read-clear: the
                                   bank-A status read ACKs the OPM timer flag
                                   (and with it the level IRQ line) */
+    if (c) y->opna_flag = 0;   /* task-255 OPNA: bank-B status read ACKs the
+                                  free-running timer A level */
     y->irq_latch[c] = 1;   /* status read ACKs the level IRQ: line stays low
                               until the NEXT timer overflow re-clears the latch
                               (ymfm read_status parity; without it the Z80

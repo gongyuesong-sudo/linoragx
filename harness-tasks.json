@@ -8949,9 +8949,9 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 1,
+   "attempts": 2,
    "max_attempts": 3,
-   "started_at_commit": "67903af",
+   "started_at_commit": "88a3a1d",
    "validation": {
     "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
     "timeout_seconds": 300
@@ -8960,7 +8960,8 @@
     "cleanup": null
    },
    "error_log": [
-    "[TASK_EXEC] attempt1\uff1aCAPN=1/4/8/16 \u5168\u90e8 loud=41 \u65e0\u53d8\u5316\u2014\u2014samsho2 IRQ \u5b9e\u9645\u8d70 legacy tflag[0] \u8def\u5f84\uff08opm_mask=0 \u4f7f opm_flag \u7ea7\u8054\u8def\u5f84\u6b7b\uff09\u3002OPMDBG\uff1asamsho2 r1c=0x80 latch=0 \u2192 lin OPM \u5468\u671f=latch+1=1 tick(0.064ms) \u65b9\u5411\u53cd\u4e86\uff1b\u91d1\u6807 r1c \u5206\u5e03 0x00\u00d710524(mask=0 \u4e3a\u4e3b)/0x80\u00d7374\u3002\u91d1\u6807 IRQ \u53cc\u9891\u7ed3\u6784\u5b9a\u6848\uff1a56Hz\u2248OPM timer A(latch=0\u219216.4ms) + 1428Hz \u4e3b\u9891=bank B OPN timer A(load=0 \u81ea\u7531\u8fd0\u884c\uff0csamsho2 bank B timer \u5bc4\u5b58\u5668\u5199=0)"
+    "[TASK_EXEC] attempt1\uff1aCAPN=1/4/8/16 \u5168\u90e8 loud=41 \u65e0\u53d8\u5316\u2014\u2014samsho2 IRQ \u5b9e\u9645\u8d70 legacy tflag[0] \u8def\u5f84\uff08opm_mask=0 \u4f7f opm_flag \u7ea7\u8054\u8def\u5f84\u6b7b\uff09\u3002OPMDBG\uff1asamsho2 r1c=0x80 latch=0 \u2192 lin OPM \u5468\u671f=latch+1=1 tick(0.064ms) \u65b9\u5411\u53cd\u4e86\uff1b\u91d1\u6807 r1c \u5206\u5e03 0x00\u00d710524(mask=0 \u4e3a\u4e3b)/0x80\u00d7374\u3002\u91d1\u6807 IRQ \u53cc\u9891\u7ed3\u6784\u5b9a\u6848\uff1a56Hz\u2248OPM timer A(latch=0\u219216.4ms) + 1428Hz \u4e3b\u9891=bank B OPN timer A(load=0 \u81ea\u7531\u8fd0\u884c\uff0csamsho2 bank B timer \u5bc4\u5b58\u5668\u5199=0)",
+    "[TASK_EXEC] attempt2\uff1aOPNA \u81ea\u7531\u8fd0\u884c timer \u5b9e\u73b0\uff08env=YM\u65f6\u949f/\u6ea2\u51fa\uff0c\u4ec5 IRQ \u7ebf+\u53ef\u9009 tflag[1]bit0\uff0cbank B \u72b6\u6001\u8bfb\u6e05\u9664\uff09\u3002OPNA=5600/11200 loud=41 \u540c\u57fa\u7ebf\u30012800 \u997f\u6b7b 0\uff1bFM \u5bc6\u5ea6 254 \u4e0d\u53d8\u3002\u7f6e tflag[1]bit0 \u540e handler fc37=01 \u8d70 bit0\u21920837 \u5206\u652f\u2014\u2014\u975e\u97f3\u4e50\u4efb\u52a1\uff0c\u5bc6\u5ea6\u65e0\u53d8\u5316\u3002\u7f3a\u91d1\u6807 IN(06) \u4f4d\u5206\u5e03\u5b9e\u6d4b\u6570\u636e"
    ],
    "checkpoints": [
     {
@@ -8974,11 +8975,17 @@
      "total": 3,
      "description": "\u91d1\u6807 IRQ \u53cc\u9891\u6765\u6e90\u5b9a\u4f4d\u3002\u4e0b\u4e00\u6b65\uff1a\u5b9e\u73b0 bank B OPN timer A \u81ea\u7531\u8fd0\u884c(load \u9ed8\u8ba4 0\uff0c\u5468\u671f~0.7ms)\u53ea\u9a71\u52a8 IRQ \u7ebf\u4e0d\u7f6e IN(06) \u72b6\u6001\u4f4d\uff08\u7ed5\u5f00 kof98 \u56de\u5f52\u6839\u56e0\u2014\u2014IN(06) bit \u7ffb\u8f6c\uff09\uff0cenv \u95e8\u63a7 OPNA=1 \u5b9e\u9a8c\uff1b\u540c\u65f6\u4fee OPM \u5468\u671f\u65b9\u5411 (256-latch)\u00d7512",
      "timestamp": "2026-11-02T15:27:02Z"
+    },
+    {
+     "step": 2,
+     "total": 3,
+     "description": "\u4e0b\u4e00\u6b65\uff1aMAME STATRD \u63a2\u9488\u6d4b\u91d1\u6807 samsho2 bank B IN(06) \u8bfb\u503c\u4f4d\u5206\u5e03\uff08preisle2 \u66fe\u6d4b IN(06)=00\uff1bsamsho2 \u672a\u77e5\uff09\uff0c\u786e\u5b9a\u91d1\u6807 IRQ \u643a\u5e26\u7684\u771f\u5b9e\u72b6\u6001\u4f4d\u518d\u5b9a OPNA \u8bed\u4e49",
+     "timestamp": "2026-11-02T15:42:16Z"
     }
    ],
    "completed_at": null
   }
  ],
- "session_count": 269,
- "last_session": "2026-11-02T15:27:02Z"
+ "session_count": 270,
+ "last_session": "2026-11-02T15:42:16Z"
 }
