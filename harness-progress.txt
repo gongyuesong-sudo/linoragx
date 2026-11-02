@@ -1607,3 +1607,9 @@
 [2026-11-02T15:42:16Z] [SESSION-274] ERROR [task-255] [TASK_EXEC] attempt2：OPNA 无密度增益（254 不变）；bit0 分支非音乐任务
 [2026-11-02T15:42:16Z] [SESSION-274] STATS tasks_total=253 completed=160 failed=93 pending=0
 [2026-11-02T15:42:16Z] [SESSION-274] LOCK released
+[2026-11-02T15:43:06Z] [SESSION-275] LOCK acquired (pid=3978508)
+[2026-11-02T15:43:06Z] [SESSION-275] Starting [task-255] 金标 IN(06) 状态位分布实测 (base=8ff70be)
+[2026-11-02T15:57:16Z] [SESSION-275] ERROR [task-255] [TASK_EXEC] attempt3：金标 IN(06)=00/01/02 三分天下，bank B 双 timer 定案
+[2026-11-02T15:57:16Z] [SESSION-275] CHECKPOINT [task-255] step=3/3 修复路径=bank B timer 门+r26seen，转 task-256
+[2026-11-02T15:57:16Z] [SESSION-275] STATS tasks_total=254 completed=160 failed=94 pending=1
+[2026-11-02T15:57:16Z] [SESSION-275] LOCK released

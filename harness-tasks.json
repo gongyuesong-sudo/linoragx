@@ -8949,9 +8949,9 @@
    "status": "failed",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
-   "started_at_commit": "88a3a1d",
+   "started_at_commit": "8ff70be",
    "validation": {
     "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
     "timeout_seconds": 300
@@ -8961,7 +8961,8 @@
    },
    "error_log": [
     "[TASK_EXEC] attempt1\uff1aCAPN=1/4/8/16 \u5168\u90e8 loud=41 \u65e0\u53d8\u5316\u2014\u2014samsho2 IRQ \u5b9e\u9645\u8d70 legacy tflag[0] \u8def\u5f84\uff08opm_mask=0 \u4f7f opm_flag \u7ea7\u8054\u8def\u5f84\u6b7b\uff09\u3002OPMDBG\uff1asamsho2 r1c=0x80 latch=0 \u2192 lin OPM \u5468\u671f=latch+1=1 tick(0.064ms) \u65b9\u5411\u53cd\u4e86\uff1b\u91d1\u6807 r1c \u5206\u5e03 0x00\u00d710524(mask=0 \u4e3a\u4e3b)/0x80\u00d7374\u3002\u91d1\u6807 IRQ \u53cc\u9891\u7ed3\u6784\u5b9a\u6848\uff1a56Hz\u2248OPM timer A(latch=0\u219216.4ms) + 1428Hz \u4e3b\u9891=bank B OPN timer A(load=0 \u81ea\u7531\u8fd0\u884c\uff0csamsho2 bank B timer \u5bc4\u5b58\u5668\u5199=0)",
-    "[TASK_EXEC] attempt2\uff1aOPNA \u81ea\u7531\u8fd0\u884c timer \u5b9e\u73b0\uff08env=YM\u65f6\u949f/\u6ea2\u51fa\uff0c\u4ec5 IRQ \u7ebf+\u53ef\u9009 tflag[1]bit0\uff0cbank B \u72b6\u6001\u8bfb\u6e05\u9664\uff09\u3002OPNA=5600/11200 loud=41 \u540c\u57fa\u7ebf\u30012800 \u997f\u6b7b 0\uff1bFM \u5bc6\u5ea6 254 \u4e0d\u53d8\u3002\u7f6e tflag[1]bit0 \u540e handler fc37=01 \u8d70 bit0\u21920837 \u5206\u652f\u2014\u2014\u975e\u97f3\u4e50\u4efb\u52a1\uff0c\u5bc6\u5ea6\u65e0\u53d8\u5316\u3002\u7f3a\u91d1\u6807 IN(06) \u4f4d\u5206\u5e03\u5b9e\u6d4b\u6570\u636e"
+    "[TASK_EXEC] attempt2\uff1aOPNA \u81ea\u7531\u8fd0\u884c timer \u5b9e\u73b0\uff08env=YM\u65f6\u949f/\u6ea2\u51fa\uff0c\u4ec5 IRQ \u7ebf+\u53ef\u9009 tflag[1]bit0\uff0cbank B \u72b6\u6001\u8bfb\u6e05\u9664\uff09\u3002OPNA=5600/11200 loud=41 \u540c\u57fa\u7ebf\u30012800 \u997f\u6b7b 0\uff1bFM \u5bc6\u5ea6 254 \u4e0d\u53d8\u3002\u7f6e tflag[1]bit0 \u540e handler fc37=01 \u8d70 bit0\u21920837 \u5206\u652f\u2014\u2014\u975e\u97f3\u4e50\u4efb\u52a1\uff0c\u5bc6\u5ea6\u65e0\u53d8\u5316\u3002\u7f3a\u91d1\u6807 IN(06) \u4f4d\u5206\u5e03\u5b9e\u6d4b\u6570\u636e",
+    "[TASK_EXEC] attempt3\uff1a\u91d1\u6807 IN(06) \u5206\u5e03\u5b9e\u6d4b\uff08STATRD \u63a2\u9488\u79fb\u690d\u5230 ymopn.h status_hi_r\uff0c\u6a21\u677f\u5185 machine() \u4e0d\u53ef\u89c1\u6539\u7eaf\u503c\u8bb0\u5f55\uff09\uff1a00\u00d78075/01\u00d76504/02\u00d75663/80\u00d74056/03\u00d7131\u2014\u2014bank B timer A(bit0)\u4e0e timer B(bit1)\u5747\u9ad8\u9891\u7ffb\u8f6c\u3002lin IN(06) \u6052 00\u30020837=bit0 \u5206\u652f=ADPCM-B \u97f3\u4e50 init\uff08call 2b71\u00d74 de=1000/1c80/1c00/1080\uff09\u3002OPNA \u98ce\u66b4 taken=0\uff1alin \u5fc3\u8df3\u5faa\u73af\u5b9e\u9645\u7531\u4e3b\u5faa\u73af\u8c03\u7528\u94fe\u9a71\u52a8\uff08pc=217b iff=0\uff09\uff0c\u975e IRQ \u9a71\u52a8"
    ],
    "checkpoints": [
     {
@@ -8981,11 +8982,37 @@
      "total": 3,
      "description": "\u4e0b\u4e00\u6b65\uff1aMAME STATRD \u63a2\u9488\u6d4b\u91d1\u6807 samsho2 bank B IN(06) \u8bfb\u503c\u4f4d\u5206\u5e03\uff08preisle2 \u66fe\u6d4b IN(06)=00\uff1bsamsho2 \u672a\u77e5\uff09\uff0c\u786e\u5b9a\u91d1\u6807 IRQ \u643a\u5e26\u7684\u771f\u5b9e\u72b6\u6001\u4f4d\u518d\u5b9a OPNA \u8bed\u4e49",
      "timestamp": "2026-11-02T15:42:16Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "\u5b9a\u6848\uff1a\u91d1\u6807 bank B timer A+B \u90fd\u8fd0\u884c\u4e14\u9a71\u52a8 handler \u5206\u652f\u3002\u4fee\u590d=bank B timer \u95e8 c<=1 + r26seen \u5224\u522b\u5668\uff08samsho2 r26=2 \u5f00\u3001kof98 r26=0 \u5173\uff0c\u590d\u7528 task-262 \u5224\u522b\u5668\uff09\u3002\u65b0\u5efa task-256 \u5b9e\u73b0",
+     "timestamp": "2026-11-02T15:57:16Z"
     }
    ],
    "completed_at": null
+  },
+  {
+   "id": "task-256",
+   "title": "bank B OPN timer \u95e8\u5f00 c<=1 + r26seen \u5224\u522b\u5668\uff08samsho2 \u5f00/kof98 \u5173\uff09\uff0c\u91d1\u6807 IN(06) bit0\u00d76504+bit1\u00d75663 \u5bf9\u7167\uff0c\u76ee\u6807 FM>500/3000f \u4e14\u56de\u5f52\u77e9\u9635\u96f6\u635f\u5931",
+   "status": "pending",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 0,
+   "max_attempts": 3,
+   "started_at_commit": null,
+   "validation": {
+    "command": "bash /home/gill/.hermes/cache/scratch/check_t252.sh",
+    "timeout_seconds": 300
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [],
+   "checkpoints": [],
+   "completed_at": null
   }
  ],
- "session_count": 270,
- "last_session": "2026-11-02T15:42:16Z"
+ "session_count": 271,
+ "last_session": "2026-11-02T15:57:16Z"
 }
