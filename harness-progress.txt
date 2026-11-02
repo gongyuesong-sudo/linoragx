@@ -1529,3 +1529,5 @@
 [2026-11-02T12:17:10Z] [SESSION-261] ERROR [task-250] [TASK_EXEC] BRELOAD 副作用未解（金标 kof98 r27 也密集 312/s 但 lin BRELOAD 反坏 kof98——B 相位/OPM ACK 竞争），留 1 次重试
 [2026-11-02T12:17:10Z] [SESSION-261] STATS tasks_total=248 completed=157 failed=91 pending=0 blocked=0
 [2026-11-02T12:17:10Z] [SESSION-261] LOCK released
+[2026-11-02T12:23:17Z] [SESSION-262] LOCK acquired (pid=3825165)
+[2026-11-02T12:23:17Z] [SESSION-262] Starting [task-250] samsho2 任务链调度器 第3次尝试：r26-written 判别条件 (base=e71fd25)

@@ -71,6 +71,13 @@ struct ym2610 {
                        the Z80 INT was ever raised). Cleared by the status read
                        (ack) or once the window (~1 frame) expires. */
     int tcntb[2], tloadb[2], tfracb[2], irqen[2];
+    int r26seen[2]; /* driver explicitly wrote timer-B load (reg 0x26) at least
+                       once. BRELOAD gates on this: samsho2/samsho3 arm timer B
+                       (r26 x2) and need continuous re-arming to emulate the
+                       golden driver's dense 0x27 re-arm; kof98/kof2000 never
+                       touch 0x26 and their drivers branch on IN(04) bit1 —
+                       reloading for them REGRESSED kof98 9→0 loud. Not in the
+                       save blob: the driver re-writes 0x26 periodically. */
     /* YM2151 (OPM) native timer — samsho2 task-206: the SNK m1 FM task arms
        its tick through reg 0x1C (7-bit latch, bit7 = IRQ mask) and keeps it
        running; MAME ym2151 auto-reloads on every expiry (~64us steps), so the
@@ -305,7 +312,7 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     if (reg == 0x25) { y->tload[c] = (y->tload[c] & 0x0FF) | ((val & 0x03) << 8);
         { extern int g_ym_frame; static int t25=-1; if (t25<0) t25=getenv("R24DBG")?1:0;
           if (t25) fprintf(stderr, "R25 f=%d val=%02x tload=%d\n", g_ym_frame, val, y->tload[c]); } }
-    if (reg == 0x26) { y->tloadb[c] = val; }
+    if (reg == 0x26) { y->tloadb[c] = val; y->r26seen[c] = 1; }
     if (reg == 0x27) {
         { static int r27 = -1;
           if (r27 < 0) r27 = getenv("R27DBG") ? 1 : 0;
@@ -448,17 +455,19 @@ void ym_advance(ym2610 *y, int zcycles)
             if (--y->tcntb[c] <= 0) {
                 y->tflag[c] |= 2;
                 y->irq_latch[c] = 0;
-                /* BRELOAD=1: emulate the golden driver's dense 0x27 re-arm.
-                   Golden samsho2 writes r27 1306/s (YM helper heartbeat) so
-                   timer B is perpetually re-armed and overflows continuously
-                   (~854/s, paced to 109/s IRQ by status reads); lin's driver
-                   writes r27 ~1/s so the ymfm one-shot leaves B dead and the
-                   Z80 IRQ rate collapses to 37/s — too sparse to ever land on
-                   the main loop's processing window, so the 2207 task group
-                   (bit 1,l phase gate) never starts and attract BGM stalls. */
-                static int breload = -1;
-                if (breload < 0) breload = getenv("BRELOAD") ? 1 : 0;
-                if (breload) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
+                /* Timer-B auto-reload, gated on the driver having explicitly
+                   loaded reg 0x26 (r26seen). Hardware parity: the golden
+                   driver re-arms B with dense 0x27 writes (samsho2 1306/s)
+                   so B overflows continuously; lin's Z80 runs the driver at
+                   ~1/s re-arm so a ymfm one-shot leaves B dead, IN(04) bit1
+                   never flips, and the m1 TCB-init branch (IN A,(04); BIT 1,A)
+                   mis-routes — attract BGM stalls (samsho2 0→41/50s with
+                   reload). Cards that never write 0x26 (kof98/kof2000) keep
+                   the strict ymfm one-shot: reloading for them regressed
+                   kof98 9→0. Override with ONE_SHOT_B=1 to force one-shot. */
+                static int oneshot_b = -1;
+                if (oneshot_b < 0) oneshot_b = getenv("ONE_SHOT_B") ? 1 : 0;
+                if (!oneshot_b && y->r26seen[c]) { int v = 256 - (y->tloadb[c] & 0xFF); y->tcntb[c] = v > 0 ? v : 1; }
                 else y->tcntb[c] = 0;   /* one-shot: stop until next 0x27 arm (ymfm) */
                 y->tpend[c] = y->clk ? (int)y->clk : 1;
                 { int v = 256 - (y->tloadb[c] & 0xFF); (void)v; }

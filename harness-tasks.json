@@ -8699,10 +8699,10 @@
   {
    "id": "task-250",
    "title": "samsho2 \u4efb\u52a1\u94fe\u8c03\u5ea6\u5668\uff1afd17 \u6d88\u8d39\u2192TCB arming\u2192\u8f68\u9053\u63a8\u8fdb\uff08\u51fb\u6253\u58f0+BGM \u5bc6\u5ea6\uff09",
-   "status": "failed",
+   "status": "in_progress",
    "priority": "P1",
    "depends_on": [],
-   "attempts": 2,
+   "attempts": 3,
    "max_attempts": 3,
    "started_at_commit": "3c31c84",
    "validation": {
@@ -8733,6 +8733,6 @@
    "completed_at": null
   }
  ],
- "session_count": 261,
- "last_session": "2026-11-02T12:17:10Z"
+ "session_count": 262,
+ "last_session": "2026-11-02T12:23:17Z"
 }
