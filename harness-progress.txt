@@ -1656,3 +1656,8 @@
 [2026-11-02T17:05:10Z] [SESSION-285] ERROR [task-259] [TASK_EXEC] attempt1：队列假设证伪，fd20=静态任务表，缺口=fd26 f7xx 指针填充路径
 [2026-11-02T17:05:10Z] [SESSION-285] STATS tasks_total=257 completed=160 failed=97 pending=0
 [2026-11-02T17:05:10Z] [SESSION-285] LOCK released
+[2026-11-02T17:07:13Z] [SESSION-286] LOCK acquired
+[2026-11-02T17:07:13Z] [SESSION-286] Starting [task-259] attempt2 fd26 填充窗口 (base=task-259a1)
+[2026-11-02T17:07:13Z] [SESSION-286] ERROR [task-259] [TASK_EXEC] attempt2：填充窗口 t4.2-9s，lin 零写入，填充者未定位
+[2026-11-02T17:07:13Z] [SESSION-286] STATS tasks_total=257 completed=160 failed=97 pending=0
+[2026-11-02T17:07:13Z] [SESSION-286] LOCK released
