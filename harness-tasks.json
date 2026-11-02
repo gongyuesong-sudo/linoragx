@@ -9374,6 +9374,18 @@
           "total": 3,
           "description": "MAJOR CORRECTION: NMI works fine all along - NMIDISP shows dispatch f24 (spurious), f250 x2, f257, f639-652; P0R proves handler read latch=01 at f25 zpc=006c. Prior NMI=0 conclusions were probe blind spots (PC hook misses 0x66 after Rst; PCOUNT frame-sampled). Self-halt REINTERPRETED: 0b88 cmd-01 handler does push 0cfc + ret -> trampoline into 0c00 block -> 0c2b writes jp-fffd -> halt-wait for NEXT NMI. It is sm1's designed command-wait, NOT a fault. golden does the same at t=4.0. lin f260: fe39=02 (dispatcher ran, took 01c4 branch) but detect block (needs fe39=3) never ran -> fe40 stays 0. Next gap: why lin queue yields cmd 2 where golden yields cmd 3 (detect) - queue content/parse divergence at f250-260.",
           "timestamp": "2026-11-02T20:30:23Z"
+        },
+        {
+          "step": 10,
+          "total": 3,
+          "description": "SECOND CORRECTION: golden zs7 (t9s) shows fe46=0 fe47=0 fe39=0 fe40=0 ring all-zero - IDENTICAL to lin's sm1 end state. Detect block never ran in golden either (fe40=0 both sides) - fe40=4 hypothesis DEAD. lin f25 cmd=01 vs golden t=4.0 cmd=01: same stream, lin 4s earlier (fast-boot), but content identical. sm1 phase fully aligned in end state => divergence is NOT in sm1. Both sides: sm1 consumes commands, self-halts, handoff swaps to m1. Remaining gap must be inside m1 phase post-handoff (already narrowed by MAMEVIEW test: handoff timing aligned f251~golden t4.17, task tables correct, commands byte-identical, yet FM density 254 vs 11000). Next: golden m1 cold-start RAM/queue state at t=4.2-4.3 (zs window right after view swap) vs lin at f251-260 - full 64K diff in that window, not t9s.",
+          "timestamp": "2026-11-02T20:35:40Z"
+        },
+        {
+          "step": 11,
+          "total": 3,
+          "description": "golden zs5 (t4.5, m1 cold-start+0.3s) vs lin f260 (MAMEVIEW handoff+9f): 177 diffs - golden already has music-engine runtime structures: f967-f99b track handle table (stride 0x10 entries 01|ptr_lo|f5-f7) + fadf-fb13 rhythm pair table (33 33/74 74/78 78/30 30/15 15/40 40/14 1e/0f 0f/0c 0c stride 4). lin all zeros there. Rhythm pattern NOT in m1 ROM (0 hits) - tables are engine runtime products, not loaded data. => golden m1 engine executes within 0.3s of cold start; lin engine never produces them. Divergence is m1 main-loop execution, not data loading. Next: identify m1 routine that builds f967 handle table (search m1 for writes to f967 via hl=967x setup: ld hl,967f/ld de,967f/imm patterns or ldir dest f967) and its entry gate.",
+          "timestamp": "2026-11-02T20:37:12Z"
         }
       ],
       "completed_at": null
