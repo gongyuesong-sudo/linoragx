@@ -1547,3 +1547,8 @@
 [2026-11-02T12:53:35Z] [SESSION-264] Starting [task-252] samsho2 音乐任务链密度 (base=5dfea44)
 [2026-11-02T12:53:35Z] [SESSION-264] CHECKPOINT [task-252] step=1/3 排除68K侧与TCB假设；缺口=Z80每IRQ任务执行量（金标r27 1306/s vs lin 0.28/s）
 [2026-11-02T13:03:24Z] [SESSION-264] CHECKPOINT [task-252] step=2/3 三层假象连破（no-audio 队列陷阱/ZPCSTAT 探针假报/fc3b 语义误读）；真分歧=IN(04) bit0 读窗口 vs 68K r27 bit4 清除时序
+[2026-11-02T13:06:04Z] [SESSION-264] CHECKPOINT [task-252] step=3/3 切入点=24b0 对 fe3c=0x0e 退出语义
+[2026-11-02T13:06:04Z] [SESSION-264] ERROR [task-252] [TEST_FAIL] FM 密度 254<500（真实缺口=任务循环率 23x）
+[2026-11-02T13:06:04Z] [SESSION-264] STATS tasks_total=250 completed=160 failed=90 pending=0
+[2026-11-02T13:06:04Z] [SESSION-264] WARN 批测 140/208 时零回归+gain kof96ae20，等完成通知
+[2026-11-02T13:06:04Z] [SESSION-264] LOCK released

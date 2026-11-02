@@ -8775,7 +8775,7 @@
   {
    "id": "task-252",
    "title": "samsho2 \u97f3\u4e50\u4efb\u52a1\u94fe\u63a8\u8fdb\u5bc6\u5ea6\uff1aFM\u97f3\u7b2615 vs \u91d1\u680711000\u3001r27 14 vs 117521\uff08\u7ea61/1000\uff09\u2014\u2014BGM \u9760\u957f ADPCM-B \u6837\u672c\u6491 loudsecs \u4f46\u65cb\u5f8b\u7a00\u758f\u3001\u97f3\u8272\u5355\u8584",
-   "status": "in_progress",
+   "status": "failed",
    "priority": "P1",
    "depends_on": [],
    "attempts": 1,
@@ -8788,7 +8788,9 @@
    "on_failure": {
     "cleanup": null
    },
-   "error_log": [],
+   "error_log": [
+    "[TEST_FAIL] FM \u5bc6\u5ea6 254/3000f < 500\uff08\u97f3\u9891\u7248\u5b9e\u6d4b\uff0cno-audio \u5047\u8c61\u5df2\u6392\u9664\uff09\uff1b\u7f3a\u53e3=\u4efb\u52a1\u5faa\u73af\u7387 56/s vs \u91d1\u6807 1306/s"
+   ],
    "checkpoints": [
     {
      "step": 1,
@@ -8801,11 +8803,17 @@
      "total": 3,
      "description": "\u4e09\u5c42\u5047\u8c61\u8fde\u7834\uff1a\u2460--no-audio \u4e0b YM \u5199\u6ede\u7559\u961f\u5217\u4e0d\u6d88\u8d39\uff0cOPM/timer \u72b6\u6001\u673a\u4e0d\u9a71\u52a8\u2014\u2014\u6240\u6709 timer \u63a2\u9488\u5fc5\u987b\u5e26 --dump-audio \u8dd1\uff1b\u2461taken=0 \u5047\u62a5\u2014\u2014zpcstat_hook \u9700 ZPCSTAT env \u542f\u7528\uff0c\u5b9e\u6d4b IRQ taken=1575/1800f(0.87/\u5e27) IRQ \u4e00\u76f4\u88ab\u63a5\u53d7\uff1b\u2462\u91d1\u6807 fc3b=01 \u4e0d\u662f 2207 \u6267\u884c\u8bc1\u636e\u2014\u2014215d \u95e8\u4e0d\u8df3\u8def\u5f84\u5199 fc3b=IN(04)\uff0c\u91d1\u6807\u540c\u6837\u4e0d\u8fdb 2207\uff08bank B \u5b9a\u65f6\u5668\u53cc\u65b9\u90fd\u672a\u88c5\u8f7d\uff09\u3002\u771f\u5206\u6b67\uff1alin IN(04) bit0 \u6052 0\uff0868K \u6bcf\u5e27\u5199 r27=1f/2f bit4 \u6e05 timer A flag\uff0cZ80 handler \u8bfb IN(04) \u6070\u5728\u6e05\u9664\u540e\uff09\uff0c\u91d1\u6807\u8bfb\u7a97\u53e3\u843d\u5728 overflow \u540e bit0=1\u3002\u4fee\u590d\u65b9\u5411\uff1ar27 bit4 \u6e05\u9664\u4e0e Z80 \u8bfb\u4e4b\u95f4\u7684 overflow \u4fdd\u5e8f",
      "timestamp": "2026-11-02T13:03:24Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "\u5207\u5165\u70b9\u9501\u5b9a\uff1a22f8 \u904d\u5386\u21922310\u2192call 24b0 \u97f3\u4e50\u7b49\u5f85\u5faa\u73af\uff0clin fe3c=0x0e\uff08\u5fc3\u8df3\u56de\u663e\uff09\uff1bSESSION-260 \u8bb0\u5f55 24b0 \u9000\u51fa\u503c={0,0x31,0x60,bit7}\u4e0d\u542b 0x0e\u2014\u2014\u4f46\u91d1\u6807 fe3c \u540c\u4e3a 0x0e \u5374\u4e0d\u6ede\u7559\uff0c\u9700\u91cd\u6838 24b0 \u5bf9 0x0e \u7684\u771f\u5b9e\u5904\u7406\uff08SESSION-260 \u66fe\u5224 zdis \u53d8\u957f\u524d\u7f00\u53cd\u6c47\u7f16\u6709\u9519\uff09",
+     "timestamp": "2026-11-02T13:06:04Z"
     }
    ],
    "completed_at": null
   }
  ],
  "session_count": 263,
- "last_session": "2026-11-02T12:34:04Z"
+ "last_session": "2026-11-02T13:06:04Z"
 }
