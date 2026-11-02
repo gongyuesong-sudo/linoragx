@@ -1531,3 +1531,8 @@
 [2026-11-02T12:17:10Z] [SESSION-261] LOCK released
 [2026-11-02T12:23:17Z] [SESSION-262] LOCK acquired (pid=3825165)
 [2026-11-02T12:23:17Z] [SESSION-262] Starting [task-250] samsho2 任务链调度器 第3次尝试：r26-written 判别条件 (base=e71fd25)
+[2026-11-02T12:29:27Z] [SESSION-262] CHECKPOINT [task-250] step=3/3 BGM 修复默认化 ac330b1（r26seen 门控 auto-reload；samsho2 41/50s；5卡零回归）
+[2026-11-02T12:29:27Z] [SESSION-262] ERROR [task-250] [TASK_EXEC] validation 击打声 r23 仍 0，failed(3/3)；拆出 task-251（SFX ADPCM-A start）
+[2026-11-02T12:29:27Z] [SESSION-262] WARN 208卡音频批测后台运行中(proc_bfe7c8286ab5)验证 ac330b1 零回归
+[2026-11-02T12:29:27Z] [SESSION-262] STATS tasks_total=249 completed=157 failed=92 pending=1 blocked=0
+[2026-11-02T12:29:27Z] [SESSION-262] LOCK released

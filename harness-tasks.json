@@ -8699,7 +8699,7 @@
   {
    "id": "task-250",
    "title": "samsho2 \u4efb\u52a1\u94fe\u8c03\u5ea6\u5668\uff1afd17 \u6d88\u8d39\u2192TCB arming\u2192\u8f68\u9053\u63a8\u8fdb\uff08\u51fb\u6253\u58f0+BGM \u5bc6\u5ea6\uff09",
-   "status": "in_progress",
+   "status": "failed",
    "priority": "P1",
    "depends_on": [],
    "attempts": 3,
@@ -8714,7 +8714,8 @@
    },
    "error_log": [
     "[TASK_EXEC] \u672a\u4fee\u590d\u4f46\u6839\u56e0\u6536\u7a84\uff1a2207 \u4efb\u52a1\u7fa4\u5165\u53e3\u76f8\u4f4d\u95e8 bit 1,l\uff1blin IRQ \u63a5\u53d7\u9501\u6b7b\u5728\u7b49\u5f85\u5faa\u73af l=b4\uff1b\u91d1\u6807\u552f\u4e00\u5206\u53c9 fe3c=0e vs 00\uff1bRAMPOKE \u9759\u6001\u6ce8\u5165\u8bc1\u4f2a",
-    "[TASK_EXEC] BRELOAD \u5b9e\u9a8c\uff1atimer B \u81ea\u52a8\u91cd\u8f7d\u4f7f samsho2 BGM 0\u219241/50s\uff08\u673a\u5236=IN(04) bit1\u2192TCB init \u5206\u652f\uff09\uff0c\u4f46\u56de\u5f52 kof98(25\u21920)/kof2000(17\u21923)\uff1b\u91d1\u6807 r27 \u5bc6\u96c6(samsho2 1306/s,kof98 312/s) vs lin \u5168\u7a00\u758f(~1/s)\u662f\u7cfb\u7edf\u6027\u5dee\u8ddd\uff0c\u81ea\u52a8\u5224\u522b\u6761\u4ef6\u672a\u627e\u5230"
+    "[TASK_EXEC] BRELOAD \u5b9e\u9a8c\uff1atimer B \u81ea\u52a8\u91cd\u8f7d\u4f7f samsho2 BGM 0\u219241/50s\uff08\u673a\u5236=IN(04) bit1\u2192TCB init \u5206\u652f\uff09\uff0c\u4f46\u56de\u5f52 kof98(25\u21920)/kof2000(17\u21923)\uff1b\u91d1\u6807 r27 \u5bc6\u96c6(samsho2 1306/s,kof98 312/s) vs lin \u5168\u7a00\u758f(~1/s)\u662f\u7cfb\u7edf\u6027\u5dee\u8ddd\uff0c\u81ea\u52a8\u5224\u522b\u6761\u4ef6\u672a\u627e\u5230",
+    "[TASK_EXEC] validation \u672a\u8fc7\uff1a\u51fb\u6253\u58f0 bank B r23(ADPCM-A start) \u4ecd 0\uff08\u91d1\u6807\u00d71238 zpc=2b80 bank B \u52a9\u624b\uff09\uff1b\u4f46 BGM \u5df2\u9ed8\u8ba4\u4fee\u590d 0\u219241/50s\uff08timer-B auto-reload gated on r26seen\uff0c\u63d0\u4ea4 ac330b1\uff0c5\u5361\u5192\u70df\u96f6\u56de\u5f52\uff09"
    ],
    "checkpoints": [
     {
@@ -8728,11 +8729,37 @@
      "total": 3,
      "description": "\u6839\u56e0\u94fe\u95ed\u5408\uff1alin \u9a71\u52a8 r27 \u7a00\u758f\u2192B one-shot \u6b7b\u2192IN(04) bit1 \u60520\u2192TCB init \u8d70\u9519\u5206\u652f\u2192\u97f3\u4e50\u4efb\u52a1\u672a armed\uff1bBRELOAD=1 \u8bc1\u660e\u8be5\u94fe\uff08samsho2 loud 41/50s\uff09\uff1b\u526f\u4f5c\u7528 kof98/kof2000 \u56de\u5f52\u5f85\u89e3",
      "timestamp": "2026-11-02T12:17:10Z"
+    },
+    {
+     "step": 3,
+     "total": 3,
+     "description": "BGM \u4fee\u590d\u9ed8\u8ba4\u5316\uff1ar26seen \u5224\u522b\uff08samsho \u5bb6\u65cf\u5199 r26\u00d72\uff0ckof98/kof2000 \u6052 0\uff09\uff1bsamsho2 41/50s\u3001kof98 9s\u3001kof2000 27s\u3001vliner 21s\u3001mslug4 21s \u96f6\u56de\u5f52\uff1b\u51fb\u6253\u58f0 r23 \u9057\u7559\u62c6 task-251",
+     "timestamp": "2026-11-02T12:29:27Z"
     }
    ],
+   "completed_at": null
+  },
+  {
+   "id": "task-251",
+   "title": "samsho2 \u51fb\u6253\u58f0\uff1aADPCM-A start(bank B r23) \u96f6\u5199\u5165\u2014\u2014SFX \u4efb\u52a1/0b87 \u64ad\u653e\u5668\u672a\u5230\u8fbe\uff08\u91d1\u6807 r23\u00d71238 zpc=2b80\uff09",
+   "status": "pending",
+   "priority": "P1",
+   "depends_on": [],
+   "attempts": 0,
+   "max_attempts": 3,
+   "started_at_commit": null,
+   "validation": {
+    "command": "bash -c \"cd /home/gill/linoragx && YMWR=0:99999 LINORAGX_INPUT='2328:6:2,2343:6:2,2358:6:2,2373:6:2,2388:6:2,2403:6:2' timeout 200 reawork/bin/linoragx --rom roms/samsho2.zip --bios /home/gill/linoragx --frames 3600 --headless --no-audio 2>/tmp/t251_ym.txt >/dev/null; python3 -c \\\"import re;c=re.compile(r'YMWR f=(\\\\d+) c1 r=23');n=[int(m.group(1)) for m in c.finditer(open('/tmp/t251_ym.txt',errors='replace').read())];hit=[f for f in n if 2300<=f<=2900];print('r23',len(n),'hitwin',len(hit));assert len(hit)>0\\\"\"",
+    "timeout_seconds": 300
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [],
+   "checkpoints": [],
    "completed_at": null
   }
  ],
  "session_count": 262,
- "last_session": "2026-11-02T12:23:17Z"
+ "last_session": "2026-11-02T12:29:27Z"
 }
