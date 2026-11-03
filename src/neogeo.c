@@ -3611,8 +3611,8 @@ void linoragx_z80_step(unsigned int pc)
     if (g_ng && ym_irq_pending(g_ng->ym)) z80w_irq(g_ng->z, 0xff);
     { static int iqdbg = -2; static long iq_n = 0;
       if (iqdbg == -2) iqdbg = getenv("IRQRATE") ? 1 : 0;
-      if (iqdbg && (iq_n++ % 20000) == 0) { extern int ym_irq_pending_dbg(void*); extern int g_ym_frame;
-          fprintf(stderr, "IRQRATE f=%d pend=%d n=%ld\n", g_ym_frame, ym_irq_pending_dbg(g_ng ? g_ng->ym : NULL), iq_n); } }
+      if (iqdbg && (iq_n++ % 20000) == 0) { extern int ym_irq_pending_dbg(void*); extern int ym_gold_dbg(void*); extern int g_ym_frame;
+          fprintf(stderr, "IRQRATE f=%d pend=%d gold=%x n=%ld\n", g_ym_frame, ym_irq_pending_dbg(g_ng ? g_ng->ym : NULL), ym_gold_dbg(g_ng ? g_ng->ym : NULL), iq_n); } }
     { static int zdbg=-2; extern uint8_t z80w_if(void*); extern int z80w_im(void*); extern unsigned long zirq_assert_n(void), g_rst38_n;
       if (zdbg==-2) zdbg=getenv("ZIRQDBG")?1:0;
       if (zdbg && (g_ng->frame % 300)==0)

@@ -1742,3 +1742,4 @@
 [2026-11-02T21:29:55Z] [SESSION-502] task-264 cp1: golden sm1 stays in idle loop (never self-halts) - lin self-halt at f25 is THE divergence. LOCK released.
 [2026-11-02T21:30:34Z] [SESSION-277] LOCK acquired; RECOVERY task-264 in_progress cp1 present -> resume attempt 1
 [2026-11-02T21:33:09Z] [SESSION-277] task-264 cp2 saved (fe40=0 detect-fail root). USER PIVOT: rebuild audio module by porting MAME gold-standard audio layer -> task-265 created (P0).
+[2026-11-02T22:32:23Z] [SESSION-278] LOCK acquired (pid=109241); resuming task-265 goldport batch eval

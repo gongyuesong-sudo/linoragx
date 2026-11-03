@@ -207,6 +207,24 @@ static void ym_ssg_silence(ym2610 *y)
 }
 
 /* GOLDPORT interface bodies (struct ym2610 complete here) */
+/* GOLDPORT bisection sub-switches (task-266): each isolates one gold-model
+   facet so a regression can be attributed without reverting the whole mode.
+   Default 1 = full gold; set 0 to fall back to legacy for that facet. */
+static int gold_sub(const char *env)
+{
+    static int cache[4]; static const char *keys[4] = {"GOLDTICK","GOLDRD","GOLDBUSY","GOLDIRQ"};
+    for (int i = 0; i < 4; i++) {
+        if (!strcmp(env, keys[i])) {
+            if (cache[i] == 0) { const char *e = getenv(env); cache[i] = (e && atoi(e) == 0) ? -1 : 1; }
+            return cache[i] == 1;
+        }
+    }
+    return 1;
+}
+#define GOLD_TICK(y) ((y)->gold && gold_sub("GOLDTICK"))
+#define GOLD_RD(y)   ((y)->gold && gold_sub("GOLDRD"))
+#define GOLD_BUSY(y) ((y)->gold && gold_sub("GOLDBUSY"))
+#define GOLD_IRQ(y)  ((y)->gold && gold_sub("GOLDIRQ"))
 void ym2610::LinIntf::ymfm_set_timer(uint32_t tnum, int32_t clocks)
 {
     if (y && y->gold && tnum < 2) y->chip.lin_set_timer((int)tnum, clocks);
@@ -217,7 +235,7 @@ void ym2610::LinIntf::ymfm_set_busy_end(uint32_t clocks)
 }
 bool ym2610::LinIntf::ymfm_is_busy()
 {
-    return (y && y->gold) ? y->chip.lin_is_busy() : false;
+    return (y && GOLD_BUSY(y)) ? y->chip.lin_is_busy() : false;
 }
 void ym2610::LinIntf::ymfm_update_irq(bool asserted)
 {
@@ -304,6 +322,8 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     extern int g_ym_frame;
     if (ymdbg < 0) ymdbg = getenv("YMBDBG") ? 1 : 0;
     if (ymdbg) fprintf(stderr, "YM%c f=%d %02x=%02x\n", 'A'+chipno, g_ym_frame, reg, val);
+    { static int cw = -2; if (cw == -2) cw = getenv("COREWR") ? 1 : 0;
+      if (cw) fprintf(stderr, "COREWR f=%d c%d r=%02x v=%02x\n", g_ym_frame, chipno, reg, val); }
     if (chipno == 2) return;                 /* legacy YM2151 mirror: bank A IS the OPM FM, ymfm handles it */
     int c = chipno ? 1 : 0;
     /* ymfm ym2610 is a unified 9-bit address space (vendor ymfm_opn.cpp
@@ -354,8 +374,11 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     }
     /* GOLDPORT: in gold mode the core owns busy (ymfm_set_busy_end on every
        write) and the timers (ymfm_set_timer via write_data 0x24-0x27); the
-       hand-written busy/timer bookkeeping below is legacy-layer only. */
-    if (!y->gold) {
+       hand-written busy/timer bookkeeping below is legacy-layer only.
+       Gated on GOLD_TICK (not gold) so GOLDTICK=0 fully restores the legacy
+       timer state machine — without the bookkeeping ten/tcnt stay zero and
+       the legacy tick in ym_advance spins harmlessly (task-266 bisection). */
+    if (!GOLD_TICK(y)) {
     y->busy[c] = 1;                          /* real YM2610 raises D7 after a write */
     y->busy_at[c] = y->clk + 200;            /* ...and clears it ~25us later on its own */
 
@@ -446,7 +469,7 @@ void ym_advance(ym2610 *y, int zcycles)
        ymfm_set_timer fire inside lin_tick(); engine_timer_expired -> status
        flag -> engine_check_interrupts -> ymfm_update_irq drives the Z80 IRQ
        level exactly like MAME's device timers + inputline. */
-    if (y->gold) { y->clk += (unsigned long)zcycles; y->chip.lin_tick(zcycles); return; }
+    if (GOLD_TICK(y)) { y->clk += (unsigned long)zcycles; y->chip.lin_tick(zcycles); return; }
     static int f_notimerb = -1;
     if (f_notimerb < 0) f_notimerb = getenv("NOTIMERB") ? 1 : 0;
     /* ymfm fm_engine_base::update_timer (ymfm_fm.ipp:1480): timer B period =
@@ -616,12 +639,13 @@ int ym_load_state(ym2610 *y, const void *buf)
 }
 
 extern "C" int ym_irq_pending_dbg(void *y) { return ym_irq_pending((ym2610 *)y); }
+extern "C" int ym_gold_dbg(void *y) { ym2610 *p = (ym2610*)y; return p ? (p->gold | (p->irq_level << 4)) : -1; }
 int ym_irq_pending(ym2610 *y)
 {
     /* GOLDPORT: the core's engine_check_interrupts already computed the exact
        level MAME wires to the audiocpu IRQ line (status & irq_mask, edge
        reported through ymfm_update_irq). Nothing else to model. */
-    if (y->gold) return y->irq_level;
+    if (GOLD_IRQ(y)) return y->irq_level;
     /* HYBRID, timer-A only: level IRQ = timer A flag (persistent, cleared by
        the 0x27 bit4 reset) AND active-low IRQA (0x27 bit6) — empirically what
        sm1/m1 drivers act on (they write 0x1f/0x35 with bit6=0 then wait).
@@ -687,9 +711,18 @@ uint8_t ym_read(ym2610 *y, int chipno)
        window (ymfm_is_busy -> lin_is_busy, advanced by lin_tick); bank B
        (upper port) = ADPCM EOS bits gated by the flag mask. No read-clear:
        flags are cleared by the driver's 0x27 reset bits, per the core. */
-    if (y->gold) {
+    if (GOLD_RD(y)) {
         if (chipno) return y->chip.read_status_hi();
         uint8_t st = y->chip.read_status();
+        /* datasheet parity: status read clears the timer flags (and with
+           them the level IRQ) so polling drivers deassert without a 0x27
+           reset write. Task-266 A/B: this is the lifeline for the 9-card
+           latch family (dragonsh/kof98/2020bb/aof2/cphd/fatfury family/
+           gowcaizr:
+           m1 task-chain gap means no 0x27 reset -> level latches -> RST38
+           storm; read-clear lets the polling handler deassert). doubledr's
+           regression is GOLDIRQ-side, not here (bisection matrix). */
+        y->chip.lin_clear_timer_flags();
         /* ADPCM-B EOS on the bank-A status bit6 (legacy-layer semantics the
            mslug4 BGM pump depends on; ymfm keeps it out of read_status). */
         if (y->chip.adpcm_b_status() & ymfm::adpcm_b_channel::STATUS_EOS)

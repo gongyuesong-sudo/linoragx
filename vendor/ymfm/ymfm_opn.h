@@ -731,6 +731,12 @@ public:
 	// Z80 livelocks (kof98 attract: peak 0). Mask timer A only, matching the
 	// legacy layer's proven "timer B must not drive the line" finding.
 	void lin_set_irq_mask(int mask) { m_fm.set_irq_mask(mask); }
+	// LINORAGX GOLDPORT: real YM2610 hardware clears the timer flags on a
+	// STATUS READ (datasheet); ymfm only clears via the 0x27 reset bits.
+	// Drivers that poll status without re-writing 0x27 (dragonsh/kof98 m1
+	// post-handoff) then latch the level IRQ high forever -> RST38 storm.
+	// Read-clear parity: clear both timer flags after the host reads status.
+	void lin_clear_timer_flags() { m_fm.set_reset_status(0, fm_engine::STATUS_TIMERA | fm_engine::STATUS_TIMERB); }
 
 
 	// read access

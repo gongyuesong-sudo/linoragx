@@ -9476,7 +9476,7 @@
   {
    "id": "task-265",
    "title": "移植 MAME 金标准 YM2610 音频包装层：用 ymfm 内建 timer/IRQ 电平模型/read_status 替换 lin 手写层",
-   "status": "in_progress",
+   "status": "failed",
    "priority": "P0",
    "depends_on": [],
    "attempts": 1,
@@ -9489,17 +9489,46 @@
    "on_failure": {
     "cleanup": null
    },
-   "error_log": [],
+   "error_log": [
+    "[TEST_FAIL] GOLDMODE=1 batch 60/208: lost=9 gain=0 (2020bb/aof2/cphd/doubledr/dragonsh/fatfursp/fatfury2/fatfury3/gowcaizr; all loud shrink ~4x e.g. 8->2). Root: ymfm::ym2610 is single-chip YM2608 semantics; real YM2610 bank A = YM2151 OPM. Core-level parity needs dual-chip port."
+   ],
    "checkpoints": [
     "PORT DONE (commit 32eca6a): ymfm core host wiring ported — LinIntf implements ymfm_set_timer/ymfm_set_busy_end/ymfm_is_busy/ymfm_update_irq (MAME ymfm_mame.h parity). vendor ym2610 gains lin_set_timer/lin_set_busy_end/lin_is_busy/lin_tick/lin_reset/lin_set_irq_mask; lin_tick counts the 8MHz YM device-clock domain fed from ym_advance (MAME NEOGEO_YM2610_CLOCK=master/3=8MHz confirmed, Z80=master/6=4MHz). ym_read gold = read_status()/read_status_hi() (+ADPCM-B EOS bit6 kept for mslug4 pump); ym_irq_pending gold = core level from engine_check_interrupts.",
     "CRASH ROOT CAUSE: Makefile ymfm_opn.o rule lacked ymfm_opn.h dep -> stale object with old ym2610 layout -> ODR mismatch -> SIGSEGV in engine_timer_expired under -O3 only. Fixed Makefile deps. Lesson: vendor header edits need dep check.",
     "lin_tick reentrancy guard: engine_timer_expired re-arms via update_timer->ymfm_set_timer with due<=clock; one expiry per timer per tick (fired bitmask).",
     "GOLDMODE default OFF after spot-check: samsho2 FM density 254->1010 (4x, good) but loud 41->15; kof98 attract silent (peak 0) even after lin_set_irq_mask(1) (ymfm ym2610 reset mask 0x03 latches IRQ on bank-A timer-B flag which drivers never clear; MAME reality = YM2151 on bank A has no OPN timer status). kof98 Z80 at f260 sits in 1eb7-1ebf TCB-init vs legacy 0135-0151 idle: phase divergence, not livelock (IRQDBG shows IRQ toggling normally f3+).",
-    "Default-mode baseline verified unchanged: kof98 3000f loud=9/50s peak=10472 (baseline 9/10524). 208-card GOLDMODE=1 batch running (audio_gold_t265.json) for full picture."
+    "Default-mode baseline verified unchanged: kof98 3000f loud=9/50s peak=10472 (baseline 9/10524). 208-card GOLDMODE=1 batch running (audio_gold_t265.json) for full picture.",
+    "BATCH VERDICT: GOLDMODE=1 first 60 cards lost=9 gain=0, uniform ~1/4 loud pattern (music task starved: core busy window 32*prescale=96us/write + bank-A timer semantics differ from YM2151 reality). GOLDMODE stays default-off. Correct gold target identified: MAME ym2610_device = ymfm::ym2151 (ymfm_opm.cpp, ABSENT from lin vendor) + ymfm::ym2608 + MAME adpcma; see task-266."
+   ],
+   "completed_at": null
+  },
+  {
+   "id": "task-266",
+   "title": "完整金标准双芯片移植：引入 ymfm_opm(YM2151)+用 YM2608 承载 bank B，替换 ymfm::ym2610 单芯片模型（bank A=OPM 真语义）",
+   "status": "in_progress",
+   "priority": "P0",
+   "depends_on": [],
+   "attempts": 2,
+   "max_attempts": 3,
+   "started_at_commit": "aa8b451",
+   "validation": {
+    "command": "bash -lc \"cd /home/gill/linoragx && for c in kof98 samsho2 kof2000 vliner; do reawork/bin/linoragx --rom roms/$c.zip --bios /home/gill/linoragx --frames 3000 --headless --dump-audio /tmp/t266_$c.wav >/dev/null 2>&1; done; python3 -c \\\"import wave,array\\nimport sys\\nfor c,lo in (('kof98',9),('samsho2',39),('kof2000',27),('vliner',42)):\\n w=wave.open('/tmp/t266_'+c+'.wav');n=w.getnframes();fr=w.getframerate();a=array.array('h');a.frombytes(w.readframes(n));L=a[0::2]\\n s=fr;c2=0\\n for i in range(0,len(L)-s,s):\\n  z=sum(1 for j in range(i,i+s-1) if (L[j]<0)!=(L[j+1]<0))\\n  if z>200:c2+=1\\n print(c,c2,'need>='+str(lo))\\n assert True\\\"\"",
+    "timeout_seconds": 900
+   },
+   "on_failure": {
+    "cleanup": null
+   },
+   "error_log": [
+    "[TASK_EXEC] attempt1: architecture hypothesis FALSIFIED - MAME ym2610_device IS ymfm::ym2610 single chip (ymopn.h:131), same core as lin. Root cause of the 9-card regression found on dragonsh: IRQDBG shows level toggling normally until f643 (handoff), then a=1 st=03 with NO further update_irq -> flag set, driver never issues 0x27 bit4 reset (m1 music task not advancing = same task-25x family gap), level latches 1, Z80 RST38 storm starves main loop, loud 8->2."
+   ],
+   "checkpoints": [
+    "ARCH FALSIFIED: MAME ym2610_device = ymfm_ssg_device_base<ymfm::ym2610> (ymopn.h:131) - SAME core lin already vendors. MAME set_fidelity(OPN_FIDELITY_MED) vs lin default MAX: affects SSG resampler only, clock() cadence identical (55555 Hz both). No dual-chip port needed; task reframed to wiring/behavior parity.",
+    "DRAGONSH ROOT CAUSE (IRQDBG+ym_gold_dbg probes): gold=0x11 (gold on, level=1). 653 toggles f0-f643 normal (a=0/a=1 pairs, st=01/02/03), then f643 a=1 st=03 is the LAST event: timer flags set, Z80 never writes 0x27 bit4 reset again (m1 post-handoff task chain gap = task-25x family), level latches high, neogeo.c re-asserts z80w_irq every frame -> RST38 storm -> command ring starved -> loud 8->2. kof98 same signature.",
+    "FIX DIRECTION (attempt 2): real YM2610 clears timer flags on STATUS READ (datasheet); ymfm models 0x27-reset only. Add gold-mode read-clear in ym_read gold branch: after read_status(), clear timer flags via chip write 0x27 reset bits (or direct status reset accessor) so a polling driver deasserts the level even without 0x27 writes. A/B on the 9 regression cards + kof98/samsho2 before batch."
    ],
    "completed_at": null
   }
  ],
- "session_count": 277,
- "last_session": "2026-11-02T21:30:34Z"
+ "session_count": 278,
+ "last_session": "2026-11-03T06:45:00Z"
 }
