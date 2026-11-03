@@ -3752,12 +3752,12 @@ void linoragx_z80_step(unsigned int pc)
       if (qd && g_ng && g_ng->frame != qf) {
           qf = g_ng->frame;
           if (g_ng->frame % 60 == 0 && g_ng->frame >= 240) {
-              extern uint8_t z_read_pub(uint32_t, void*);
+              extern uint8_t z80w_peek(void*, uint32_t);
               fprintf(stderr, "QDBG f=%llu fdca=%02x fd66=%02x fd67=%02x fddb=%02x fddc=%02x\n",
                       (unsigned long long)g_ng->frame,
-                      z_read_pub(0xFDCA, g_ng), z_read_pub(0xFD66, g_ng),
-                      z_read_pub(0xFD67, g_ng), z_read_pub(0xFDDB, g_ng),
-                      z_read_pub(0xFDDC, g_ng)); } } }
+                      z80w_peek(g_ng->z, 0xFDCA), z80w_peek(g_ng->z, 0xFD66),
+                      z80w_peek(g_ng->z, 0xFD67), z80w_peek(g_ng->z, 0xFDDB),
+                      z80w_peek(g_ng->z, 0xFDDC)); } } }
     { static int zdb = -2; static FILE *zf = 0;
       if (zdb == -2) zdb = getenv("ZDUMPB") ? 1 : 0;
       if (zdb && g_ng && g_ng->frame == 300 && !zf) {

@@ -62,7 +62,9 @@ static UINT8 tr_rd(UINT32 off, MemoryReadByte *h)
   if (off >= 0xF800) return w->cpu->ram_array()[off];
   return w->rd(off + h->lowAddr, w->ctx); }
 static void  tr_wr(UINT32 off, UINT8 v, MemoryWriteByte *h)
-{ if ((zdbg() & 1) && ((off >= 0xFEB0 && off < 0xFF00) || (off >= 0xFE4A && off < 0xFE80))) {
+{ { static int fc = -2; if (fc == -2) fc = getenv("FDCAW") ? 1 : 0;
+    if (fc && off == 0xFDCA) { static long n = 0;
+      if (n++ < 20) fprintf(stderr, "FDCAW off=%04x v=%02x n=%ld\n", off, v, n); } } if ((zdbg() & 1) && ((off >= 0xFEB0 && off < 0xFF00) || (off >= 0xFE4A && off < 0xFE80))) {
     static long bwr = 0; z80w *w0 = (z80w*)h->pUserArea;
     if (off < 0xFEC0 || (off >= 0xFE4A && off < 0xFE80) || (off >= 0xFC30 && off < 0xFC60) || (bwr++ % 50) == 0) fprintf(stderr, "BLKWR a=%04x v=%02x pc=%04x\n", off, v, w0->cpu->get_state().PC); }
   z80w *w = (z80w*)h->pUserArea;
