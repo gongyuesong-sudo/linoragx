@@ -1754,8 +1754,14 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
          at 0xD00124 and the BIOS scan (tst.b loop) then halted on CALENDAR
          ERROR (mslug3 family). */
       if (!ng->sram_unlocked) return;
-      if (mem_mask & 0xFF00) ng->sram[o] = d>>8;
-      if (mem_mask & 0x00FF) ng->sram[o+1] = d&0xFF;
+      /* Byte-exact placement: high byte (mask 0xFF00) -> even address, low byte
+         (mask 0x00FF) -> odd address. The old `sram[o+1]` broke ODD-byte writes
+         (move.b to an odd address landed one byte too high), corrupting save RAM
+         for games that init it byte-wise then read it back word-wise: diggerma
+         reads its $D00108 boot flag, gets a wrong value, installs a zero vector
+         table and crashes into RAM (black screen, silent). */
+      if (mem_mask & 0xFF00) ng->sram[o & ~1u] = d>>8;
+      if (mem_mask & 0x00FF) ng->sram[o | 1u] = d&0xFF;
       ng->sram_dirty = 1; }
 }
 
