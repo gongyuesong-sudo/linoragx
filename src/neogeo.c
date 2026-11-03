@@ -3761,6 +3761,12 @@ void linoragx_z80_step(unsigned int pc)
             if (g_ng && (int)g_ng->frame < zf) goto zpt_done; }
           zpt_n++;
           extern uint8_t z80w_peek_cb(void*, uint32_t);
+          { extern void z80w_regs(void*, unsigned*, unsigned*, unsigned*);
+            static int ldb = -2; if (ldb == -2) ldb = getenv("LDIRDBG") ? 1 : 0;
+            if (ldb && g_ng && (pc & 0xFFF) == 0x0C2) {
+                unsigned bc=0, hl=0, de=0; z80w_regs(g_ng->z, &bc, &hl, &de);
+                fprintf(stderr, "LDIRDBG f=%llu bc=%04x hl=%04x de=%04x\n",
+                        (unsigned long long)g_ng->frame, bc, hl, de); } }
           fprintf(stderr, "ZPT f=%llu pc=%04x b=%02x %02x %02x %02x %02x %02x\n",
                   g_ng ? (unsigned long long)g_ng->frame : 0ULL, pc,
                   g_ng ? z80w_peek_cb(g_ng->z, pc) : 0,
