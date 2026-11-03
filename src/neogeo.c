@@ -1493,6 +1493,8 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                     ng->z80_nmi_pend = 0;   /* discard the BIOS pulse command: m1 tables not
                                                ready yet; BIOS resends after ack timeout and
                                                m1 (fully booted by then) answers the resend */
+                    { static int fe = -2; if (fe == -2) fe = getenv("FORCEEI") ? 1 : 0;
+                      if (fe) { extern void z80w_force_ei(void*); z80w_force_ei(ng->z); } }
                     ng->m1_view = 1;
                     if (f_latch_tr()) fprintf(stderr, "M1BOOT f=%d\n", ng->frame);
                 }

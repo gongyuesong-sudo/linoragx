@@ -690,6 +690,10 @@ unsigned cpu_z80::mz80step()
 	unsigned cyc = 0;
 
 	if (m_step_hook) m_step_hook(z80pc);
+	{ static int ih = -2; static long ih_n = 0, ih_t = 0;
+	  if (ih == -2) ih = getenv("INTHEAD") ? 1 : 0;
+	  if (ih && m_irq_line && (ih_n++ % 1000) == 0) fprintf(stderr, "INTHEAD n=%ld pc=%04x\n", ih_n, z80pc);
+	  if (ih) ih_t++; }
 	{	static int c0 = -2;
 	 if (c0 == -2) c0 = getenv("CORE0CA0") ? 1 : 0;
 	 if (c0 && z80pc == 0x0ca0) { extern unsigned long long z80w_dbg_frame;
@@ -754,7 +758,7 @@ unsigned cpu_z80::mz80step()
 	{
 		unsigned before = cCycles;
 		{ static int idbg = -1; if (idbg < 0) idbg = getenv("IFFDBG") ? 1 : 0;
-		  if (idbg && (cCycles % 50000) < 3) fprintf(stderr, "IFFDBG pc=%04x iff1=%d dly=%d halt=%d\n", z80pc, m_iff1, iff_delay, (int)m_fHalt); }
+		  if (idbg) { static long it = 0; if ((it++ % 1000) == 0) fprintf(stderr, "IFFDBG pc=%04x iff1=%d dly=%d halt=%d n=%ld\n", z80pc, m_iff1, iff_delay, (int)m_fHalt, it); } }
 		mz80int_dispatch();                  // adds to cCycles internally
 		cyc += (cCycles - before);
 	}

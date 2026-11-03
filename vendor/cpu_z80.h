@@ -141,6 +141,7 @@ public:
 	void    MemWriteByte(UINT16 wAddr, UINT8 bVal);
 	int     m_data_read = 0;   /* 1 while a data (non-fetch) bus read is in flight */
 	void    mz80int_now(UINT32 v) { mz80int(v); mz80int_dispatch(); }  /* same-context latch+dispatch */
+	void    force_ei(void) { m_iff1 = 1; m_iff2 = 1; }  /* golden m1 boots with IFF1=1; lin's handoff reset must match */
 	UINT8   MemReadByte(UINT16 wAddr);
 	UINT16  MemReadWord(UINT16 wAddr);
 
