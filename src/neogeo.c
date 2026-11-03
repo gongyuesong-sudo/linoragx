@@ -5317,6 +5317,10 @@ void ng_run_frame(neogeo *ng)
                 ng->ch5_bios_pend = 0;
                 ng->cart_audio = 1;
                 if (!f_noreset()) {
+                    { static int rc = -2; if (rc == -2) rc = getenv("RAMCLR") ? 1 : 0;
+                      if (rc == 1) memset(ng->smem + 0x3800, 0, 0x800);        /* f800-ffff: stack+locals */
+                      else if (rc == 2) memset(ng->smem + 0x3C00, 0, 0x400);  /* fc00-ffff only */
+                      if (rc) memset(ng->smem_dirty + 0x700, 0, 0x100); }
                     z80w_reset(ng->z);
                     ng->z80_nmi_asserted = 0;   /* keep z80_nmi_pend: the HC259 line survives (mslug4) */
                 }
