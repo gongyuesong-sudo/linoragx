@@ -309,7 +309,8 @@ void cpu_z80::MemWriteByte(UINT16 wAddr, UINT8 bVal)
 
 UINT8 cpu_z80::MemReadByte(UINT16 wAddr)
 {
-	return (mz80GetMemory(wAddr));
+	m_data_read = 1;
+	{ UINT8 v = mz80GetMemory(wAddr); m_data_read = 0; return v; }
 }
 
 UINT16 cpu_z80::MemReadWord(UINT16 wAddr)

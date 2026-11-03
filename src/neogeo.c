@@ -424,6 +424,18 @@ static uint8_t z_read(uint32_t a, void *c)
         return ng->smem[0x8000 + (a - 0x7000)];
     }
     if (a < 0x8000) {
+        /* MAME bank-select ports: map(0x08,0x0b).mirror(0x00f0).select(0xff00)
+           — a READ of 0x??08-0x??0B (upper byte = entry) latches the audio cart
+           bank slot.  Golden kof98: reads of 1e08/0e09/060a/020b set
+           (slot,entry)=(0,1e)(1,0e)(2,06)(3,02).  Vectors at 0x0008-0x003B have
+           upper byte 0 and must NOT fire. */
+        if (cart_visible && sz > 0x10000 && a >= 0x0100 && (a & 0x0F) >= 0x08 && (a & 0x0F) <= 0x0B
+            && getenv("BANKHACK") && ng->z && ({ extern int z80w_is_data_read(void*); z80w_is_data_read(ng->z); })) {
+            ng->zbank[a & 3] = a >> 8;
+            { static int bs = -2; if (bs == -2) bs = getenv("BANKDBG") ? 1 : 0;
+              if (bs) fprintf(stderr, "BANKSEL a=%04x slot=%d entry=%02x\n", a, a & 3, a >> 8); }
+            return 0;
+        }
         return (r && a < sz) ? r[a] : 0xFF;
     }
     if (!cart_visible && ng->sm1 && a < 0xF800)

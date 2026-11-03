@@ -139,6 +139,7 @@ public:
 	void    Out(uint8_t bPort, uint8_t bVal);
 	void    MemWriteWord(UINT16 wAddr, UINT16 wVal);
 	void    MemWriteByte(UINT16 wAddr, UINT8 bVal);
+	int     m_data_read = 0;   /* 1 while a data (non-fetch) bus read is in flight */
 	UINT8   MemReadByte(UINT16 wAddr);
 	UINT16  MemReadWord(UINT16 wAddr);
 
