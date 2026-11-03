@@ -444,7 +444,7 @@ static uint8_t z_read(uint32_t a, void *c)
         }
         return ng->sm1[a & 0x1FFFF];       /* BIOS phase: sm1 flat-mapped, NO banking (zbank regs may hold cart-m1 garbage; sm1 is 128K flat) */
     }
-    if (r && sz > 0x10000 && cart_visible) {   /* upper banks use the SAME view (r/sz) as the lower 32K: BIOS pulse keeps everything on sm1 (sm1 code spans upper banks); cart view only post-handoff */
+    if (r && sz > 0x10000 && cart_visible && a < 0xF800) {   /* 0xF800+ is always RAM (MAME audio map) — must not be swallowed by the bank view */
         uint32_t b;
         if (a < 0xC000) b = zbank_base(ng,3,ng->zbank[3],sz) + (a-0x8000);
         else if (a < 0xE000) b = zbank_base(ng,2,ng->zbank[2],sz) + (a-0xC000);
