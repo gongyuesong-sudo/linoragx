@@ -4751,7 +4751,8 @@ void ng_run_frame(neogeo *ng)
                           m68k_get_reg(NULL,M68K_REG_A2), m68k_get_reg(NULL,M68K_REG_A3),
                           m68k_get_reg(NULL,M68K_REG_D0), m68k_get_reg(NULL,M68K_REG_D1));
               } else if (pcx != 0x9f6e) last9f = pcx; }
-              fprintf(stderr, "T %d %08x b=%02x %02x %02x %02x %02x %02x\n", ng->frame,
+              if (lo >= 0 && ng->frame >= lo && ng->frame <= hi)
+                fprintf(stderr, "T %d %08x b=%02x %02x %02x %02x %02x %02x\n", ng->frame,
                       m68k_get_reg(NULL, M68K_REG_PC),
                       (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC)),
                       (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC) + 1),
