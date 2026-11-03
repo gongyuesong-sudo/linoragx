@@ -3756,7 +3756,9 @@ void linoragx_z80_step(unsigned int pc)
               char *d = strchr(buf, '-');
               zpt_lo = (unsigned)strtoul(buf, 0, 16);
               zpt_hi = d ? (unsigned)strtoul(d + 1, 0, 16) : zpt_lo; } }
-      if (zpt && pc >= zpt_lo && pc <= zpt_hi && zpt_n < 300000) {
+      if (zpt && pc >= zpt_lo && pc <= zpt_hi && zpt_n < 3000000) {
+          { static int zf = -2; if (zf == -2) zf = getenv("ZPTF") ? atoi(getenv("ZPTF")) : 0;
+            if (g_ng && (int)g_ng->frame < zf) goto zpt_done; }
           zpt_n++;
           extern uint8_t z80w_peek_cb(void*, uint32_t);
           fprintf(stderr, "ZPT f=%llu pc=%04x b=%02x %02x %02x %02x %02x %02x\n",
@@ -3767,6 +3769,7 @@ void linoragx_z80_step(unsigned int pc)
                   g_ng ? z80w_peek_cb(g_ng->z, pc + 3) : 0,
                   g_ng ? z80w_peek_cb(g_ng->z, pc + 4) : 0,
                   g_ng ? z80w_peek_cb(g_ng->z, pc + 5) : 0); } }
+zpt_done: ;
     { static int f51 = -2;
       if (f51 == -2) f51 = getenv("F51RD") ? 1 : 0;
       if (f51 && pc == 0x0F51 && g_ng) {
