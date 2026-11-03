@@ -514,7 +514,7 @@ static uint16_t z_in(uint32_t p, void *c)
                  return v; }   /* YM2610 A status (timer flags) */
     case 0x06: { uint8_t v = ym_read(ng->ym, 1);
                  { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
-                   if (st_rd) { static long c6=0; if ((c6++ % 200)==0) fprintf(stderr,"STATRD B=%02x f=%d\n", v, ng->frame); } }
+                   if (st_rd) { static long c6=0; if ((c6++ % 1)==0) fprintf(stderr,"STATRD B=%02x f=%d pc=%04x\n", v, ng->frame, z80w_pc(ng->z)); } }
                  return v; }   /* YM2610 B status */
     case 0x05: return ym_read_data(ng->ym, 0, ng->ym_reg[0]);  /* bank A data readback (SSG shadow, mslug5 GPIO RMW) */
     case 0x07: return ym_read_data(ng->ym, 1, ng->ym_reg[1]);  /* bank B data readback shadow */
