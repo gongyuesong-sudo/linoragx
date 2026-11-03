@@ -140,6 +140,7 @@ public:
 	void    MemWriteWord(UINT16 wAddr, UINT16 wVal);
 	void    MemWriteByte(UINT16 wAddr, UINT8 bVal);
 	int     m_data_read = 0;   /* 1 while a data (non-fetch) bus read is in flight */
+	void    mz80int_now(UINT32 v) { mz80int(v); mz80int_dispatch(); }  /* same-context latch+dispatch */
 	UINT8   MemReadByte(UINT16 wAddr);
 	UINT16  MemReadWord(UINT16 wAddr);
 

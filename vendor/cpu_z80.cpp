@@ -2122,6 +2122,8 @@ UINT32 cpu_z80::mz80int(UINT32 bVal)
 {
 	irq_vector = bVal;
 	m_irq_line = true;
+	{ static int mi = -1; if (mi < 0) mi = getenv("INTLATCH") ? 1 : 0;
+	  if (mi) fprintf(stderr, "INTLATCH set pc=%04x\n", z80pc); }
 	return 0;
 }
 
