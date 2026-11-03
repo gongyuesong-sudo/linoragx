@@ -1106,6 +1106,17 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           fprintf(stderr, "WA68 f=%llu a=%06x d=%04x m=%04x pc=%08x\n",
                   (unsigned long long)ng->frame, a, d, mem_mask,
                   m68k_get_reg(NULL,M68K_REG_PC)); } }
+    { static int dmp = -2;
+      if (dmp == -2) { const char *e = getenv("DUMP68"); dmp = e ? atoi(e) : 0; }
+      if (dmp && ng->frame == (unsigned)dmp) {
+          static int done = 0;
+          if (!done) { done = 1;
+              FILE *fp = fopen("/tmp/lin_68k_c1.bin", "wb");
+              if (fp) { for (uint32_t x = 0xC10000; x < 0xC20000; x += 2) {
+                            uint16_t w = m68k_read_memory_16(x);
+                            fputc(w >> 8, fp); fputc(w & 0xFF, fp); }
+                        fclose(fp);
+                        fprintf(stderr, "DUMP68 done f=%d\n", dmp); } } } }
     if (a == 0x2F00) {
         static int s_dbg = -1;
         if (s_dbg < 0) s_dbg = getenv("IRQ2F00") ? 1 : 0;
