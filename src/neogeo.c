@@ -1643,7 +1643,9 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
         }
         return;
     }
-    if (a < 0x420000) {                     /* CRAM */
+    if (a < 0x420000) {                     /* CRAM — MAME map(0x400000,0x401fff).mirror(0x3fe000):
+        mask 0xC01FFF means 0x402000-0x7FFFFF all mirror onto CRAM[0..] (0x402000 -> CRAM[0]).
+        Keep the wide window: diggerma-style games read back 0x402000 as CRAM[0]. */
         uint32_t o = ((a>>1)&0xFFF) | ng->cram_bank;   /* MAME: offset + palette bank
             (direct window 0x400000-0x401FFF mirrored — mask wraps like MAME's mirror(0x3fe000)) */
         /* MAME renders each scanline with the bank set during vblank (games
@@ -4775,6 +4777,25 @@ void ng_run_frame(neogeo *ng)
               if (cd_a >= 0) { fprintf(stderr, "CODUMP %08x:", cd_a);
                   for (int q = 0; q < 96; q++) fprintf(stderr, " %02x", (unsigned)m68k_read_memory_8(cd_a + q));
                   fprintf(stderr, "\n"); } } }
+        { static int cv_a = -2; static long cv_n;
+          if (cv_a == -2) { const char *e = getenv("COPYV"); cv_a = e ? (int)strtol(e, 0, 16) : -1; }
+          if (cv_a >= 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              if (pc == cv_a && cv_n++ < 40) {
+                  extern uint32_t m68k_read_memory_16(uint32_t);
+                  unsigned d0 = (unsigned)m68k_get_reg(NULL, M68K_REG_D0);
+                  unsigned a0 = (unsigned)m68k_get_reg(NULL, M68K_REG_A0);
+                  unsigned a1 = (unsigned)m68k_get_reg(NULL, M68K_REG_A1);
+                  fprintf(stderr, "COPYV f=%d pc=%08x d0=%08x a0=%08x a1=%08x [a0]=%04x\n",
+                      ng->frame, pc, d0, a0, a1, (unsigned)m68k_read_memory_16(a0)); } } }
+        { static int cb_on = -2; static long cb_n;
+          if (cb_on == -2) cb_on = getenv("COPYBANK") ? 1 : 0;
+          if (cb_on) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              if (pc == 0xC12450u && cb_n++ < 40) {
+                  extern uint32_t m68k_read_memory_16(uint32_t);
+                  unsigned a0 = (unsigned)m68k_get_reg(NULL, M68K_REG_A0);
+                  fprintf(stderr, "COPYBANK f=%d a0=%08x [a0]=%04x bankreg=%02x base=%08x\n",
+                      ng->frame, a0, (unsigned)m68k_read_memory_16(a0),
+                      (unsigned)(ng->prg_bank_base ? 0 : 0), ng->prg_bank_base); } } }
         { static int pra_pc = -2; static long pra_n;
           if (pra_pc == -2) { const char *e = getenv("PCHITRA"); pra_pc = e ? (int)strtol(e, 0, 16) : -1; }
           if (pra_pc >= 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
