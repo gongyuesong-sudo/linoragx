@@ -596,13 +596,7 @@ static void z_out(uint32_t p, uint8_t v, void *c)
               if (ng->dbg_z80==3) { extern uint16_t z80w_pc(void*); uint16_t zp = z80w_pc(ng->z);
                   fprintf(stderr, "S2W %02x zpc=%04x f=%d at=%02x %02x\n", v, zp, ng->frame,
                       z_read((uint32_t)(zp-2), ng), z_read((uint32_t)(zp-1), ng)); } break;
-    case 0x08: ng->z80_nmi_en = 1;
-               /* HC259 gate just opened: a command that arrived while the
-                  gate was closed (pend held) must fire now — MAME's merger
-                  line is level, it re-asserts the instant the gate opens. */
-               if (ng->z80_nmi_pend) { z80w_nmi(ng->z); ng->nmi_cnt++;
-                                       ng->z80_nmi_asserted = 1; }
-               break;
+    case 0x08: ng->z80_nmi_en = 1; break;
     case 0x18: ng->z80_nmi_en = 0; break;
     case 0x80: case 0x81: case 0x82: case 0x83:   /* ADPCM-A bank/vol: stored, no playback yet */
         ng->adpcm_a[p & 3] = v; break;
