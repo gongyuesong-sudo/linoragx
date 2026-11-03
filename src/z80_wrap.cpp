@@ -119,6 +119,14 @@ void z80w_reset(void *v) {
 }
 unsigned long z80w_exec(void *v, unsigned long t) { return ((z80w*)v)->cpu->mz80exec(t); }
 uint8_t z80w_peek(void *v, uint32_t off) { return ((z80w*)v)->cpu->ram_array()[off & 0xFFFF]; }
+/* read through the live read-callback map (ROM banks), not the RAM array */
+uint8_t z80w_peek_cb(void *v, uint32_t off)
+{
+    z80w *w = (z80w*)v;
+    off &= 0xFFFF;
+    if (off >= 0xF800) return w->cpu->ram_array()[off];
+    return w->rd(off, w->ctx);
+}
 void z80w_poke(void *v, uint32_t off, uint8_t val) { ((z80w*)v)->cpu->ram_array()[off & 0xFFFF] = val; }
 int z80w_iff1(void *v) { return ((z80w*)v)->cpu->get_state().IFF1; }
 int z80w_im(void *v) { return ((z80w*)v)->cpu->get_state().NIM; }

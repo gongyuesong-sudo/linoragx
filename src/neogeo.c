@@ -337,6 +337,24 @@ static uint32_t zbank_base(neogeo *ng, int region, int entry, uint32_t len)
     return (ng->snd_mirrored ? 0x10000u : 0u) + x;
 }
 static unsigned long g_zpc_hits[8];
+static unsigned long g_zpc_hist[65536];
+static void zpc_hist_dump(void)
+{
+    int i, k;
+    static int top_pc[24]; static unsigned long top_v[24];
+    for (k = 0; k < 24; k++) { top_pc[k] = -1; top_v[k] = 0; }
+    for (i = 0; i < 65536; i++) {
+        unsigned long v = g_zpc_hist[i];
+        if (!v) continue;
+        for (k = 0; k < 24; k++)
+            if (v > top_v[k]) {
+                int j; for (j = 23; j > k; j--) { top_v[j] = top_v[j-1]; top_pc[j] = top_pc[j-1]; }
+                top_v[k] = v; top_pc[k] = i; break;
+            }
+    }
+    for (k = 0; k < 24 && top_pc[k] >= 0; k++)
+        fprintf(stderr, "ZPHIST %04x %lu\n", top_pc[k], top_v[k]);
+}
 static void zpcstat_hook(unsigned pc) {
     switch (pc) {
         case 0x0066: g_zpc_hits[0]++; break;   /* NMI entry */
@@ -406,7 +424,23 @@ static uint8_t z_read(uint32_t a, void *c)
         return (r && a < sz) ? r[a] : 0xFF;
     }
     if (!cart_visible && ng->sm1 && a < 0xF800)
-        return ng->sm1[a & 0x1FFFF];           /* BIOS phase: sm1 flat-mapped, NO banking (zbank regs may hold cart-m1 garbage; sm1 is 128K flat) */
+    {
+        /* sm1 architecture (kof98/vliner class): the BIOS sm1 driver runs in
+           0x0000-0x7FFF and reads cart music data from the banked windows
+           0x8000-0xF7FF.  The cart s1 (loaded into ng->fixed) must be visible
+           there — with snd==NULL (no m1 cart) the old flat sm1 map starved the
+           driver of its music data: no YM commands, empty queue, 68K parked
+           spinning for the Z80 ack (kof98 68K a142 / ff2785). */
+        if (ng->fixed && ng->fixed_size >= 0x8000 && a >= 0x8000) {
+            uint32_t fsz = ng->fixed_size, b;
+            if (a < 0xC000) b = (((uint32_t)ng->zbank[3] << 14) & (fsz - 1)) + (a - 0x8000);
+            else if (a < 0xE000) b = (((uint32_t)ng->zbank[2] << 13) & (fsz - 1)) + (a - 0xC000);
+            else if (a < 0xF000) b = (((uint32_t)ng->zbank[1] << 12) & (fsz - 1)) + (a - 0xE000);
+            else b = (((uint32_t)ng->zbank[0] << 11) & (fsz - 1)) + (a - 0xF000);
+            return (b < fsz) ? ng->fixed[b] : 0xFF;
+        }
+        return ng->sm1[a & 0x1FFFF];       /* BIOS phase: sm1 flat-mapped, NO banking (zbank regs may hold cart-m1 garbage; sm1 is 128K flat) */
+    }
     if (r && sz > 0x10000 && cart_visible) {   /* upper banks use the SAME view (r/sz) as the lower 32K: BIOS pulse keeps everything on sm1 (sm1 code spans upper banks); cart view only post-handoff */
         uint32_t b;
         if (a < 0xC000) b = zbank_base(ng,3,ng->zbank[3],sz) + (a-0x8000);
@@ -1397,7 +1431,16 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             if (want != ng->cart_audio) {
                 ng->cart_audio = want;
                 if (!want && !ng->m1_booted && !ng->m1_view && ng->snd && ng->sm1
-                    && f_m1boot1()) {
+                    && f_m1boot1() && !ng->z80_nmi_en) {
+                    /* Gate on z80_nmi_en: a live NMI-enabled Z80 audio CPU (sm1
+                       took over at BIOS handoff, kof98 f=25) is the REAL audio
+                       source — the ch5 1->0 edge is the game's own enable bit
+                       toggling, NOT a BIOS self-test pulse ending.  Resetting
+                       here wipes sm1 state: the 68K's pending latch command
+                       (ack at 0xff2785 spin, kof98 68K a142) never gets
+                       answered and music starves forever.  The genuine m1
+                       class (mslug3) has nmi_en=0 at this edge: BIOS answered
+                       the pulse via sm1 but never enabled the cart path. */
                     /* BIOS self-test pulse just ended (0->1->0 within BIOS): boot cart m1
                        NOW so its table init completes BEFORE the test command arrives;
                        the pulse itself was answered by sm1 (no reset at 0->1 in BIOS). */
@@ -3627,7 +3670,7 @@ void linoragx_z80_step(unsigned int pc)
       if (zwa == -2) { const char *e = getenv("ZRAMWA"); zwa = e ? 1 : 0; zwa_a = e ? (unsigned)strtoul(e, 0, 16) : 0; }
       if (zwa && g_ng) { extern uint8_t z80w_peek(void*, uint32_t);
           int v = z80w_peek(g_ng->z, zwa_a);
-          if (v != zwa_v) { if (zwa_n++ < 400) fprintf(stderr, "ZWR f=%llu a=%04x v=%02x zpc=%04x\n",
+          if (v != zwa_v) { if (zwa_n++ < 200000) fprintf(stderr, "ZWR f=%llu a=%04x v=%02x zpc=%04x\n",
                             (unsigned long long)g_ng->frame, zwa_a, v, pc); zwa_v = v; } } }
     { static int tdbg = -2;
       if (tdbg == -2) tdbg = getenv("TCBDBG") ? 1 : 0;
@@ -3659,6 +3702,18 @@ void linoragx_z80_step(unsigned int pc)
     { static int zps = -2;
       if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
       if (zps) zpcstat_hook(pc); }
+    { static int zh = -2;
+      if (zh == -2) { zh = getenv("ZPCHIST") ? 1 : 0;
+          if (zh) atexit(zpc_hist_dump); }
+      if (zh) g_zpc_hist[pc]++; }
+    { static int zn = -2; static unsigned long lastf = 0;
+      if (zn == -2) zn = getenv("ZNMI") ? 1 : 0;
+      if (zn && g_ng && g_ng->frame != lastf) {
+          lastf = g_ng->frame;
+          if (g_ng->frame % 60 == 0)
+              fprintf(stderr, "ZNMI f=%llu sl1=%lu nmi=%lu en=%d\n",
+                      (unsigned long long)g_ng->frame, g_ng->sl1_cnt,
+                      g_ng->nmi_cnt, g_ng->z80_nmi_en); } }
     { static int zpt = -2; static unsigned zpt_lo = 0, zpt_hi = 0; static long zpt_n = 0;
       if (zpt == -2) { const char *e = getenv("ZPCTRACE"); zpt = e ? 1 : 0;
           if (e) { char buf[40]; strncpy(buf, e, 39); buf[39] = 0;
@@ -3667,15 +3722,15 @@ void linoragx_z80_step(unsigned int pc)
               zpt_hi = d ? (unsigned)strtoul(d + 1, 0, 16) : zpt_lo; } }
       if (zpt && pc >= zpt_lo && pc <= zpt_hi && zpt_n < 300000) {
           zpt_n++;
-          extern uint8_t z80w_peek(void*, uint32_t);
+          extern uint8_t z80w_peek_cb(void*, uint32_t);
           fprintf(stderr, "ZPT f=%llu pc=%04x b=%02x %02x %02x %02x %02x %02x\n",
                   g_ng ? (unsigned long long)g_ng->frame : 0ULL, pc,
-                  g_ng ? z80w_peek(g_ng->z, pc) : 0,
-                  g_ng ? z80w_peek(g_ng->z, pc + 1) : 0,
-                  g_ng ? z80w_peek(g_ng->z, pc + 2) : 0,
-                  g_ng ? z80w_peek(g_ng->z, pc + 3) : 0,
-                  g_ng ? z80w_peek(g_ng->z, pc + 4) : 0,
-                  g_ng ? z80w_peek(g_ng->z, pc + 5) : 0); } }
+                  g_ng ? z80w_peek_cb(g_ng->z, pc) : 0,
+                  g_ng ? z80w_peek_cb(g_ng->z, pc + 1) : 0,
+                  g_ng ? z80w_peek_cb(g_ng->z, pc + 2) : 0,
+                  g_ng ? z80w_peek_cb(g_ng->z, pc + 3) : 0,
+                  g_ng ? z80w_peek_cb(g_ng->z, pc + 4) : 0,
+                  g_ng ? z80w_peek_cb(g_ng->z, pc + 5) : 0); } }
     { static int f51 = -2;
       if (f51 == -2) f51 = getenv("F51RD") ? 1 : 0;
       if (f51 && pc == 0x0F51 && g_ng) {
@@ -4607,7 +4662,14 @@ void ng_run_frame(neogeo *ng)
           if (lo == -2) { const char *e = getenv("PCTRACE"); const char *d = e ? strchr(e, '-') : 0;
               lo = e ? atoi(e) : -1; hi = d ? atoi(d + 1) : -1; }
           if (lo >= 0 && ng->frame >= lo && ng->frame <= hi)
-              fprintf(stderr, "T %d %08x\n", ng->frame, m68k_get_reg(NULL, M68K_REG_PC)); }
+              fprintf(stderr, "T %d %08x b=%02x %02x %02x %02x %02x %02x\n", ng->frame,
+                      m68k_get_reg(NULL, M68K_REG_PC),
+                      (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC)),
+                      (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC) + 1),
+                      (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC) + 2),
+                      (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC) + 3),
+                      (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC) + 4),
+                      (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC) + 5)); }
         { static int pch[4]; static long hcnt[4]; static int hinit = -2;
           if (hinit == -2) { const char *e = getenv("PCHIT"); hinit = 0;
               if (e) { char buf[64]; strncpy(buf, e, 63); buf[63] = 0;
