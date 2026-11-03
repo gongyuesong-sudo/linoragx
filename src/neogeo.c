@@ -564,13 +564,6 @@ static uint16_t z_in(uint32_t p, void *c)
                  if (ng->latch1_hold > 0) ng->latch1_defer = 1;
                  else ng->soundlatch1 = 0;
                  ng->z80_nmi_pend = 0; ng->z80_nmi_asserted = 0; ng->p0_cnt++; return v; }
-    case 0x08: case 0x09: case 0x0A: case 0x0B:
-        /* MAME map(0x08,0x0b).mirror(0x00f0).select(0xff00): IN(port) re-reads
-           the bank-select port -> audio_cart bank slot (port&3) re-latches its
-           entry (IN carries 8-bit port so entry = port>>8 = 0). */
-        { int slot = (port & 3);
-          if (slot < 4) ng->zbank[slot] = 0;
-          return 0xFF; }
     case 0x04: { uint8_t v = ym_read(ng->ym, 0);                 { static int st_rd = -2; if (st_rd==-2) st_rd = getenv("STATRD")?1:0;
                    if (st_rd) { static long c4=0; if ((c4++ % 200)==0) fprintf(stderr,"STATRD A=%02x f=%d pc=%04x\n", v, ng->frame, z80w_pc(ng->z)); } }
                  return v; }   /* YM2610 A status (timer flags) */
