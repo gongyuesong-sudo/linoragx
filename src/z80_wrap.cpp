@@ -138,9 +138,9 @@ uint8_t z80w_a(void *v) { return (uint8_t)(((z80w*)v)->cpu->get_state().AF >> 8)
 void z80w_regs(void *v, unsigned *bc, unsigned *hl, unsigned *de)
 {
     cpu_z80::State st = ((z80w*)v)->cpu->get_state();
-    if (bc) *bc = st.BC >> 16;
-    if (hl) *hl = st.HL >> 16;
-    if (de) *de = st.DE >> 16;
+    if (bc) *bc = st.BC;
+    if (hl) *hl = st.HL;
+    if (de) *de = st.DE;
 }
 uint16_t z80w_hl(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().HL); }
 uint16_t z80w_af(void *v) { return (uint16_t)(((z80w*)v)->cpu->get_state().AF); }
