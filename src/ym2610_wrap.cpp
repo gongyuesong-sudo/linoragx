@@ -231,6 +231,12 @@ void ym2610::LinIntf::ymfm_set_timer(uint32_t tnum, int32_t clocks)
       if (td) fprintf(stderr, "TMR t=%u clocks=%d\n", tnum, clocks); }
     if (y && y->gold && tnum < 2) y->chip.lin_set_timer((int)tnum, clocks);
 }
+int g_tickfire_dbg = 0;
+extern int g_ym_frame;
+void lin_tickfire_log(int t)
+{
+    fprintf(stderr, "TICKFIRE f=%d t=%d\n", g_ym_frame, t);
+}
 void ym2610::LinIntf::ymfm_set_busy_end(uint32_t clocks)
 {
     if (y && y->gold) y->chip.lin_set_busy_end(clocks);
@@ -267,6 +273,7 @@ static int gold_mode(void)
 ym2610 *ym_create(void)
 {
     ym2610 *y = new ym2610();
+    { extern int g_tickfire_dbg; g_tickfire_dbg = getenv("TICKFIRE") ? 1 : 0; }
     y->gold = gold_mode();
     y->chip.reset();   /* ymfm write paths read internal state; never touch the chip before it is reset */
     y->chip.lin_reset();

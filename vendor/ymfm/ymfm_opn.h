@@ -38,6 +38,10 @@
 #include "ymfm_fm.h"
 #include "ymfm_ssg.h"
 
+// LINORAGX: tick-fire debug hook (defined in src/ym2610_wrap.cpp)
+extern int g_tickfire_dbg;
+void lin_tickfire_log(int t);
+
 namespace ymfm
 {
 
@@ -713,6 +717,7 @@ public:
 			{
 				fired |= (1u << t);
 				m_lin_timer_due[t] = -1;
+				{ extern int g_tickfire_dbg; if (::g_tickfire_dbg) { ::lin_tickfire_log(t); } }
 				m_fm.engine_timer_expired(t);
 			}
 		if (m_lin_busy_due >= 0 && m_lin_clock >= m_lin_busy_due)
