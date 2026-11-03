@@ -725,6 +725,11 @@ uint8_t ym_read(ym2610 *y, int chipno)
     if (GOLD_RD(y)) {
         if (chipno) return y->chip.read_status_hi();
         uint8_t st = y->chip.read_status();
+        { static int srd = -2;
+          if (srd == -2) srd = getenv("STATRD") ? 1 : 0;
+          if (srd) { extern int g_ym_frame;
+            fprintf(stderr, "STATRD f=%d st=%02x zpc=%04x\n",
+                    g_ym_frame, st, z80w_pc_dbg(ng_z80_dbg())); } }
         /* datasheet parity: status read clears the timer flags (and with
            them the level IRQ) so polling drivers deassert without a 0x27
            reset write. Task-266 A/B: this is the lifeline for the 9-card
