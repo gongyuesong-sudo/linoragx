@@ -1101,7 +1101,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
        game-facing IRQ2 source on real hardware. */
     { static int wa = -2; static long wa_n = 0;
       if (wa == -2) wa = getenv("WA68") ? 1 : 0;
-      if (wa && ((a >= 0xff2780 && a <= 0xff278f) || (a >= 0x1000c0 && a <= 0x1000cf)) && wa_n < 400) {
+      if (wa && ((a >= 0xff2780 && a <= 0xff278f) || (a >= 0x1000c0 && a <= 0x1000cf) || (a >= 0xa140 && a <= 0xa148)) && wa_n < 400) {
           wa_n++;
           fprintf(stderr, "WA68 f=%llu a=%06x d=%04x m=%04x pc=%08x\n",
                   (unsigned long long)ng->frame, a, d, mem_mask,
