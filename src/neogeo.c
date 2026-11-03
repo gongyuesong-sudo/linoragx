@@ -3714,6 +3714,13 @@ void linoragx_z80_step(unsigned int pc)
               fprintf(stderr, "ZNMI f=%llu sl1=%lu nmi=%lu en=%d\n",
                       (unsigned long long)g_ng->frame, g_ng->sl1_cnt,
                       g_ng->nmi_cnt, g_ng->z80_nmi_en); } }
+    { static int znh = -2; static long znh_n = 0;
+      if (znh == -2) znh = getenv("ZNMIPATH") ? 1 : 0;
+      if (znh && (pc == 0x00e7 || pc == 0x007a ||
+                  pc == 0x00c4 || pc == 0x00d9) && znh_n < 200000) {
+          znh_n++;
+          fprintf(stderr, "ZNH f=%llu pc=%04x\n",
+                  g_ng ? (unsigned long long)g_ng->frame : 0ULL, pc); } }
     { static int zpt = -2; static unsigned zpt_lo = 0, zpt_hi = 0; static long zpt_n = 0;
       if (zpt == -2) { const char *e = getenv("ZPCTRACE"); zpt = e ? 1 : 0;
           if (e) { char buf[40]; strncpy(buf, e, 39); buf[39] = 0;
