@@ -469,6 +469,7 @@ static uint8_t z_read(uint32_t a, void *c)
       if (ur && a >= 0xF800) return ng->smem[a]; }
     return ng->sndram[a & 0x7FF];
 }
+uint8_t z_read_pub(uint32_t a, void *c) { return z_read(a, c); }
 static void z_write(uint32_t a, uint8_t v, void *c)
 {
     neogeo *ng = (neogeo*)c;
@@ -3732,6 +3733,13 @@ void linoragx_z80_step(unsigned int pc)
               fprintf(stderr, "ZNMI f=%llu sl1=%lu nmi=%lu en=%d p0=%lu\n",
                       (unsigned long long)g_ng->frame, g_ng->sl1_cnt,
                       g_ng->nmi_cnt, g_ng->z80_nmi_en, g_ng->p0_cnt); } }
+    { static int zdb = -2; static FILE *zf = 0;
+      if (zdb == -2) zdb = getenv("ZDUMPB") ? 1 : 0;
+      if (zdb && g_ng && g_ng->frame == 300 && !zf) {
+          extern uint8_t z_read_pub(uint32_t, void*);
+          zf = fopen("/tmp/lin_z80_bank.bin", "wb");
+          if (zf) { for (uint32_t a = 0x8000; a < 0xC000; a++) fputc(z_read_pub(a, g_ng), zf);
+                    fclose(zf); fprintf(stderr, "ZDUMPB done\n"); } } }
     { static int znh = -2; static long znh_n = 0;
       if (znh == -2) znh = getenv("ZNMIPATH") ? 1 : 0;
       if (znh && (pc == 0x00e7 || pc == 0x007a ||
