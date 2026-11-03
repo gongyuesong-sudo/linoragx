@@ -4770,6 +4770,11 @@ void ng_run_frame(neogeo *ng)
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
                       fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x a5=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6), (unsigned)m68k_get_reg(NULL, M68K_REG_A5)); } } }
+        { static int cd_a = -2;
+          if (cd_a == -2) { const char *e = getenv("CODUMP"); cd_a = e ? (int)strtol(e, 0, 16) : -1;
+              if (cd_a >= 0) { fprintf(stderr, "CODUMP %08x:", cd_a);
+                  for (int q = 0; q < 96; q++) fprintf(stderr, " %02x", (unsigned)m68k_read_memory_8(cd_a + q));
+                  fprintf(stderr, "\n"); } } }
         { static int pra_pc = -2; static long pra_n;
           if (pra_pc == -2) { const char *e = getenv("PCHITRA"); pra_pc = e ? (int)strtol(e, 0, 16) : -1; }
           if (pra_pc >= 0) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
