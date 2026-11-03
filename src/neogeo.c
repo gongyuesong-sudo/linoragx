@@ -3997,6 +3997,7 @@ neogeo *ng_create(const char *biosdir, const char *gamezip, char *err, size_t er
                         if (!(sno & 8) && !ng->adpcm && sw_area(sw, "ymsnd:adpcma", ents, 96, &ne, &asz) == 0)
                             ng->adpcm = sw_build(gamezip, ents, ne, 0x10000000, asz, &ng->adpcm_size);
                         if (getenv("SWDBG")) fprintf(stderr, "[sw] adpcma: sno8=%d adpcm=%p size=%x\n", (sno>>3)&1, (void*)ng->adpcm, ng->adpcm_size);
+                        if (getenv("SWDBG")) fprintf(stderr, "[sw] audio: snd=%p size=%x fixed=%p size=%x\n", (void*)ng->snd, ng->snd_size, (void*)ng->fixed, ng->fixed_size);
                         if (!(sno & 16) && !ng->acrypt && sw_area(sw, "audiocrypt", ents, 96, &ne, &asz) == 0)
                             ng->acrypt = sw_build(gamezip, ents, ne, 0x80000, asz, &ng->acrypt_size);
                         if (ng->rom && !getenv("NOPROT")) {
@@ -5297,7 +5298,8 @@ void ng_run_frame(neogeo *ng)
            BIOS has had far more than its full boot budget since ch5 rose, the game
            has certainly started — hand off regardless of PC. */
         { static int fbf = -2; if (fbf == -2) fbf = getenv("NOHANDFB") ? 0 : 1;
-          if (fbf && ng->frame > ng->ch5_on_frame + 30) in_bios = 0; }
+          { static int hfw = -2; if (hfw == -2) hfw = getenv("HANDFBW") ? atoi(getenv("HANDFBW")) : 2;
+            if (fbf && ng->frame > ng->ch5_on_frame + hfw) in_bios = 0; } }
         if (!in_bios) {
             if (ng->frame - ng->ch5_on_frame >= 2) {   /* debounce bank-switch transients */
                 ng->ch5_bios_pend = 0;
