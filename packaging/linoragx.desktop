@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=linoragx
+GenericName=Neo Geo Emulator
+Comment=Neo Geo MVS/AES emulator (Wayland + Vulkan)
+Exec=linoragx --rom %f
+Icon=linoragx
+Terminal=false
+Categories=Game;Emulator;
+Keywords=neogeo;arcade;emulator;SNK;
+MimeType=application/zip;
