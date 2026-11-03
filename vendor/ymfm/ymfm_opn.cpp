@@ -1904,6 +1904,11 @@ void ym2610::save_restore(ymfm_saved_state &state)
 uint8_t ym2610::read_status()
 {
 	uint8_t result = m_fm.status() & (fm_engine::STATUS_TIMERA | fm_engine::STATUS_TIMERB);
+	// LINORAGX GOLDPORT: propagate the timer flags through the core's IRQ
+	// checker (ymf288::read_status_hi does the same). Without this the core
+	// never calls ymfm_update_irq, irq_level stays 0, and the audio CPU never
+	// receives its timer heartbeat (kof98/vliner m1 starved).
+	m_fm.set_reset_status(result, ~result);
 	if (m_fm.intf().ymfm_is_busy())
 		result |= fm_engine::STATUS_BUSY;
 	return result;
