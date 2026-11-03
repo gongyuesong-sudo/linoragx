@@ -3729,9 +3729,9 @@ void linoragx_z80_step(unsigned int pc)
       if (zn && g_ng && g_ng->frame != lastf) {
           lastf = g_ng->frame;
           if (g_ng->frame % 60 == 0)
-              fprintf(stderr, "ZNMI f=%llu sl1=%lu nmi=%lu en=%d\n",
+              fprintf(stderr, "ZNMI f=%llu sl1=%lu nmi=%lu en=%d p0=%lu\n",
                       (unsigned long long)g_ng->frame, g_ng->sl1_cnt,
-                      g_ng->nmi_cnt, g_ng->z80_nmi_en); } }
+                      g_ng->nmi_cnt, g_ng->z80_nmi_en, g_ng->p0_cnt); } }
     { static int znh = -2; static long znh_n = 0;
       if (znh == -2) znh = getenv("ZNMIPATH") ? 1 : 0;
       if (znh && (pc == 0x00e7 || pc == 0x007a ||
