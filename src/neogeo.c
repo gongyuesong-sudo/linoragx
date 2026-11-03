@@ -406,6 +406,9 @@ static uint8_t z_read(uint32_t a, void *c)
        audio reset line. Resetting the Z80 on ch5 (old behavior) deadlocks
        pnyaa-class carts whose m1 defers dispatch on the first NMI. */
     int cart_visible = ng->snd ? (ng->cart_audio || ng->m1_view) : 0;   /* visible during ch5 pulses (transient) and permanently after the post-pulse m1 boot */
+    { static int fm = -2; if (fm == -2) fm = getenv("FORCEM1") ? 1 : 0;
+      if (fm && ng->snd) { if (fm == 1) { fm = 2; z80w_reset(ng->z); ng->z80_nmi_asserted = 0; }
+                           ng->m1_view = 1; cart_visible = 1; } }   /* MAME parity experiment: entry1=cart audio from INIT (golden set_entry(1) at init_audio) */
     const uint8_t *r = cart_visible ? ng->snd : (ng->sm1 ? ng->sm1 : ng->snd);
     uint32_t sz = cart_visible ? ng->snd_size : (ng->sm1 ? 0x20000 : ng->snd_size);
     if (!r) { r = ng->snd; sz = ng->snd_size; }
@@ -5288,6 +5291,13 @@ void ng_run_frame(neogeo *ng)
         unsigned long pc = (unsigned long)m68k_get_reg(NULL, M68K_REG_PC);
         int in_bios = (pc >= 0xC00000UL && pc < 0xD00000UL) || pc >= 0xFF8000UL
                    || (pc >= 0x100000UL && pc < 0x200000UL);   /* BIOS workram */
+        /* kof98cb-class: the game's own code lives in the C1xxxx window (protection
+           board remap), so its 68K PC looks 'in BIOS' forever and the handoff never
+           fires (m1 starved, Z80 stuck on sm1 which self-halts).  Fallback: once the
+           BIOS has had far more than its full boot budget since ch5 rose, the game
+           has certainly started — hand off regardless of PC. */
+        { static int fbf = -2; if (fbf == -2) fbf = getenv("NOHANDFB") ? 0 : 1;
+          if (fbf && ng->frame > ng->ch5_on_frame + 30) in_bios = 0; }
         if (!in_bios) {
             if (ng->frame - ng->ch5_on_frame >= 2) {   /* debounce bank-switch transients */
                 ng->ch5_bios_pend = 0;
