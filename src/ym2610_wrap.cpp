@@ -325,6 +325,8 @@ extern "C" int ym_queue_on(void)
     return q;
 }
 
+extern "C" unsigned int z80w_pc_dbg(void*);
+extern "C" void *ng_z80_dbg(void);
 static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
 {
     static int ymdbg = -1;
@@ -332,7 +334,7 @@ static void ym_write_core(ym2610 *y, int chipno, uint8_t reg, uint8_t val)
     if (ymdbg < 0) ymdbg = getenv("YMBDBG") ? 1 : 0;
     if (ymdbg) fprintf(stderr, "YM%c f=%d %02x=%02x\n", 'A'+chipno, g_ym_frame, reg, val);
     { static int cw = -2; if (cw == -2) cw = getenv("COREWR") ? 1 : 0;
-      if (cw) fprintf(stderr, "COREWR f=%d c%d r=%02x v=%02x\n", g_ym_frame, chipno, reg, val); }
+      if (cw) fprintf(stderr, "COREWR f=%d c%d r=%02x v=%02x zpc=%04x\n", g_ym_frame, chipno, reg, val, z80w_pc_dbg(ng_z80_dbg())); }
     if (chipno == 2) return;                 /* legacy YM2151 mirror: bank A IS the OPM FM, ymfm handles it */
     int c = chipno ? 1 : 0;
     /* ymfm ym2610 is a unified 9-bit address space (vendor ymfm_opn.cpp

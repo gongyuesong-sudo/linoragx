@@ -3596,9 +3596,12 @@ void linoragx_pc_hook(unsigned int pc)
 
 /* Z80FLOW=lo-hi: instruction-level Z80 PC flow (env-gated) */
 static int g_z80flow_lo = -1, g_z80flow_hi = -1;
+/* COREWR zpc debug wrappers (used by src/ym2610_wrap.cpp probe) */
+unsigned int z80w_pc_dbg(void *z) { return z ? z80w_pc(z) : 0; }
+void *ng_z80_dbg(void) { return g_ng ? g_ng->z : NULL; }
+
 void linoragx_z80_step(unsigned int pc)
-{
-    { extern unsigned g_cur_zpc; g_cur_zpc = pc; }
+{    { extern unsigned g_cur_zpc; g_cur_zpc = pc; }
     { extern uint32_t g_z_step; extern int ym_queue_on(void); if (ym_queue_on()) g_z_step++; }
     /* Instruction-level YM2610 timer IRQ delivery. The YM IRQ is a LEVEL
        signal: real hardware takes it at the next Z80 instruction boundary,
