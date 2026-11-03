@@ -3659,6 +3659,23 @@ void linoragx_z80_step(unsigned int pc)
     { static int zps = -2;
       if (zps == -2) zps = getenv("ZPCSTAT") ? 1 : 0;
       if (zps) zpcstat_hook(pc); }
+    { static int zpt = -2; static unsigned zpt_lo = 0, zpt_hi = 0; static long zpt_n = 0;
+      if (zpt == -2) { const char *e = getenv("ZPCTRACE"); zpt = e ? 1 : 0;
+          if (e) { char buf[40]; strncpy(buf, e, 39); buf[39] = 0;
+              char *d = strchr(buf, '-');
+              zpt_lo = (unsigned)strtoul(buf, 0, 16);
+              zpt_hi = d ? (unsigned)strtoul(d + 1, 0, 16) : zpt_lo; } }
+      if (zpt && pc >= zpt_lo && pc <= zpt_hi && zpt_n < 300000) {
+          zpt_n++;
+          extern uint8_t z80w_peek(void*, uint32_t);
+          fprintf(stderr, "ZPT f=%llu pc=%04x b=%02x %02x %02x %02x %02x %02x\n",
+                  g_ng ? (unsigned long long)g_ng->frame : 0ULL, pc,
+                  g_ng ? z80w_peek(g_ng->z, pc) : 0,
+                  g_ng ? z80w_peek(g_ng->z, pc + 1) : 0,
+                  g_ng ? z80w_peek(g_ng->z, pc + 2) : 0,
+                  g_ng ? z80w_peek(g_ng->z, pc + 3) : 0,
+                  g_ng ? z80w_peek(g_ng->z, pc + 4) : 0,
+                  g_ng ? z80w_peek(g_ng->z, pc + 5) : 0); } }
     { static int f51 = -2;
       if (f51 == -2) f51 = getenv("F51RD") ? 1 : 0;
       if (f51 && pc == 0x0F51 && g_ng) {
