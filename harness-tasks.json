@@ -9537,8 +9537,8 @@
    "depends_on": [
     "task-266"
    ],
-   "notes": "金标基准：biodemo 心跳 0x27=0x1F x1.13/帧（timer A val 0x51、duration 147312）；lin 空闲循环 0x35 伪写 x1.5/帧（zpc 012b-0143）而真任务泵仅 0.07/帧。timer 溢出率正常（TICKFIRE 1.03/帧）。Z80 RAM f800-ffff 仅抖动字节（fe46/fe5c/fff6）——分歧在 c000-f7ff 或轮询循环的 flag 语义细节。下一步：两侧 Z80 RAM 探针扩到 c000-ffff（MAME LINORAGX_ZRAM 重编 ~6min + lin Z80DUMP 扩范围），找首个结构分歧帧；对照空闲循环轮询段反汇编确认其消费 status 的位语义（core read_status vs legacy tflag）。",
-   "attempts": 0,
+   "notes": "金标基准：biodemo 心跳 0x27=0x1F x1.13/帧（timer A val 0x51、duration 147312）；lin 空闲循环 0x35 伪写 x1.5/帧（zpc 012b-0143）而真任务泵仅 0.07/帧。timer 溢出率正常（TICKFIRE 1.03/帧）。Z80 RAM f800-ffff 仅抖动字节（fe46/fe5c/fff6）——分歧在 c000-f7ff 或轮询循环的 flag 语义细节。下一步：两侧 Z80 RAM 探针扩到 c000-ffff（MAME LINORAGX_ZRAM 重编 ~6min + lin Z80DUMP 扩范围），找首个结构分歧帧；对照空闲循环轮询段反汇编确认其消费 status 的位语义（core read_status vs legacy tflag）。 进展1：两侧 Z80 RAM 探针已扩 c000-ffff（lin Z80DUMP 0fcd725 后扩；MAME neogeo.cpp:1911 扩+重编配方同 task-174）。600 帧 diff：无结构崩塌，稳定 31-36 字节差；关键分歧=ffe2-ffeb vs fff6-ffff 的 YM 写命令暂存区错位——金标 ffe2/ffe3=1f/27、ffe6/ffe7=3f/29、ffde/ffdf=fe4c 指针；lin 对应槽 0，其 3f/29 对在 fff6/fff7 且 fffd=c3(jp 自改码)、fff3=0a。下一步：反汇编 sm1 写 ffe2/fff6 的任务代码（harnesses/zdis.py），找队列写指针推进条件分歧。",
+   "attempts": 1,
    "max_attempts": 3,
    "error_log": []
   }

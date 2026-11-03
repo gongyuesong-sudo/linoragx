@@ -3708,7 +3708,7 @@ void linoragx_z80_step(unsigned int pc)
                          if (zdp) zdf = fopen(getenv("Z80DUMP"), "wb"); }
         if (zdp && zdf && g_ng && f != zdf_f) { zdf_f = f;
             extern uint8_t z80w_peek(void*, uint32_t);
-            for (unsigned a = 0xf800; a < 0x10000; a++) fputc(z80w_peek(g_ng->z, a), zdf);
+            for (unsigned a = 0xc000; a < 0x10000; a++) fputc(z80w_peek(g_ng->z, a), zdf);
             if ((zdf_n++ & 63) == 0) fflush(zdf); } }
       if (pkf >= 0 && g_ng && f == pkf) {
           extern uint8_t z80w_peek(void*, uint32_t);
