@@ -227,6 +227,8 @@ static int gold_sub(const char *env)
 #define GOLD_IRQ(y)  ((y)->gold && gold_sub("GOLDIRQ"))
 void ym2610::LinIntf::ymfm_set_timer(uint32_t tnum, int32_t clocks)
 {
+    { static int td = -2; if (td == -2) td = getenv("TMRDBG") ? 1 : 0;
+      if (td) fprintf(stderr, "TMR t=%u clocks=%d\n", tnum, clocks); }
     if (y && y->gold && tnum < 2) y->chip.lin_set_timer((int)tnum, clocks);
 }
 void ym2610::LinIntf::ymfm_set_busy_end(uint32_t clocks)
@@ -258,7 +260,7 @@ void ym2610::LinIntf::ymfm_update_irq(bool asserted)
 static int gold_mode(void)
 {
     static int g = -1;
-    if (g < 0) { const char *e = getenv("GOLDMODE"); g = (e && atoi(e) != 0) ? 1 : 0; }
+    if (g < 0) { const char *e = getenv("GOLDMODE"); g = (e && atoi(e) == 0) ? 0 : 1; }
     return g;
 }
 
