@@ -3742,6 +3742,17 @@ void linoragx_z80_step(unsigned int pc)
               fprintf(stderr, "ZNMI f=%llu sl1=%lu nmi=%lu en=%d p0=%lu\n",
                       (unsigned long long)g_ng->frame, g_ng->sl1_cnt,
                       g_ng->nmi_cnt, g_ng->z80_nmi_en, g_ng->p0_cnt); } }
+    { static int qd = -2; static unsigned long qf = 0;
+      if (qd == -2) qd = getenv("QDBG") ? 1 : 0;
+      if (qd && g_ng && g_ng->frame != qf) {
+          qf = g_ng->frame;
+          if (g_ng->frame % 60 == 0 && g_ng->frame >= 240) {
+              extern uint8_t z_read_pub(uint32_t, void*);
+              fprintf(stderr, "QDBG f=%llu fdca=%02x fd66=%02x fd67=%02x fddb=%02x fddc=%02x\n",
+                      (unsigned long long)g_ng->frame,
+                      z_read_pub(0xFDCA, g_ng), z_read_pub(0xFD66, g_ng),
+                      z_read_pub(0xFD67, g_ng), z_read_pub(0xFDDB, g_ng),
+                      z_read_pub(0xFDDC, g_ng)); } } }
     { static int zdb = -2; static FILE *zf = 0;
       if (zdb == -2) zdb = getenv("ZDUMPB") ? 1 : 0;
       if (zdb && g_ng && g_ng->frame == 300 && !zf) {
