@@ -28,6 +28,8 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+extern int g_tmr27dbg;
+void tmr27_log(int lb, int la);
 namespace ymfm
 {
 
@@ -1589,6 +1591,7 @@ void fm_engine_base<RegisterType>::engine_mode_write(uint8_t data)
 		// is a bit shorter
 		update_timer(1, m_regs.load_timer_b(), -(m_total_clocks & 15));
 		update_timer(0, m_regs.load_timer_a(), 0);
+		{ extern int g_tmr27dbg; if (::g_tmr27dbg) { ::tmr27_log((int)m_regs.load_timer_b(), (int)m_regs.load_timer_a()); } }
 	}
 }
 

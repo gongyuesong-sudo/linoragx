@@ -234,9 +234,11 @@ static int gold_irqmask(void)
     if (im == -2) { const char *e = getenv("IRQMASK"); im = e ? atoi(e) : 3; }
     return im;
 }
+int g_tmr27dbg = 0;
+void tmr27_log(int lb, int la) { fprintf(stderr, "TMR27 lb=%d la=%d\n", lb, la); }
 void ym2610::LinIntf::ymfm_set_timer(uint32_t tnum, int32_t clocks)
 {
-    { static int td = -2; if (td == -2) td = getenv("TMRDBG") ? 1 : 0;
+    { static int td = -2; if (td == -2) { td = getenv("TMRDBG") ? 1 : 0; g_tmr27dbg = td; }
       if (td) fprintf(stderr, "TMR t=%u clocks=%d\n", tnum, clocks); }
     if (y && y->gold && tnum < 2) y->chip.lin_set_timer((int)tnum, clocks);
 }
