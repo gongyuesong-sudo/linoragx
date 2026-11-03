@@ -1101,7 +1101,7 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
        game-facing IRQ2 source on real hardware. */
     { static int wa = -2; static long wa_n = 0;
       if (wa == -2) wa = getenv("WA68") ? 1 : 0;
-      if (wa && a >= 0xff2780 && a <= 0xff278f && wa_n < 400) {
+      if (wa && ((a >= 0xff2780 && a <= 0xff278f) || (a >= 0x1000c0 && a <= 0x1000cf)) && wa_n < 400) {
           wa_n++;
           fprintf(stderr, "WA68 f=%llu a=%06x d=%04x m=%04x pc=%08x\n",
                   (unsigned long long)ng->frame, a, d, mem_mask,
@@ -4676,6 +4676,15 @@ void ng_run_frame(neogeo *ng)
           if (lo == -2) { const char *e = getenv("PCTRACE"); const char *d = e ? strchr(e, '-') : 0;
               lo = e ? atoi(e) : -1; hi = d ? atoi(d + 1) : -1; }
           if (lo >= 0 && ng->frame >= lo && ng->frame <= hi)
+            { static unsigned last9f = 0xFFFFFFFF;
+              unsigned pcx = m68k_get_reg(NULL, M68K_REG_PC);
+              if (pcx == 0x9f6e && last9f != 0x9f6e) {
+                  last9f = pcx;
+                  fprintf(stderr, "T9F f=%d a1=%08x a2=%08x a3=%08x d0=%08x d1=%08x\n",
+                          ng->frame, m68k_get_reg(NULL,M68K_REG_A1),
+                          m68k_get_reg(NULL,M68K_REG_A2), m68k_get_reg(NULL,M68K_REG_A3),
+                          m68k_get_reg(NULL,M68K_REG_D0), m68k_get_reg(NULL,M68K_REG_D1));
+              } else if (pcx != 0x9f6e) last9f = pcx; }
               fprintf(stderr, "T %d %08x b=%02x %02x %02x %02x %02x %02x\n", ng->frame,
                       m68k_get_reg(NULL, M68K_REG_PC),
                       (unsigned)m68k_read_memory_8(m68k_get_reg(NULL, M68K_REG_PC)),
