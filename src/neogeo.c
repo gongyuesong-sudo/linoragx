@@ -5302,6 +5302,9 @@ void ng_run_frame(neogeo *ng)
             if (fbf && ng->frame > ng->ch5_on_frame + hfw) in_bios = 0; } }
         if (!in_bios) {
             if (ng->frame - ng->ch5_on_frame >= 2) {   /* debounce bank-switch transients */
+                { static int hdb = -2; if (hdb == -2) hdb = getenv("HANDDBG") ? 1 : 0;
+                  if (hdb) fprintf(stderr, "HANDOFF f=%llu pc=%08x on=%llu\n",
+                      (unsigned long long)ng->frame, pc, (unsigned long long)ng->ch5_on_frame); }
                 ng->ch5_bios_pend = 0;
                 ng->cart_audio = 1;
                 if (!f_noreset()) {
