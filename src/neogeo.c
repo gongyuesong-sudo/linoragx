@@ -504,7 +504,8 @@ static uint16_t z_in(uint32_t p, void *c)
                  $C10EC0, game boot poll at $10E4) before the Z80 ever runs.  Here the
                  Z80 runs between those two 68K instrs and would steal the value, so
                  defer the clear until the hold window drains. */
-                 if (ng->dbg_z80==3) fprintf(stderr, "P0R %02x zpc=%04x f=%d\n", v, z80w_pc(ng->z), ng->frame);
+                 { static int p0r = -2; if (p0r==-2) p0r = getenv("P0RD")?1:0;
+                   if (p0r) fprintf(stderr, "P0R %02x zpc=%04x f=%d hold=%d\n", v, z80w_pc(ng->z), ng->frame, ng->latch1_hold); }
                  if (ng->latch1_hold > 0) ng->latch1_defer = 1;
                  else ng->soundlatch1 = 0;
                  ng->z80_nmi_pend = 0; ng->z80_nmi_asserted = 0; ng->p0_cnt++; return v; }
