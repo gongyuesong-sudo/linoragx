@@ -506,6 +506,11 @@ static void z_write(uint32_t a, uint8_t v, void *c)
         return;
     }
     if (a >= 0xF800) {
+        { static int f66 = -2; if (f66 == -2) f66 = getenv("FD66W") ? 1 : 0;
+          if (f66 && (a == 0xFD66 || a == 0xFD67 || a == 0xFDCA)) {
+              static long fc66 = 0;
+              if (fc66++ < 60) fprintf(stderr, "FD66W f=%llu a=%04x v=%02x zpc=%04x\n",
+                  (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); } }
         if ((zwr_tr&4) && a >= 0xFFE0) { static long stw = 0;
             if (stw++ < 300) fprintf(stderr, "STKW f=%llu a=%04x v=%02x pc=%04x\n",
                 (unsigned long long)ng->frame, a, v, z80w_pc(ng->z)); }
