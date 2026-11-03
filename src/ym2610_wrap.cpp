@@ -225,6 +225,15 @@ static int gold_sub(const char *env)
 #define GOLD_RD(y)   ((y)->gold && gold_sub("GOLDRD"))
 #define GOLD_BUSY(y) ((y)->gold && gold_sub("GOLDBUSY"))
 #define GOLD_IRQ(y)  ((y)->gold && gold_sub("GOLDIRQ"))
+/* IRQMASK env: gold-mode bank-A IRQ mask at init/reset (default 1 = timer A
+   only, kof98-era finding). sdodgeb m1 heartbeat is timer B (0x27=0x2A:
+   bit6 enable, latch 42 -> ~6.8ms, golden 6ms cadence) — needs mask 3. */
+static int gold_irqmask(void)
+{
+    static int im = -2;
+    if (im == -2) { const char *e = getenv("IRQMASK"); im = e ? atoi(e) : 3; }
+    return im;
+}
 void ym2610::LinIntf::ymfm_set_timer(uint32_t tnum, int32_t clocks)
 {
     { static int td = -2; if (td == -2) td = getenv("TMRDBG") ? 1 : 0;
@@ -277,7 +286,7 @@ ym2610 *ym_create(void)
     y->gold = gold_mode();
     y->chip.reset();   /* ymfm write paths read internal state; never touch the chip before it is reset */
     y->chip.lin_reset();
-    if (y->gold) y->chip.lin_set_irq_mask(1);   /* timer A only, see ymfm_opn.h note */
+    if (y->gold) y->chip.lin_set_irq_mask(gold_irqmask());   /* timer A only by default, see ymfm_opn.h note */
     y->irqmask[0] = y->irqmask[1] = 3;   /* ymfm reset IRQ mask (task-196) */
     ym_ssg_silence(y);
     return y;
@@ -289,7 +298,7 @@ void ym_reset(ym2610 *y)
     y->wq.clear();
     y->chip.reset();
     y->chip.lin_reset();
-    if (y->gold) y->chip.lin_set_irq_mask(1);
+    if (y->gold) y->chip.lin_set_irq_mask(gold_irqmask());
     y->irq_level = 0;
     ym_ssg_silence(y);
     ae_reset(y->ae);
