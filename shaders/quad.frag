@@ -2,7 +2,8 @@
 /* Pixel-art enhancement.
  *  enhance 0 = plain nearest (legacy)
  *  enhance 1 = generalized Scale2x (hard-edge corner fill)
- *  enhance 2 = xBR level 2 curve smoothing (DEFAULT)
+ *  enhance 2 = xBR level 2 curve smoothing
+ *  enhance 3 = xBRZ freescale (DEFAULT)
  *
  * enhance 2 is a port of the pattern-recognition core of Hyllian's
  * xbr-lv2.glsl from libretro/glsl-shaders (MIT licensed), adapted to a
@@ -10,6 +11,13 @@
  * delta derived from screen-space derivatives so it works at any
  * (even non-integer) scale ratio. Curves and diagonals are cut with
  * straight-line inequations instead of staircase steps.
+ *
+ * enhance 3 is a port of xbrz-freescale.slang from libretro/slang-shaders
+ * (edge-smoothing/xbrz/shaders), which implements Zenju's xBRZ: YCbCr
+ * color distance, dominant-gradient corner preprocessing and line-angle
+ * aware corner blending. That source is GPL-3.0 (xBRZ (C) Zenju, vertex
+ * mapping (C) Hyllian MIT); note this shader file is therefore GPL-3.0.
+ * Scale ratio likewise derived from screen-space derivatives.
  *
  * Letterbox is handled C-side (viewport fits 320:224, bars = clear color),
  * so uv here always spans exactly the game image. */
@@ -147,12 +155,184 @@ vec3 xbr(vec2 uvc)
     return mix(res1, res2, step(c_df(E, res1), c_df(E, res2)));
 }
 
+/* ---------- enhance 3: xBRZ (ported from xbrz-freescale.slang, GPL-3.0) ---------- */
+const float XZ_EQ_TOL = 30.0 / 255.0;
+const float XZ_STEEP = 2.2;
+const float XZ_DOMINANT = 3.6;
+
+float distYCbCr(vec3 a, vec3 b)
+{
+    const vec3 w = vec3(0.2627, 0.6780, 0.0593);
+    float sB = 0.5 / (1.0 - w.b);
+    float sR = 0.5 / (1.0 - w.r);
+    vec3 d = a - b;
+    float Y = dot(d, w);
+    float Cb = sB * (d.b - Y);
+    float Cr = sR * (d.r - Y);
+    return sqrt(Y * Y + Cb * Cb + Cr * Cr);
+}
+bool pixEq(vec3 a, vec3 b) { return distYCbCr(a, b) < XZ_EQ_TOL; }
+
+float left_ratio(vec2 center, vec2 origin, vec2 dir, vec2 scale)
+{
+    vec2 P0 = center - origin;
+    vec2 proj = dir * (dot(P0, dir) / dot(dir, dir));
+    vec2 distv = P0 - proj;
+    vec2 orth = vec2(-dir.y, dir.x);
+    float side = sign(dot(P0, orth));
+    float v = side * length(distv * scale);
+    return smoothstep(-sqrt(2.0) / 2.0, sqrt(2.0) / 2.0, v);
+}
+
+vec3 xbrz(vec2 uvc)
+{
+    vec2 srcsz = vec2(textureSize(tex, 0));
+    vec2 sp = uvc * srcsz;
+    ivec2 c0 = ivec2(floor(sp));
+    vec2 pos = fract(sp) - 0.5;
+    /* output pixels per source texel, from screen derivatives */
+    vec2 scale = 1.0 / max(abs(vec2(dFdx(uvc.x), dFdy(uvc.y))) * srcsz, vec2(1e-6));
+
+    vec3 A = px(c0 + ivec2(-1,-1)).rgb, B = px(c0 + ivec2(0,-1)).rgb, C = px(c0 + ivec2(1,-1)).rgb;
+    vec3 D = px(c0 + ivec2(-1, 0)).rgb, E = px(c0).rgb,                F = px(c0 + ivec2(1, 0)).rgb;
+    vec3 G = px(c0 + ivec2(-1, 1)).rgb, H = px(c0 + ivec2(0, 1)).rgb,  I = px(c0 + ivec2(1, 1)).rgb;
+
+    ivec4 blendResult = ivec4(0, 0, 0, 0);
+
+    /* preprocess corner z (lower-right) */
+    if (!((E == F && H == I) || (E == H && F == I))) {
+        float dHF = distYCbCr(G, E) + distYCbCr(E, C)
+                  + distYCbCr(px(c0 + ivec2(0, 2)).rgb, I) + distYCbCr(I, px(c0 + ivec2(2, 0)).rgb)
+                  + 4.0 * distYCbCr(H, F);
+        float dEI = distYCbCr(D, H) + distYCbCr(H, px(c0 + ivec2(1, 2)).rgb)
+                  + distYCbCr(B, F) + distYCbCr(F, px(c0 + ivec2(2, 1)).rgb)
+                  + 4.0 * distYCbCr(E, I);
+        bool dom = (XZ_DOMINANT * dHF) < dEI;
+        blendResult.z = ((dHF < dEI) && E != F && E != H) ? (dom ? 2 : 1) : 0;
+    }
+    /* preprocess corner w (lower-left) */
+    if (!((D == E && G == H) || (D == G && E == H))) {
+        float dGE = distYCbCr(px(c0 + ivec2(-2, 1)).rgb, D) + distYCbCr(D, B)
+                  + distYCbCr(px(c0 + ivec2(-1, 2)).rgb, H) + distYCbCr(H, F)
+                  + 4.0 * distYCbCr(G, E);
+        float dDH = distYCbCr(px(c0 + ivec2(-2, 0)).rgb, G) + distYCbCr(G, px(c0 + ivec2(0, 2)).rgb)
+                  + distYCbCr(A, E) + distYCbCr(E, I)
+                  + 4.0 * distYCbCr(D, H);
+        bool dom = (XZ_DOMINANT * dDH) < dGE;
+        blendResult.w = ((dGE > dDH) && E != D && E != H) ? (dom ? 2 : 1) : 0;
+    }
+    /* preprocess corner y (upper-right) */
+    if (!((B == C && E == F) || (B == E && C == F))) {
+        float dEC = distYCbCr(D, B) + distYCbCr(B, px(c0 + ivec2(1, -2)).rgb)
+                  + distYCbCr(H, F) + distYCbCr(F, px(c0 + ivec2(2, -1)).rgb)
+                  + 4.0 * distYCbCr(E, C);
+        float dBF = distYCbCr(A, E) + distYCbCr(E, I)
+                  + distYCbCr(px(c0 + ivec2(0, -2)).rgb, C) + distYCbCr(C, px(c0 + ivec2(2, 0)).rgb)
+                  + 4.0 * distYCbCr(B, F);
+        bool dom = (XZ_DOMINANT * dBF) < dEC;
+        blendResult.y = ((dEC > dBF) && E != B && E != F) ? (dom ? 2 : 1) : 0;
+    }
+    /* preprocess corner x (upper-left) */
+    if (!((A == B && D == E) || (A == D && B == E))) {
+        float dDB = distYCbCr(px(c0 + ivec2(-2, 0)).rgb, A) + distYCbCr(A, px(c0 + ivec2(0, -2)).rgb)
+                  + distYCbCr(G, E) + distYCbCr(E, C)
+                  + 4.0 * distYCbCr(D, B);
+        float dAE = distYCbCr(px(c0 + ivec2(-2, -1)).rgb, D) + distYCbCr(D, H)
+                  + distYCbCr(px(c0 + ivec2(-1, -2)).rgb, B) + distYCbCr(B, F)
+                  + 4.0 * distYCbCr(A, E);
+        bool dom = (XZ_DOMINANT * dDB) < dAE;
+        blendResult.x = ((dDB < dAE) && E != D && E != B) ? (dom ? 2 : 1) : 0;
+    }
+
+    vec3 res = E;
+    const float r2 = 1.0 / sqrt(2.0);
+
+    /* blend corner z */
+    if (blendResult.z != 0) {
+        float dFG = distYCbCr(F, G);
+        float dHC = distYCbCr(H, C);
+        bool doLineBlend = (blendResult.z == 2 ||
+            !((blendResult.y != 0 && !pixEq(E, G)) || (blendResult.w != 0 && !pixEq(E, C)) ||
+              (pixEq(G, H) && pixEq(H, I) && pixEq(I, F) && pixEq(F, C) && !pixEq(E, I))));
+        vec2 origin = vec2(0.0, r2);
+        vec2 direction = vec2(1.0, -1.0);
+        if (doLineBlend) {
+            bool shallow = (XZ_STEEP * dFG <= dHC) && E != G && D != G;
+            bool steep   = (XZ_STEEP * dHC <= dFG) && E != C && B != C;
+            origin = shallow ? vec2(0.0, 0.25) : vec2(0.0, 0.5);
+            direction.x += shallow ? 1.0 : 0.0;
+            direction.y -= steep ? 1.0 : 0.0;
+        }
+        vec3 blendPix = mix(H, F, step(distYCbCr(E, F), distYCbCr(E, H)));
+        res = mix(res, blendPix, left_ratio(pos, origin, direction, scale));
+    }
+    /* blend corner w */
+    if (blendResult.w != 0) {
+        float dHA = distYCbCr(H, A);
+        float dDI = distYCbCr(D, I);
+        bool doLineBlend = (blendResult.w == 2 ||
+            !((blendResult.z != 0 && !pixEq(E, A)) || (blendResult.x != 0 && !pixEq(E, I)) ||
+              (pixEq(A, D) && pixEq(D, G) && pixEq(G, H) && pixEq(H, I) && !pixEq(E, G))));
+        vec2 origin = vec2(-r2, 0.0);
+        vec2 direction = vec2(1.0, 1.0);
+        if (doLineBlend) {
+            bool shallow = (XZ_STEEP * dHA <= dDI) && E != A && B != A;
+            bool steep   = (XZ_STEEP * dDI <= dHA) && E != I && F != I;
+            origin = shallow ? vec2(-0.25, 0.0) : vec2(-0.5, 0.0);
+            direction.y += shallow ? 1.0 : 0.0;
+            direction.x += steep ? 1.0 : 0.0;
+        }
+        vec3 blendPix = mix(H, D, step(distYCbCr(E, D), distYCbCr(E, H)));
+        res = mix(res, blendPix, left_ratio(pos, origin, direction, scale));
+    }
+    /* blend corner y */
+    if (blendResult.y != 0) {
+        float dBI = distYCbCr(B, I);
+        float dFA = distYCbCr(F, A);
+        bool doLineBlend = (blendResult.y == 2 ||
+            !((blendResult.x != 0 && !pixEq(E, I)) || (blendResult.z != 0 && !pixEq(E, A)) ||
+              (pixEq(I, F) && pixEq(F, C) && pixEq(C, B) && pixEq(B, A) && !pixEq(E, C))));
+        vec2 origin = vec2(r2, 0.0);
+        vec2 direction = vec2(-1.0, -1.0);
+        if (doLineBlend) {
+            bool shallow = (XZ_STEEP * dBI <= dFA) && E != I && H != I;
+            bool steep   = (XZ_STEEP * dFA <= dBI) && E != A && D != A;
+            origin = shallow ? vec2(0.25, 0.0) : vec2(0.5, 0.0);
+            direction.y -= shallow ? 1.0 : 0.0;
+            direction.x -= steep ? 1.0 : 0.0;
+        }
+        vec3 blendPix = mix(F, B, step(distYCbCr(E, B), distYCbCr(E, F)));
+        res = mix(res, blendPix, left_ratio(pos, origin, direction, scale));
+    }
+    /* blend corner x */
+    if (blendResult.x != 0) {
+        float dDC = distYCbCr(D, C);
+        float dBG = distYCbCr(B, G);
+        bool doLineBlend = (blendResult.x == 2 ||
+            !((blendResult.w != 0 && !pixEq(E, C)) || (blendResult.y != 0 && !pixEq(E, G)) ||
+              (pixEq(C, B) && pixEq(B, A) && pixEq(A, D) && pixEq(D, G) && !pixEq(E, A))));
+        vec2 origin = vec2(0.0, -r2);
+        vec2 direction = vec2(-1.0, 1.0);
+        if (doLineBlend) {
+            bool shallow = (XZ_STEEP * dDC <= dBG) && E != C && F != C;
+            bool steep   = (XZ_STEEP * dBG <= dDC) && E != G && H != G;
+            origin = shallow ? vec2(0.0, -0.25) : vec2(0.0, -0.5);
+            direction.x -= shallow ? 1.0 : 0.0;
+            direction.y += steep ? 1.0 : 0.0;
+        }
+        vec3 blendPix = mix(D, B, step(distYCbCr(E, B), distYCbCr(E, D)));
+        res = mix(res, blendPix, left_ratio(pos, origin, direction, scale));
+    }
+    return res;
+}
+
 void main()
 {
     vec3 col;
     if (pc.enhance == 0)      col = texture(tex, uv).rgb;
     else if (pc.enhance == 1) col = scale2x(uv);
-    else                      col = xbr(uv);
+    else if (pc.enhance == 2) col = xbr(uv);
+    else                      col = xbrz(uv);
     outc = vec4(col, 1.0);
     if (pc.scanlines == 1) {
         // darken every other source line (224 lines scaled)
