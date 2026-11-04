@@ -1399,6 +1399,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                 fprintf(stderr, "SLABSORB f=%d a=%06x d=%04x m=%04x pc=%08x\n",
                     ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
             uint8_t v = (uint8_t)(d >> 8);
+            /* LATCHW=1: log 68K sound-command writes with PC (mirrors MAME probe) */
+            static int latchw = -2;
+            if (latchw == -2) latchw = getenv("LATCHW") ? 1 : 0;
+            if (latchw)
+                fprintf(stderr, "LATCHW t=%d d=%02x pc=%08x\n",
+                    ng->frame, v, m68k_get_reg(NULL, M68K_REG_PC));
             ng->soundlatch1 = v;
             ng->latch1_hold = 16;   /* hold window: let the 68K read its own command back
                                        (MAME slice timing) before the Z80 may clear it */
