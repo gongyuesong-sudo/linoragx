@@ -126,5 +126,4 @@ void   vk_set_fullscreen(vkrend *v, int on);
 void   vk_toggle_fullscreen(vkrend *v);                  /* F11 / Alt+Enter */
 int    vk_is_fullscreen(vkrend *v);
 void   vk_present(vkrend *v, const uint32_t *fb);
-void   vk_set_dlss(vkrend *v, int mode);
 int    vk_offscreen_dump(vkrend *v, const uint32_t *fb, const char *bmp_path);

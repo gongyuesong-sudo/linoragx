@@ -10,7 +10,6 @@ CXXFLAGS += -I$(SYSROOT_INC)
 endif
 LDFLAGS = $(EXTRA_LDFLAGS) -L$(HOME)/opt/lib/emulink
 LDLIBS  = -lm -lz -lvulkan -lwayland-client -lX11 -lxcb -ldl -lstdc++ -lpthread
-GLSLC   ?= glslc
 SRC     = src/neogeo.c src/video.c src/rom.c src/config.c src/keymap.c \
           src/audio.c src/wl_input.c src/render_vulkan.c src/ctl.c src/netplay.c src/main.c \
           src/xdg-shell-protocol.c
@@ -22,8 +21,8 @@ all: $(BIN)
 
 generated/shaders_spv.h: shaders/quad.vert shaders/quad.frag
 	@mkdir -p generated
-	$(GLSLC) --target-env=vulkan1.0 -mfmt=bin -o generated/quad.vert.spv shaders/quad.vert
-	$(GLSLC) --target-env=vulkan1.0 -mfmt=bin -o generated/quad.frag.spv shaders/quad.frag
+	glslc --target-env=vulkan1.0 -mfmt=bin -o generated/quad.vert.spv shaders/quad.vert
+	glslc --target-env=vulkan1.0 -mfmt=bin -o generated/quad.frag.spv shaders/quad.frag
 	python3 tools/embed_shaders.py generated/quad.vert.spv generated/quad.frag.spv generated/shaders_spv.h
 
 build/m68kcpu.o: vendor/m68kcpu.c | generated/shaders_spv.h
