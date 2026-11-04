@@ -22,7 +22,6 @@
 struct vkrend {
     neogeo *ng;
     int scale, scanlines, headless;
-    int dlss; float sharp;          /* enhancement mode + sharpen (vk_set_dlss) */
     char err[256];
 
     VkInstance inst;
@@ -645,7 +644,7 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
     }
     /* pipeline */
     {
-        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 24};
+        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4};
         VkPipelineLayoutCreateInfo pli = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
         pli.setLayoutCount = 1; pli.pSetLayouts = &v->dsl;
         pli.pushConstantRangeCount = 1; pli.pPushConstantRanges = &pcr;
@@ -813,9 +812,8 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     VkRect2D sc = {{0,0}, v->scext};
     vkCmdSetScissor(cb, 0, 1, &sc);
     vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset, 0, NULL);
-    struct { int sl, dlss; float sharp, pad; float dx, dy; } pc =
-        { v->scanlines ? 1 : 0, v->dlss, v->sharp, 0, (float)v->scext.width, (float)v->scext.height };
-    vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 24, &pc);
+    int sl = v->scanlines ? 1 : 0;
+    vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4, &sl);
     vkCmdDraw(cb, 4, 1, 0, 0);
     vkCmdEndRenderPass(cb);
     if (v->headless) {
@@ -891,14 +889,6 @@ static void wait_fence_wl(struct vkrend *v, VkFence f)
         else if (v->xdpy) x11_pump(v);
         else return;
     }
-}
-
-/* DLSS-style enhancement (dlss5-visual-enhancer port): 0 off, 1 Lanczos4+CAS, 2 Lanczos4+directional USM */
-void vk_set_dlss(vkrend *v, int mode)
-{
-    if (!v) return;
-    v->dlss = mode < 0 ? 0 : (mode > 2 ? 2 : mode);
-    v->sharp = v->dlss ? 0.5f : 0.0f;
 }
 
 void vk_present(vkrend *v, const uint32_t *fb)
