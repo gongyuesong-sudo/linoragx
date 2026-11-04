@@ -103,6 +103,7 @@ int main(int argc, char **argv)
     int16_t *wavbuf = NULL; size_t wavn = 0, wavcap = 0;
     int frames = 0, headless = 0, no_audio = 0;
     int scale = -1, scanl = -1, fullscreen = 0;
+    int dlss = 0;
     int netmode = 0, netport = 55300; const char *netaddr = NULL;
 
     for (int i = 1; i < argc; i++) {
@@ -121,6 +122,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i],"--no-audio")) no_audio = 1;
         else if (!strcmp(argv[i],"--dump-audio") && i+1<argc) dump_audio = argv[++i];
         else if (!strcmp(argv[i],"--scanlines")) scanl = 1;
+        else if (!strcmp(argv[i],"--dlss") && i+1<argc) dlss = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--fullscreen")) fullscreen = 1;
         else if (!strcmp(argv[i],"--net") && i+1<argc) {
             const char *m = argv[++i];
@@ -137,6 +139,7 @@ int main(int argc, char **argv)
                    "  --scale N      window scale (default 2)\n"
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
+                   "  --dlss N       enhancement: 0 off, 1 edge-aware+sharpen, 2 max\n"
                    "  --fullscreen   start fullscreen (toggle: F11 or Alt+Enter)\n"
                    "  --net host [port]    LAN netplay: host P1, wait for client (55300)\n"
                    "  --net client IP[:P]  LAN netplay: join host as P2\n"
@@ -232,6 +235,7 @@ int main(int argc, char **argv)
     } else if (!vk) {
         fprintf(stderr, "[vk] headless init: %s\n", err);
     }
+    vk_set_dlss(vk, dlss);
     if (vk && backend) fprintf(stderr, "[vk] window backend: %s\n", backend);
     if (vk && fullscreen) vk_set_fullscreen(vk, 1);
     wl_input *in = (backend && !strcmp(backend,"wayland")) ? wl_input_create(wdisp) : NULL;
