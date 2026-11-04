@@ -944,7 +944,9 @@ static uint16_t r16(neogeo *ng, uint32_t a)
           uint8_t lo = (uint8_t)~ng->buttons[1];                   /* P2 */
           return (hi<<8) | lo; }
     }
-    if (a < 0x320002) {                     /* AUDIO_COIN */
+    if (a < 0x340000) {                     /* AUDIO_COIN mirror (MAME map(0x320000,0x320001)
+        .mirror(0x01fffe) covers 0x320000-0x33FFFF; the old 0x320002 point bound leaked
+        0x320002-0x33FFFF into the video-register handler) */
         { static int ac = -2;
           if (ac == -2) ac = getenv("ACRD") ? 1 : 0;
           if (ac) { static long nac = 0;
@@ -1003,11 +1005,16 @@ static uint16_t r16(neogeo *ng, uint32_t a)
               fprintf(stderr,"L2R f=%d sl2=%02x pc=%08x\n", ng->frame, ng->soundlatch2, (unsigned)m68k_get_reg(NULL,M68K_REG_PC)); } }
         return (ng->soundlatch2<<8) | lo;
     }
-    if (a < 0x340002) {                     /* P2 */
+    if (a < 0x360000) {                     /* P2 (MAME map(0x340000,0x340001).mirror(0x01fffe)
+        covers 0x340000-0x35FFFF) */
         uint8_t b = (uint8_t)~ng->buttons[1];
         return (b<<8) | 0xFF;
     }
-    if (a < 0x380002) {                     /* SYSTEM (MAME: 0x0f00 start/sel edge,
+    if (a >= 0x380050 && a < 0x380052 && (ng->mc_shift[6] & 0xF))   /* UPD4990A out: bit6 TP, bit7 DO (state-driven, no frame gate).
+        Must precede SYSTEM: MAME's upd1990a port overrides the SYSTEM mirror there. */
+        return (uint16_t)(((ng->mc_tp ? 0x40 : 0) | (ng->mc_dout ? 0x80 : 0)) * 0x101);
+    if (a < 0x3A0000) {                     /* SYSTEM (MAME map(0x380000,0x380001).mirror(0x01fffe)
+        covers 0x360000-0x39FFFF; MAME: 0x0f00 start/sel edge,
                                                0x7000 memcard status, 0x8000 MVS=1).
                                                Report card PRESENT: the uni-bios
                                                coin-test creates and verifies a JEIDA
@@ -1024,8 +1031,6 @@ static uint16_t r16(neogeo *ng, uint32_t a)
         if (ng->buttons[1] & 0x200) hi &= ~0x08;
         return (hi<<8) | 0xFF;
     }
-    if (a >= 0x380050 && a < 0x380052 && (ng->mc_shift[6] & 0xF))   /* UPD4990A out: bit6 TP, bit7 DO (state-driven, no frame gate) */
-        return (uint16_t)(((ng->mc_tp ? 0x40 : 0) | (ng->mc_dout ? 0x80 : 0)) * 0x101);
     if (a < 0x3E0000) {                     /* video registers R (mirror 0x1FFF8) */
         switch ((a & 0x6)>>1) {             /* NOTE: MAME routes offsets 4..7 (incl.
                                                $3C0006, polled by the BIOS RAM-test
