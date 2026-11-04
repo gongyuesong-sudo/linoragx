@@ -24,6 +24,7 @@ struct vkrend {
     int scale, scanlines, headless;
     int want_w, want_h;             /* explicit window pixel size (0 = scale-derived) */
     int enh;                        /* 1 = Scale2x pixel enhancement (default), 0 = nearest */
+    int crt;                        /* 1 = CRT aperture-grille emulation overlay */
     char err[256];
 
     VkInstance inst;
@@ -763,7 +764,7 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
     }
     /* pipeline(s) */
     {
-        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16};
+        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 20};
         VkPipelineLayoutCreateInfo pli = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
         pli.setLayoutCount = 1; pli.pSetLayouts = &v->dsl;
         pli.pushConstantRangeCount = 1; pli.pPushConstantRanges = &pcr;
@@ -931,7 +932,7 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
         ? (VkViewport){0, 0, (float)sw, (float)sh, 0, 1}
         : (VkViewport){(float)vx, (float)(vy + vh), (float)vw, -(float)vh, 0, 1};
     VkRect2D sc = {{0,0}, v->scext};
-    struct { int sl, enh, dstw, dsth; } pc = { v->scanlines ? 1 : 0, v->enh, (int)vw, (int)vh };
+    struct { int sl, enh, dstw, dsth, crt; } pc = { v->scanlines ? 1 : 0, v->enh, (int)vw, (int)vh, v->crt };
     if (v->enh == 4) {
         /* xBRZ-Crisp: pass 0 computes per-source-pixel blend decisions into
            infoimg (source resolution), pass 1 applies them at output resolution. */
@@ -946,7 +947,7 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
         VkRect2D sc0 = {{0,0},{NG_W,NG_H}};
         vkCmdSetScissor(cb, 0, 1, &sc0);
         vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset0, 0, NULL);
-        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &pc);
+        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 20, &pc);
         vkCmdDraw(cb, 4, 1, 0, 0);
         vkCmdEndRenderPass(cb);
         vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
@@ -954,7 +955,7 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
         vkCmdSetViewport(cb, 0, 1, &vp);
         vkCmdSetScissor(cb, 0, 1, &sc);
         vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset1, 0, NULL);
-        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &pc);
+        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 20, &pc);
         vkCmdDraw(cb, 4, 1, 0, 0);
         vkCmdEndRenderPass(cb);
     } else {
@@ -963,7 +964,7 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
         vkCmdSetViewport(cb, 0, 1, &vp);
         vkCmdSetScissor(cb, 0, 1, &sc);
         vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset, 0, NULL);
-        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &pc);
+        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 20, &pc);
         vkCmdDraw(cb, 4, 1, 0, 0);
         vkCmdEndRenderPass(cb);
     }
@@ -1046,6 +1047,11 @@ static void wait_fence_wl(struct vkrend *v, VkFence f)
 void vk_set_enhance(vkrend *v, int on)
 {
     if (v) v->enh = on ? 1 : 0;
+}
+
+void vk_set_crt(vkrend *v, int on)
+{
+    if (v) v->crt = on ? 1 : 0;
 }
 
 void vk_present(vkrend *v, const uint32_t *fb)

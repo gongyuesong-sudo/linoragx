@@ -6,7 +6,7 @@ layout(location = 0) in vec2 uv_in;
 layout(location = 0) out vec4 FragColor;
 layout(binding = 0) uniform sampler2D Texture;           // pass-0 decision texture
 layout(binding = 1) uniform sampler2D PassPrev2Texture;  // original game frame
-layout(push_constant) uniform PCX { int sl; int enh; int dstw; int dsth; } pcx;
+layout(push_constant) uniform PCX { int sl; int enh; int dstw; int dsth; int crt; } pcx;
 #define COMPAT_TEXTURE texture
 #define FRAG_OUT FragColor
 #define vTexCoord (uv_in * 1.0001)
@@ -53,6 +53,17 @@ float get_left_ratio(vec2 center, vec2 origin, vec2 direction, vec2 scale)
 #define INFO_AT(x, y) floor(INFO(coord + vec2(x, y) * INFO_STEP) * 255.0 + 0.5)
 #define BLEND(r) mod(r, 4.0)
 #define FLAG(r, f) mod(floor((r) / (f)), 2.0)
+
+/* CRT emulation (aperture-grille style), see quad.frag for the model. */
+vec3 crt_emulate(vec3 c, vec2 fc, vec2 dst, vec2 src)
+{
+    float rows = dst.y / src.y;
+    float sy = fract(fc.y / rows) - 0.5;
+    c *= clamp(exp(-(sy * sy) / 0.16), 0.64, 1.0);
+    vec3 stripe = vec3(0.70);
+    stripe[int(mod(floor(fc.x), 3.0))] = 1.30;
+    return c * stripe * 1.5;
+}
 
 void main()
 {
@@ -236,5 +247,9 @@ void main()
     res = mix(res, blendPix, get_left_ratio(pos, origin, direction, scale));
   }
 
+  if (pcx.crt == 1)
+    res = crt_emulate(res, gl_FragCoord.xy,
+                      vec2(float(pcx.dstw), float(pcx.dsth)),
+                      vec2(textureSize(PassPrev2Texture, 0)));
   FRAG_OUT = vec4(res, 1.0);
 }

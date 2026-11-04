@@ -105,6 +105,7 @@ int main(int argc, char **argv)
     int scale = -1, scanl = -1, fullscreen = 0;
     int want_w = 1920, want_h = 1080;   /* default window output 1920x1080 */
     int enhance = 4;                    /* xBRZ-Crisp two-pass by default */
+    int crt = 0;                        /* CRT aperture-grille emulation overlay */
     int netmode = 0, netport = 55300; const char *netaddr = NULL;
 
     for (int i = 1; i < argc; i++) {
@@ -120,6 +121,7 @@ int main(int argc, char **argv)
             else { fprintf(stderr, "[linoragx] bad --size '%s' (want WxH, e.g. 1920x1080)\n", argv[i]); }
         }
         else if (!strcmp(argv[i],"--enhance") && i+1<argc) enhance = atoi(argv[++i]);
+        else if (!strcmp(argv[i],"--crt") && i+1<argc) crt = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--backend") && i+1<argc) backend_opt = argv[++i];
         else if (!strcmp(argv[i],"--frames") && i+1<argc) frames = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--dump")) dump = i+1<argc ? argv[++i] : "frame.bmp";
@@ -145,6 +147,7 @@ int main(int argc, char **argv)
                    "  --scale N      window scale (overrides default 1920x1080 output)\n"
                    "  --size WxH     window pixel size (default 1920x1080, letterboxed)\n"
                    "  --enhance N    pixel enhancement: 4 xBRZ-Crisp (default), 3 xBRZ, 2 xBR, 1 Scale2x, 0 nearest\n"
+                   "  --crt N        CRT emulation overlay: 1 on (scanlines + aperture grille), 0 off (default)\n"
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
                    "  --fullscreen   start fullscreen (toggle: F11 or Alt+Enter)\n"
@@ -243,6 +246,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "[vk] headless init: %s\n", err);
     }
     vk_set_enhance(vk, enhance);
+    vk_set_crt(vk, crt);
     if (vk && backend) fprintf(stderr, "[vk] window backend: %s\n", backend);
     if (vk && fullscreen) vk_set_fullscreen(vk, 1);
     wl_input *in = (backend && !strcmp(backend,"wayland")) ? wl_input_create(wdisp) : NULL;

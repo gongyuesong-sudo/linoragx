@@ -27,7 +27,24 @@ layout(set = 0, binding = 0) uniform sampler2D tex;
 layout(push_constant) uniform PC {
     int scanlines;
     int enhance;
+    int dstw;
+    int dsth;
+    int crt;
 } pc;
+
+/* CRT emulation (aperture-grille style): gaussian scanline beam + RGB
+ * phosphor stripes + persistence gain. Modulation depth (~36%) matches
+ * cgwg's crt-aperture look. fc = viewport pixel coord, dst = viewport
+ * size, src = source signal size. */
+vec3 crt_emulate(vec3 c, vec2 fc, vec2 dst, vec2 src)
+{
+    float rows = dst.y / src.y;
+    float sy = fract(fc.y / rows) - 0.5;
+    c *= clamp(exp(-(sy * sy) / 0.16), 0.64, 1.0);
+    vec3 stripe = vec3(0.70);
+    stripe[int(mod(floor(fc.x), 3.0))] = 1.30;
+    return c * stripe * 1.5;
+}
 
 vec4 px(ivec2 q) {
     ivec2 s = textureSize(tex, 0);
@@ -334,7 +351,11 @@ void main()
     else if (pc.enhance == 2) col = xbr(uv);
     else                      col = xbrz(uv);
     outc = vec4(col, 1.0);
-    if (pc.scanlines == 1) {
+    if (pc.crt == 1) {
+        outc.rgb = crt_emulate(outc.rgb, gl_FragCoord.xy,
+                              vec2(float(pc.dstw), float(pc.dsth)),
+                              vec2(textureSize(tex, 0)));
+    } else if (pc.scanlines == 1) {
         // darken every other source line (224 lines scaled)
         float sy = uv.y * 224.0;
         if (fract(sy) > 0.5) outc.rgb *= 0.65;
