@@ -2,7 +2,7 @@ Name:           linoragx
 Version:        0.1
 Release:        1%{?dist}
 Summary:        Neo Geo emulator (Wayland + Vulkan)
-License:        MIT
+License:        GPL-3.0-or-later
 URL:            https://github.com/gongyuesong-sudo/linoragx
 Source0:        %{name}-%{version}.tar.gz
 

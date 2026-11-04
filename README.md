@@ -72,6 +72,10 @@ generated/  SPIR-V 嵌入头
 tools/      构建辅助脚本
 ```
 
+## 许可
+
+GPL-3.0-or-later（见 LICENSE）。第三方核心（vendor/）保留各自原始许可（BSD/MIT，见 vendor/LICENSE.cores），均与 GPL-3.0 兼容；shaders/quad.frag 中 xBRZ 部分为 GPL-3.0（xBRZ (C) Zenju）。
+
 ## 声明
 
 本仓库不含任何 ROM、BIOS 或二进制固件。Neo Geo 与 NeoRageX 相关权利归各自持有者。
