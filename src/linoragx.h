@@ -118,11 +118,13 @@ int  dump_bmp(const uint32_t *fb, const char *path);
 /* vulkan renderer */
 typedef struct vkrend vkrend;
 /* backend: "wayland" | "x11" | NULL (headless) */
-vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char *err, size_t errsz);
+vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
+                int want_w, int want_h, char *err, size_t errsz);
 void   vk_destroy(vkrend *v);
 int    vk_pump(vkrend *v);                    /* handle events; 0=ok, 1=close */
 int    vk_next_key(vkrend *v, uint32_t *sym, int *down);  /* X11 key events; 1=popped */
 void   vk_set_fullscreen(vkrend *v, int on);
+void   vk_set_enhance(vkrend *v, int on);
 void   vk_toggle_fullscreen(vkrend *v);                  /* F11 / Alt+Enter */
 int    vk_is_fullscreen(vkrend *v);
 void   vk_present(vkrend *v, const uint32_t *fb);

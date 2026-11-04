@@ -22,6 +22,8 @@
 struct vkrend {
     neogeo *ng;
     int scale, scanlines, headless;
+    int want_w, want_h;             /* explicit window pixel size (0 = scale-derived) */
+    int enh;                        /* 1 = Scale2x pixel enhancement (default), 0 = nearest */
     char err[256];
 
     VkInstance inst;
@@ -90,8 +92,8 @@ static void xdg_top_configure(void *d, struct xdg_toplevel *t, int32_t w, int32_
 {
     (void)t; (void)st;
     struct vkrend *v = d;
-    uint32_t nw = w > 0 ? (uint32_t)w : NG_W * v->scale;
-    uint32_t nh = h > 0 ? (uint32_t)h : NG_H * v->scale;
+    uint32_t nw = w > 0 ? (uint32_t)w : (v->want_w ? v->want_w : NG_W * v->scale);
+    uint32_t nh = h > 0 ? (uint32_t)h : (v->want_h ? v->want_h : NG_H * v->scale);
     if (v->cfgw && (nw != v->cfgw || nh != v->cfgh)) v->sc_valid = 0;   /* force swapchain rebuild */
     v->cfgw = nw; v->cfgh = nh;
     fprintf(stderr, "[wl] toplevel configure %ux%u\n", nw, nh);
@@ -144,6 +146,11 @@ static void x11_set_fullscreen(struct vkrend *v, int on)
     XSizeHints *sh = XAllocSizeHints();
     if (sh) {
         if (on) { sh->flags = PMinSize; sh->min_width = NG_W; sh->min_height = NG_H; }
+        else if (v->want_w && v->want_h) {
+            sh->flags = PMinSize | PMaxSize;
+            sh->min_width = NG_W; sh->min_height = NG_H;
+            sh->max_width = 3840; sh->max_height = 2160;
+        }
         else {
             sh->flags = PMinSize | PMaxSize | PAspect;
             sh->min_width = NG_W; sh->min_height = NG_H;
@@ -250,7 +257,8 @@ static int x11_create(struct vkrend *v, int scale, char *err, size_t errsz)
     if (!v->xdpy) { snprintf(err, errsz, "XOpenDisplay failed (no DISPLAY?)"); return -1; }
     int scr = DefaultScreen(v->xdpy);
     Window root = RootWindow(v->xdpy, scr);
-    uint32_t w = NG_W * (scale < 1 ? 1 : scale), h = NG_H * (scale < 1 ? 1 : scale);
+    uint32_t w = v->want_w ? v->want_w : NG_W * (scale < 1 ? 1 : scale);
+    uint32_t h = v->want_h ? v->want_h : NG_H * (scale < 1 ? 1 : scale);
     XSetWindowAttributes wa;
     memset(&wa, 0, sizeof wa);
     wa.background_pixel = BlackPixel(v->xdpy, scr);
@@ -274,14 +282,21 @@ static int x11_create(struct vkrend *v, int scale, char *err, size_t errsz)
         Atom protos[2] = { v->wm_delete, v->wm_ping };
         XSetWMProtocols(v->xdpy, v->xwin, protos, 2);
     }
-    /* size hints: resizable, fixed 320:224 aspect, 1x..8x */
+    /* size hints: resizable. With an explicit pixel size (e.g. 1920x1080)
+     * the 320:224 aspect lock must be off; letterbox handles the ratio. */
     XSizeHints *sh = XAllocSizeHints();
     if (sh) {
-        sh->flags = PMinSize | PMaxSize | PAspect;
-        sh->min_width = NG_W;  sh->min_height = NG_H;
-        sh->max_width = NG_W * 8; sh->max_height = NG_H * 8;
-        sh->min_aspect.x = NG_W; sh->min_aspect.y = NG_H;
-        sh->max_aspect.x = NG_W; sh->max_aspect.y = NG_H;
+        if (v->want_w && v->want_h) {
+            sh->flags = PMinSize | PMaxSize;
+            sh->min_width = NG_W;  sh->min_height = NG_H;
+            sh->max_width = 3840;  sh->max_height = 2160;
+        } else {
+            sh->flags = PMinSize | PMaxSize | PAspect;
+            sh->min_width = NG_W;  sh->min_height = NG_H;
+            sh->max_width = NG_W * 8; sh->max_height = NG_H * 8;
+            sh->min_aspect.x = NG_W; sh->min_aspect.y = NG_H;
+            sh->max_aspect.x = NG_W; sh->max_aspect.y = NG_H;
+        }
         XSetWMNormalHints(v->xdpy, v->xwin, sh);
         XFree(sh);
     }
@@ -440,10 +455,13 @@ static int mk_fbs(struct vkrend *v)
     return 0;
 }
 
-vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char *err, size_t errsz)
+vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
+                int want_w, int want_h, char *err, size_t errsz)
 {
     struct vkrend *v = calloc(1, sizeof *v);
     v->ng = ng; v->scale = scale < 1 ? 1 : scale; v->scanlines = scanlines;
+    v->want_w = want_w > 0 ? want_w : 0; v->want_h = want_h > 0 ? want_h : 0;
+    v->enh = 1;
     err[0] = 0;
     int want_x11 = backend && !strcmp(backend, "x11");
 
@@ -463,6 +481,8 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
         xdg_toplevel_set_app_id(v->xtop, "com.linoragx.emulator");
         xdg_toplevel_set_title(v->xtop, "linoragx - Neo Geo");
         xdg_toplevel_set_min_size(v->xtop, NG_W, NG_H);
+        /* stable xdg-shell has no set_default_size: initial size comes from the
+         * first attached buffer; xdg_top_configure falls back to want_w/want_h. */
         wl_surface_commit(v->wsurf);              /* empty commit: request configure */
         while (!v->configured || !v->cfgw) {      /* NEVER present a buffer before this */
             if (wl_display_roundtrip(v->wdpy) < 0) { snprintf(err, errsz, "xdg roundtrip"); goto fail; }
@@ -599,7 +619,8 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
         if (mk_swapchain(v, v->cfgw, v->cfgh) < 0) { snprintf(err, errsz, "swapchain"); goto fail; }
     } else {
         v->scfmt = VK_FORMAT_R8G8B8A8_UNORM;
-        v->scext = (VkExtent2D){NG_W*2, NG_H*2};
+        v->scext = (VkExtent2D){v->want_w ? (uint32_t)v->want_w : NG_W*2,
+                                v->want_h ? (uint32_t)v->want_h : NG_H*2};
         /* offscreen color image */
         VkImageCreateInfo ti = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
         ti.imageType = VK_IMAGE_TYPE_2D; ti.format = v->scfmt;
@@ -644,7 +665,7 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines, char 
     }
     /* pipeline */
     {
-        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4};
+        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8};
         VkPipelineLayoutCreateInfo pli = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
         pli.setLayoutCount = 1; pli.pSetLayouts = &v->dsl;
         pli.pushConstantRangeCount = 1; pli.pPushConstantRanges = &pcr;
@@ -812,8 +833,8 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     VkRect2D sc = {{0,0}, v->scext};
     vkCmdSetScissor(cb, 0, 1, &sc);
     vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset, 0, NULL);
-    int sl = v->scanlines ? 1 : 0;
-    vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 4, &sl);
+    struct { int sl, enh; } pc = { v->scanlines ? 1 : 0, v->enh };
+    vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8, &pc);
     vkCmdDraw(cb, 4, 1, 0, 0);
     vkCmdEndRenderPass(cb);
     if (v->headless) {
@@ -889,6 +910,12 @@ static void wait_fence_wl(struct vkrend *v, VkFence f)
         else if (v->xdpy) x11_pump(v);
         else return;
     }
+}
+
+/* pixel-art enhancement: 1 = Scale2x (default), 0 = plain nearest */
+void vk_set_enhance(vkrend *v, int on)
+{
+    if (v) v->enh = on ? 1 : 0;
 }
 
 void vk_present(vkrend *v, const uint32_t *fb)

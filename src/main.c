@@ -103,6 +103,8 @@ int main(int argc, char **argv)
     int16_t *wavbuf = NULL; size_t wavn = 0, wavcap = 0;
     int frames = 0, headless = 0, no_audio = 0;
     int scale = -1, scanl = -1, fullscreen = 0;
+    int want_w = 1920, want_h = 1080;   /* default window output 1920x1080 */
+    int enhance = 1;                    /* Scale2x pixel enhancement on by default */
     int netmode = 0, netport = 55300; const char *netaddr = NULL;
 
     for (int i = 1; i < argc; i++) {
@@ -111,7 +113,13 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i],"--ini") && i+1<argc) ini = argv[++i];
         else if (!strcmp(argv[i],"--keys") && i+1<argc) g_keys_path = argv[++i];
         else if (!strcmp(argv[i],"--dump-keys")) g_dump_keys = 1;
-        else if (!strcmp(argv[i],"--scale") && i+1<argc) scale = atoi(argv[++i]);
+        else if (!strcmp(argv[i],"--scale") && i+1<argc) { scale = atoi(argv[++i]); want_w = want_h = 0; }
+        else if (!strcmp(argv[i],"--size") && i+1<argc) {
+            int ww = 0, hh = 0;
+            if (sscanf(argv[++i], "%dx%d", &ww, &hh) == 2 && ww >= 320 && hh >= 224) { want_w = ww; want_h = hh; }
+            else { fprintf(stderr, "[linoragx] bad --size '%s' (want WxH, e.g. 1920x1080)\n", argv[i]); }
+        }
+        else if (!strcmp(argv[i],"--enhance") && i+1<argc) enhance = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--backend") && i+1<argc) backend_opt = argv[++i];
         else if (!strcmp(argv[i],"--frames") && i+1<argc) frames = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--dump")) dump = i+1<argc ? argv[++i] : "frame.bmp";
@@ -134,7 +142,9 @@ int main(int argc, char **argv)
                    "  --ini FILE     neorage.ini-style config\n"
                    "  --keys FILE    key bindings ini (default <bios>/keys.ini)\n"
                    "  --dump-keys    print effective key bindings and exit\n"
-                   "  --scale N      window scale (default 2)\n"
+                   "  --scale N      window scale (overrides default 1920x1080 output)\n"
+                   "  --size WxH     window pixel size (default 1920x1080, letterboxed)\n"
+                   "  --enhance N    pixel enhancement: 1 Scale2x (default), 0 nearest\n"
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
                    "  --fullscreen   start fullscreen (toggle: F11 or Alt+Enter)\n"
@@ -224,14 +234,15 @@ int main(int argc, char **argv)
         else if (getenv("DISPLAY")) backend = "x11";
     }
     vkrend *vk = NULL;
-    vk = vk_init(ng, backend, cfg.scale, cfg.scanlines, err, sizeof err);
+    vk = vk_init(ng, backend, cfg.scale, cfg.scanlines, want_w, want_h, err, sizeof err);
     if (!vk && backend) {
         fprintf(stderr, "[vk] %s window init failed (%s), trying headless\n", backend, err);
         backend = NULL;
-        vk = vk_init(ng, NULL, cfg.scale, cfg.scanlines, err, sizeof err);
+        vk = vk_init(ng, NULL, cfg.scale, cfg.scanlines, want_w, want_h, err, sizeof err);
     } else if (!vk) {
         fprintf(stderr, "[vk] headless init: %s\n", err);
     }
+    vk_set_enhance(vk, enhance);
     if (vk && backend) fprintf(stderr, "[vk] window backend: %s\n", backend);
     if (vk && fullscreen) vk_set_fullscreen(vk, 1);
     wl_input *in = (backend && !strcmp(backend,"wayland")) ? wl_input_create(wdisp) : NULL;
