@@ -18,21 +18,14 @@ wl_input *wl_input_create(const char *disp);
 void wl_input_destroy(wl_input *in);
 int  wl_input_next(wl_input *in, uint32_t *sym, int *down);
 
-/* keysym -> (player, bit); bits: 0UP 1DN 2LF 3RT 4C 5D 6A 7B 8start 10coin */
-struct kmap { uint32_t sym; int p, bit; };
-static const struct kmap kmap[] = {
-    {0xff52,0,0},{0xff54,0,1},{0xff51,0,2},{0xff53,0,3},   /* arrows */
-    {'z',0,6},{'x',0,7},{'c',0,4},{'v',0,5},{'b',0,9},      /* A B C D select */
-    {' ',0,8},{'\n',0,8},                                   /* start */
-    {'5',0,10},{'6',1,10},                                  /* coins */
-    {0xff9c,1,0},{0xff99,1,1},{0xff96,1,2},{0xff98,1,3},   /* kp8/2/4/6 */
-    {'q',1,6},{'w',1,7},{'e',1,4},{'r',1,5},
-};
+/* key bindings live in keymap.c: built-in defaults -> keys.ini [default] -> keys.ini [<game>] */
+static const char *g_keys_path = NULL;   /* --keys FILE (else <rompath>/keys.ini) */
+static int g_dump_keys = 0;
 
 static void handle_key(neogeo *ng, uint32_t sym, int down)
 {
-    for (unsigned i = 0; i < sizeof kmap/sizeof kmap[0]; i++)
-        if (kmap[i].sym == sym) { ng_set_button(ng, kmap[i].p, kmap[i].bit, down); return; }
+    int p, bit;
+    if (keymap_lookup(sym, &p, &bit)) ng_set_button(ng, p, bit, down);
 }
 
 static double now_s(void)
@@ -116,6 +109,8 @@ int main(int argc, char **argv)
         if (!strcmp(argv[i],"--bios") && i+1<argc) bios = argv[++i];
         else if ((!strcmp(argv[i],"--game") || !strcmp(argv[i],"--rom")) && i+1<argc) game = argv[++i];
         else if (!strcmp(argv[i],"--ini") && i+1<argc) ini = argv[++i];
+        else if (!strcmp(argv[i],"--keys") && i+1<argc) g_keys_path = argv[++i];
+        else if (!strcmp(argv[i],"--dump-keys")) g_dump_keys = 1;
         else if (!strcmp(argv[i],"--scale") && i+1<argc) scale = atoi(argv[++i]);
         else if (!strcmp(argv[i],"--backend") && i+1<argc) backend_opt = argv[++i];
         else if (!strcmp(argv[i],"--frames") && i+1<argc) frames = atoi(argv[++i]);
@@ -137,6 +132,8 @@ int main(int argc, char **argv)
                    "  --bios DIR     BIOS dir (default /home/gill/neoragex)\n"
                    "  --game F.zip   game zip with .p1/.c1/.s1 members (alias: --rom)\n"
                    "  --ini FILE     neorage.ini-style config\n"
+                   "  --keys FILE    key bindings ini (default <bios>/keys.ini)\n"
+                   "  --dump-keys    print effective key bindings and exit\n"
                    "  --scale N      window scale (default 2)\n"
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
@@ -162,6 +159,25 @@ int main(int argc, char **argv)
     if (no_audio) cfg.audio = 0;
     if (dump_audio) cfg.audio = 1;   /* audio dump forces generation even headless */
     if (!cfg.rompath[0]) snprintf(cfg.rompath, sizeof cfg.rompath, "%s", defbios);
+
+    /* key bindings: built-in defaults -> keys.ini [default] -> keys.ini [<gameid>] */
+    keymap_init_default();
+    char gameid[128]; gameid[0] = 0;
+    {
+        const char *g = strrchr(cfg.gamezip, '/'); g = g ? g + 1 : cfg.gamezip;
+        const char *dot = strrchr(g, '.');
+        size_t n = dot ? (size_t)(dot - g) : strlen(g);
+        if (n >= sizeof gameid) n = sizeof gameid - 1;
+        memcpy(gameid, g, n); gameid[n] = 0;
+    }
+    {
+        char kpath[700];
+        const char *kp = g_keys_path;
+        if (!kp) { snprintf(kpath, sizeof kpath, "%s/keys.ini", cfg.rompath); kp = kpath; }
+        if (keymap_load_file(kp, gameid) == 0)
+            fprintf(stderr, "[keys] loaded %s (game=%s)\n", kp, gameid);
+    }
+    if (g_dump_keys) { keymap_dump(gameid); return 0; }
 
     char err[512];
     fprintf(stderr, "[paths] rompath=%s gamezip=%s\n", cfg.rompath, cfg.gamezip);

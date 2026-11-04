@@ -10,7 +10,7 @@ CXXFLAGS += -I$(SYSROOT_INC)
 endif
 LDFLAGS = $(EXTRA_LDFLAGS) -L$(HOME)/opt/lib/emulink
 LDLIBS  = -lm -lz -lvulkan -lwayland-client -lX11 -lxcb -ldl -lstdc++ -lpthread
-SRC     = src/neogeo.c src/video.c src/rom.c src/config.c \
+SRC     = src/neogeo.c src/video.c src/rom.c src/config.c src/keymap.c \
           src/audio.c src/wl_input.c src/render_vulkan.c src/ctl.c src/netplay.c src/main.c \
           src/xdg-shell-protocol.c
 OBJ     = $(SRC:src/%.c=build/%.o) build/z80_wrap.o build/cpu_z80.o build/m68kcpu.o build/m68kops.o build/softfloat.o \

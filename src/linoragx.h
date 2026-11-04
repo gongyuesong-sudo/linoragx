@@ -72,6 +72,12 @@ void cfg_default(nconfig *c, const char *biosdir);
 int  cfg_load(nconfig *c, const char *inipath);
 int  cfg_save(nconfig *c, const char *inipath);
 
+/* keymap.c */
+void keymap_init_default(void);
+int  keymap_load_file(const char *path, const char *gameid);
+int  keymap_lookup(uint32_t sym, int *p, int *bit);
+void keymap_dump(const char *gameid);
+
 /* ym2610 */
 typedef struct ym2610 ym2610;
 ym2610 *ym_create(void);
