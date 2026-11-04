@@ -406,6 +406,8 @@ static uint8_t z_read(uint32_t a, void *c)
        audio reset line. Resetting the Z80 on ch5 (old behavior) deadlocks
        pnyaa-class carts whose m1 defers dispatch on the first NMI. */
     int cart_visible = ng->snd ? (ng->cart_audio || ng->m1_view) : 0;   /* visible during ch5 pulses (transient) and permanently after the post-pulse m1 boot */
+    { static int mb = -2; if (mb == -2) mb = getenv("MAMEBANK") ? 1 : 0;
+      if (mb && ng->snd) cart_visible = 1; }   /* MAME parity: entry1=cart m1 from INIT (golden set_entry(1) in init_audio), no sm1 boot phase */
     { static int fm = -2; if (fm == -2) fm = getenv("FORCEM1") ? 1 : 0;
       if (fm && ng->snd) { if (fm == 1) { fm = 2; z80w_reset(ng->z); ng->z80_nmi_asserted = 0; }
                            ng->m1_view = 1; cart_visible = 1; } }   /* MAME parity experiment: entry1=cart audio from INIT (golden set_entry(1) at init_audio) */
@@ -5212,6 +5214,19 @@ void ng_run_frame(neogeo *ng)
                       fprintf(stderr, "  %04x: %lu\n", bi, best);
                       hist[bi] = 0;
                   }
+              }
+          }
+          /* ZRAMDUMP=<frame>: dump Z80 RAM f800-fbff nonzero census (golden compare) */
+          {
+              static int zrd_f = -2;
+              if (zrd_f == -2) { const char *e = getenv("ZRAMDUMP"); zrd_f = e ? (int)strtol(e, 0, 0) : -1; }
+              if (zrd_f >= 0 && ng->frame == zrd_f) {
+                  extern uint8_t z80w_peek_cb(void*, uint32_t);
+                  int nz = 0;
+                  for (int a = 0xF800; a < 0xFC00; a++) if (z80w_peek_cb(ng->z, a)) nz++;
+                  fprintf(stderr, "ZRAMDUMP nz=%d f802=%02x f80a=%02x f811=%02x f81b=%02x f82b=%02x\n",
+                      nz, z80w_peek_cb(ng->z,0xF802), z80w_peek_cb(ng->z,0xF80A),
+                      z80w_peek_cb(ng->z,0xF811), z80w_peek_cb(ng->z,0xF81B), z80w_peek_cb(ng->z,0xF82B));
               }
           }
           if (ng->dbg_z80 == 2) {
