@@ -43,6 +43,11 @@ struct vkrend {
     VkDescriptorSetLayout dsl;
     VkPipelineLayout pl;
     VkPipeline pipe;
+    /* xBRZ-Crisp two-pass chain (enhance 4) */
+    VkImage infoimg; VkDeviceMemory infomem; VkImageView infoview;
+    VkRenderPass rp0; VkFramebuffer fb0;
+    VkPipeline pipe0, pipe1;
+    VkDescriptorSet dset0, dset1;
     VkCommandPool cmdpool;
     VkCommandBuffer cmdb[MAXF];
     VkSemaphore imgavail[MAXF], renderdone[MAXF];
@@ -442,6 +447,31 @@ static int mk_renderpass(struct vkrend *v)
     return vkCreateRenderPass(v->dev, &rpi, NULL, &v->rp);
 }
 
+static int mk_renderpass0(struct vkrend *v)
+{
+    /* xBRZ-Crisp pass 0: renders per-source-pixel decisions into infoimg */
+    VkAttachmentDescription color = {0};
+    color.format = VK_FORMAT_R8G8B8A8_UNORM;
+    color.samples = VK_SAMPLE_COUNT_1_BIT;
+    color.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    color.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VkAttachmentReference cr = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkSubpassDescription sp = {0};
+    sp.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    sp.colorAttachmentCount = 1; sp.pColorAttachments = &cr;
+    VkSubpassDependency deps[2] = {
+        {VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0},
+        {0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, 0},
+    };
+    VkRenderPassCreateInfo rpi = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+    rpi.attachmentCount = 1; rpi.pAttachments = &color;
+    rpi.subpassCount = 1; rpi.pSubpasses = &sp;
+    rpi.dependencyCount = 2; rpi.pDependencies = deps;
+    return vkCreateRenderPass(v->dev, &rpi, NULL, &v->rp0);
+}
+
 static int mk_fbs(struct vkrend *v)
 {
     for (uint32_t i = 0; i < v->nfb; i++) vkDestroyFramebuffer(v->dev, v->fb[i], NULL);
@@ -588,25 +618,86 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
         si.addressModeU = si.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         vkCreateSampler(v->dev, &si, NULL, &v->samp);
     }
+    /* xBRZ-Crisp info image: pass-0 decisions, source resolution */
+    {
+        VkImageCreateInfo ti = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+        ti.imageType = VK_IMAGE_TYPE_2D; ti.format = VK_FORMAT_R8G8B8A8_UNORM;
+        ti.extent = (VkExtent3D){NG_W, NG_H, 1};
+        ti.mipLevels = ti.arrayLayers = 1;
+        ti.samples = VK_SAMPLE_COUNT_1_BIT; ti.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ti.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        ti.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        vkCreateImage(v->dev, &ti, NULL, &v->infoimg);
+        VkMemoryRequirements req; vkGetImageMemoryRequirements(v->dev, v->infoimg, &req);
+        VkMemoryAllocateInfo ai = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+        ai.allocationSize = req.size;
+        ai.memoryTypeIndex = find_mem(v->pdev, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        vkAllocateMemory(v->dev, &ai, NULL, &v->infomem);
+        vkBindImageMemory(v->dev, v->infoimg, v->infomem, 0);
+        VkImageViewCreateInfo vi = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        vi.image = v->infoimg; vi.viewType = VK_IMAGE_VIEW_TYPE_2D; vi.format = VK_FORMAT_R8G8B8A8_UNORM;
+        vi.subresourceRange = (VkImageSubresourceRange){VK_IMAGE_ASPECT_COLOR_BIT,0,1,0,1};
+        vkCreateImageView(v->dev, &vi, NULL, &v->infoview);
+    }
     /* descriptor layout + pool + set */
     {
-        VkDescriptorSetLayoutBinding b0 = {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL};
+        VkDescriptorSetLayoutBinding b[2] = {
+            {0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL},
+            {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL},
+        };
         VkDescriptorSetLayoutCreateInfo dli = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-        dli.bindingCount = 1; dli.pBindings = &b0;
+        dli.bindingCount = 2; dli.pBindings = b;
         vkCreateDescriptorSetLayout(v->dev, &dli, NULL, &v->dsl);
-        VkDescriptorPoolSize ps = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4};
+        VkDescriptorPoolSize ps = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8};
         VkDescriptorPoolCreateInfo dpi = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
         dpi.maxSets = 4; dpi.poolSizeCount = 1; dpi.pPoolSizes = &ps;
         vkCreateDescriptorPool(v->dev, &dpi, NULL, &v->dpool);
         VkDescriptorSetAllocateInfo dai = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-        dai.descriptorPool = v->dpool; dai.descriptorSetCount = 1; dai.pSetLayouts = &v->dsl;
-        vkAllocateDescriptorSets(v->dev, &dai, &v->dset);
-        VkDescriptorImageInfo di = {v->samp, v->texview, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-        VkWriteDescriptorSet w = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-        w.dstSet = v->dset; w.dstBinding = 0; w.descriptorCount = 1;
-        w.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        w.pImageInfo = &di;
-        vkUpdateDescriptorSets(v->dev, 1, &w, 0, NULL);
+        dai.descriptorPool = v->dpool; dai.descriptorSetCount = 3;
+        VkDescriptorSetLayout sets3[3] = {v->dsl, v->dsl, v->dsl};
+        dai.pSetLayouts = sets3;
+        VkDescriptorSet ds3[3];
+        vkAllocateDescriptorSets(v->dev, &dai, ds3);
+        v->dset = ds3[0]; v->dset0 = ds3[1]; v->dset1 = ds3[2];
+        /* dset (legacy pipes 0-3): binding0 = source frame */
+        VkDescriptorImageInfo di[2] = {
+            {v->samp, v->texview,  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+            {v->samp, v->texview,  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        };
+        VkWriteDescriptorSet w[2] = {0, 0};
+        for (int i = 0; i < 2; i++) {
+            w[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            w[i].dstSet = v->dset; w[i].dstBinding = i; w[i].descriptorCount = 1;
+            w[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            w[i].pImageInfo = &di[i];
+        }
+        vkUpdateDescriptorSets(v->dev, 2, w, 0, NULL);
+        /* dset1 (crisp pass 1): binding0 = info decisions, binding1 = source frame */
+        VkDescriptorImageInfo di1[2] = {
+            {v->samp, v->infoview, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+            {v->samp, v->texview,  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        };
+        VkWriteDescriptorSet w1[2] = {0, 0};
+        for (int i = 0; i < 2; i++) {
+            w1[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            w1[i].dstSet = v->dset1; w1[i].dstBinding = i; w1[i].descriptorCount = 1;
+            w1[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            w1[i].pImageInfo = &di1[i];
+        }
+        vkUpdateDescriptorSets(v->dev, 2, w1, 0, NULL);
+        /* dset0 (crisp pass 0): binding0 = source frame (binding1 unused, same view) */
+        VkDescriptorImageInfo di0[2] = {
+            {v->samp, v->texview, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+            {v->samp, v->texview, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+        };
+        VkWriteDescriptorSet w0[2] = {0, 0};
+        for (int i = 0; i < 2; i++) {
+            w0[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            w0[i].dstSet = v->dset0; w0[i].dstBinding = i; w0[i].descriptorCount = 1;
+            w0[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            w0[i].pImageInfo = &di0[i];
+        }
+        vkUpdateDescriptorSets(v->dev, 2, w0, 0, NULL);
     }
     /* swapchain format */
     if (!v->headless) {
@@ -653,6 +744,13 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
         vkBindBufferMemory(v->dev, v->readbuf, v->readmem, 0);
     }
     if (mk_renderpass(v) < 0) { snprintf(err, errsz, "renderpass"); goto fail; }
+    if (mk_renderpass0(v) < 0) { snprintf(err, errsz, "renderpass0"); goto fail; }
+    {
+        VkFramebufferCreateInfo fi = {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+        fi.renderPass = v->rp0; fi.attachmentCount = 1; fi.pAttachments = &v->infoview;
+        fi.width = NG_W; fi.height = NG_H; fi.layers = 1;
+        if (vkCreateFramebuffer(v->dev, &fi, NULL, &v->fb0) < 0) { snprintf(err, errsz, "fb0"); goto fail; }
+    }
     if (!v->headless) {
         v->nfb = v->nscimg;
         if (mk_fbs(v) < 0) { snprintf(err, errsz, "framebuffers"); goto fail; }
@@ -663,21 +761,13 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
         vkCreateFramebuffer(v->dev, &fi, NULL, &v->offfb);
         v->fb[0] = v->offfb; v->nfb = 1;
     }
-    /* pipeline */
+    /* pipeline(s) */
     {
-        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8};
+        VkPushConstantRange pcr = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16};
         VkPipelineLayoutCreateInfo pli = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
         pli.setLayoutCount = 1; pli.pSetLayouts = &v->dsl;
         pli.pushConstantRangeCount = 1; pli.pPushConstantRanges = &pcr;
         vkCreatePipelineLayout(v->dev, &pli, NULL, &v->pl);
-        VkShaderModuleCreateInfo vsi = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        vsi.codeSize = quad_vert_spv_len; vsi.pCode = quad_vert_spv;
-        VkShaderModule vs, fs;
-        VkShaderModuleCreateInfo fsi = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-        fsi.codeSize = quad_frag_spv_len; fsi.pCode = quad_frag_spv;
-        VkPipelineShaderStageCreateInfo stg[2] = {{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO},{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO}};
-        stg[0].stage = VK_SHADER_STAGE_VERTEX_BIT; stg[0].pName = "main";
-        stg[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT; stg[1].pName = "main";
         VkPipelineVertexInputStateCreateInfo vin = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
         VkPipelineInputAssemblyStateCreateInfo ias = {VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
         ias.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
@@ -694,23 +784,36 @@ vkrend *vk_init(neogeo *ng, const char *backend, int scale, int scanlines,
         VkDynamicState dyn[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
         VkPipelineDynamicStateCreateInfo dyi = {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
         dyi.dynamicStateCount = 2; dyi.pDynamicStates = dyn;
-        VkGraphicsPipelineCreateInfo gpi = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-        gpi.stageCount = 2; gpi.pStages = stg;
-        gpi.pVertexInputState = &vin; gpi.pInputAssemblyState = &ias;
-        gpi.pViewportState = &vps; gpi.pRasterizationState = &rs;
-        gpi.pMultisampleState = &ms; gpi.pColorBlendState = &cb;
-        gpi.pDynamicState = &dyi;
-        gpi.layout = v->pl; gpi.renderPass = v->rp;
-        VkResult mr1 = vkCreateShaderModule(v->dev, &vsi, NULL, &vs);
-        VkResult mr2 = vkCreateShaderModule(v->dev, &fsi, NULL, &fs);
-        stg[0].module = vs; stg[1].module = fs;
-        VkResult pr_ = vkCreateGraphicsPipelines(v->dev, NULL, 1, &gpi, NULL, &v->pipe);
-        if (mr1) fprintf(stderr, "[vk] vert module %d (len %zu)\n", mr1, vsi.codeSize);
-        if (mr2) fprintf(stderr, "[vk] frag module %d (len %zu)\n", mr2, fsi.codeSize);
-        if (pr_) fprintf(stderr, "[vk] pipeline %d\n", pr_);
-        if (mr1 || mr2 || pr_) { snprintf(err, errsz, "pipeline"); goto fail; }
+        VkShaderModuleCreateInfo vsi = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+        vsi.codeSize = quad_vert_spv_len; vsi.pCode = quad_vert_spv;
+        VkShaderModule vs;
+        if (vkCreateShaderModule(v->dev, &vsi, NULL, &vs) < 0) { snprintf(err, errsz, "vert module"); goto fail; }
+        struct { const uint32_t *code; size_t len; VkRenderPass rp; VkPipeline *out; } defs[3] = {
+            { quad_frag_spv,  quad_frag_spv_len,  v->rp,  &v->pipe  },
+            { crisp0_frag_spv, crisp0_frag_spv_len, v->rp0, &v->pipe0 },
+            { crisp1_frag_spv, crisp1_frag_spv_len, v->rp,  &v->pipe1 },
+        };
+        for (int i = 0; i < 3; i++) {
+            VkShaderModule fs;
+            VkShaderModuleCreateInfo fsi = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+            fsi.codeSize = defs[i].len; fsi.pCode = defs[i].code;
+            if (vkCreateShaderModule(v->dev, &fsi, NULL, &fs) < 0) { snprintf(err, errsz, "frag module"); goto fail; }
+            VkPipelineShaderStageCreateInfo stg[2] = {{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO},{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO}};
+            stg[0].stage = VK_SHADER_STAGE_VERTEX_BIT; stg[0].module = vs; stg[0].pName = "main";
+            stg[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT; stg[1].module = fs; stg[1].pName = "main";
+            VkGraphicsPipelineCreateInfo gpi = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+            gpi.stageCount = 2; gpi.pStages = stg;
+            gpi.pVertexInputState = &vin; gpi.pInputAssemblyState = &ias;
+            gpi.pViewportState = &vps; gpi.pRasterizationState = &rs;
+            gpi.pMultisampleState = &ms; gpi.pColorBlendState = &cb;
+            gpi.pDynamicState = &dyi;
+            gpi.layout = v->pl; gpi.renderPass = defs[i].rp;
+            if (vkCreateGraphicsPipelines(v->dev, NULL, 1, &gpi, NULL, defs[i].out) < 0) {
+                snprintf(err, errsz, "pipeline %d", i); goto fail;
+            }
+            vkDestroyShaderModule(v->dev, fs, NULL);
+        }
         vkDestroyShaderModule(v->dev, vs, NULL);
-        vkDestroyShaderModule(v->dev, fs, NULL);
     }
     /* cmd pool + buffers + sync */
     {
@@ -812,8 +915,6 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
     rbi.renderPass = v->rp; rbi.framebuffer = fbo;
     rbi.renderArea = (VkRect2D){{0,0}, v->scext};
     rbi.clearValueCount = 1; rbi.pClearValues = &cv;
-    vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe);
     /* negative viewport height flips Y (VK_KHR_maintenance1). The y origin MUST be
        at height (spec form {0,h,w,-h}); {0,0,w,-h} clamps to zero height on RADV
        WSI images and the quad silently vanishes.
@@ -829,14 +930,43 @@ static int record_frame(struct vkrend *v, const uint32_t *fb, VkCommandBuffer cb
         : vpv && !strcmp(vpv,"pos")
         ? (VkViewport){0, 0, (float)sw, (float)sh, 0, 1}
         : (VkViewport){(float)vx, (float)(vy + vh), (float)vw, -(float)vh, 0, 1};
-    vkCmdSetViewport(cb, 0, 1, &vp);
     VkRect2D sc = {{0,0}, v->scext};
-    vkCmdSetScissor(cb, 0, 1, &sc);
-    vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset, 0, NULL);
-    struct { int sl, enh; } pc = { v->scanlines ? 1 : 0, v->enh };
-    vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8, &pc);
-    vkCmdDraw(cb, 4, 1, 0, 0);
-    vkCmdEndRenderPass(cb);
+    struct { int sl, enh, dstw, dsth; } pc = { v->scanlines ? 1 : 0, v->enh, (int)vw, (int)vh };
+    if (v->enh == 4) {
+        /* xBRZ-Crisp: pass 0 computes per-source-pixel blend decisions into
+           infoimg (source resolution), pass 1 applies them at output resolution. */
+        VkRenderPassBeginInfo r0 = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+        r0.renderPass = v->rp0; r0.framebuffer = v->fb0;
+        r0.renderArea = (VkRect2D){{0,0},{NG_W,NG_H}};
+        r0.clearValueCount = 1; r0.pClearValues = &cv;
+        vkCmdBeginRenderPass(cb, &r0, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe0);
+        VkViewport vp0 = {0, (float)NG_H, (float)NG_W, -(float)NG_H, 0, 1};
+        vkCmdSetViewport(cb, 0, 1, &vp0);
+        VkRect2D sc0 = {{0,0},{NG_W,NG_H}};
+        vkCmdSetScissor(cb, 0, 1, &sc0);
+        vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset0, 0, NULL);
+        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &pc);
+        vkCmdDraw(cb, 4, 1, 0, 0);
+        vkCmdEndRenderPass(cb);
+        vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe1);
+        vkCmdSetViewport(cb, 0, 1, &vp);
+        vkCmdSetScissor(cb, 0, 1, &sc);
+        vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset1, 0, NULL);
+        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &pc);
+        vkCmdDraw(cb, 4, 1, 0, 0);
+        vkCmdEndRenderPass(cb);
+    } else {
+        vkCmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pipe);
+        vkCmdSetViewport(cb, 0, 1, &vp);
+        vkCmdSetScissor(cb, 0, 1, &sc);
+        vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, v->pl, 0, 1, &v->dset, 0, NULL);
+        vkCmdPushConstants(cb, v->pl, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, &pc);
+        vkCmdDraw(cb, 4, 1, 0, 0);
+        vkCmdEndRenderPass(cb);
+    }
     if (v->headless) {
         img_barrier(cb, v->offimg, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR == 0 ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,

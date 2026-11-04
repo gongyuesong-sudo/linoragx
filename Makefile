@@ -20,11 +20,13 @@ BIN     = build/linoragx
 
 all: $(BIN)
 
-generated/shaders_spv.h: shaders/quad.vert shaders/quad.frag
+generated/shaders_spv.h: shaders/quad.vert shaders/quad.frag shaders/crisp0.frag shaders/crisp1.frag
 	@mkdir -p generated
 	$(GLSLC) --target-env=vulkan1.0 -mfmt=bin -o generated/quad.vert.spv shaders/quad.vert
 	$(GLSLC) --target-env=vulkan1.0 -mfmt=bin -o generated/quad.frag.spv shaders/quad.frag
-	python3 tools/embed_shaders.py generated/quad.vert.spv generated/quad.frag.spv generated/shaders_spv.h
+	$(GLSLC) --target-env=vulkan1.0 -mfmt=bin -o generated/crisp0.frag.spv shaders/crisp0.frag
+	$(GLSLC) --target-env=vulkan1.0 -mfmt=bin -o generated/crisp1.frag.spv shaders/crisp1.frag
+	python3 tools/embed_shaders.py generated/quad.vert.spv generated/quad.frag.spv generated/crisp0.frag.spv generated/crisp1.frag.spv generated/shaders_spv.h
 
 build/m68kcpu.o: vendor/m68kcpu.c | generated/shaders_spv.h
 	@mkdir -p build

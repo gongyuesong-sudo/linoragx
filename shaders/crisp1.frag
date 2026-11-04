@@ -1,0 +1,240 @@
+#version 450
+// xBRZ-Crisp pass 1: apply pass-0 decisions at output resolution.
+// Ported from https://github.com/ele3131/xBRZ-Crisp (GPL-3.0-or-later);
+// xBRZ (C) Zenju.
+layout(location = 0) in vec2 uv_in;
+layout(location = 0) out vec4 FragColor;
+layout(binding = 0) uniform sampler2D Texture;           // pass-0 decision texture
+layout(binding = 1) uniform sampler2D PassPrev2Texture;  // original game frame
+layout(push_constant) uniform PCX { int sl; int enh; int dstw; int dsth; } pcx;
+#define COMPAT_TEXTURE texture
+#define FRAG_OUT FragColor
+#define vTexCoord (uv_in * 1.0001)
+#define OutputSize (vec2(float(pcx.dstw), float(pcx.dsth)))
+#define TextureSize (vec2(textureSize(Texture, 0)))
+#define InputSize TextureSize
+#define PassPrev2TextureSize (vec2(textureSize(PassPrev2Texture, 0)))
+#define PassPrev2InputSize PassPrev2TextureSize
+
+// the input of the first pass, which is the original image unless other shaders run before xBRZ
+#define OUT_SIZE OutputSize
+#define ORIG_SIZE vec4(PassPrev2TextureSize, 1.0 / PassPrev2TextureSize)
+#define ORIG_INPUT_SIZE PassPrev2InputSize
+// the first pass's texture and the original's can have different sizes (RetroArch rounds each one
+// up to a power of two on its own, e.g. 256 and 512 with snes9x), so each one is read with its own
+#define SRC_SIZE vec4(TextureSize, 1.0 / TextureSize)
+#define P(x,y) COMPAT_TEXTURE(PassPrev2Texture, ocoord + ORIG_SIZE.zw * vec2(x, y)).rgb
+#define INFO(uv) COMPAT_TEXTURE(Texture, uv)
+#define INFO_STEP SRC_SIZE.zw
+
+float distYCbCr(vec3 pixA, vec3 pixB)
+{
+  const vec3 w = vec3(0.2627, 0.6780, 0.0593);
+  vec3 diff = pixA - pixB;
+  float Y = dot(diff, w);
+  float Cb = 0.5 / (1.0 - 0.0593) * (diff.b - Y);
+  float Cr = 0.5 / (1.0 - 0.2627) * (diff.r - Y);
+  return sqrt(Y * Y + Cb * Cb + Cr * Cr);
+}
+
+float get_left_ratio(vec2 center, vec2 origin, vec2 direction, vec2 scale)
+{
+  vec2 P0 = center - origin;
+  vec2 proj = direction * (dot(P0, direction) / dot(direction, direction));
+  vec2 distv = P0 - proj;
+  vec2 orth = vec2(-direction.y, direction.x);
+  float side = sign(dot(P0, orth));
+  float v = side * length(distv * scale);
+  return smoothstep(-sqrt(2.0)/2.0, sqrt(2.0)/2.0, v);
+}
+
+// the first pass's decisions for the four corners of the pixel at (x, y) from E; see the decision
+// word in pass 0 (BLEND is the blend type, FLAG(r, f) one of its flags)
+#define INFO_AT(x, y) floor(INFO(coord + vec2(x, y) * INFO_STEP) * 255.0 + 0.5)
+#define BLEND(r) mod(r, 4.0)
+#define FLAG(r, f) mod(floor((r) / (f)), 2.0)
+
+void main()
+{
+  //---------------------------------------
+  // Input Pixel Mapping: -|B|-
+  //                      D|E|F
+  //                      -|H|-
+
+  vec2 scale = OUT_SIZE.xy / ORIG_INPUT_SIZE.xy;
+  vec2 pos = fract(vTexCoord * SRC_SIZE.xy) - vec2(0.5, 0.5);
+  vec2 coord = vTexCoord - pos * SRC_SIZE.zw;
+  vec2 ocoord = coord * SRC_SIZE.xy * ORIG_SIZE.zw;
+
+  vec4 info = INFO_AT(0.0, 0.0);
+  vec3 E = P( 0., 0.);
+  vec3 res = E;
+
+  // info Mapping: x|y|
+  //               w|z|
+  vec4 blendResult = BLEND(info);
+
+  // ============================================================================================
+  // the second part of rules 1 and 2, which needs the neighbours' decisions
+  // ============================================================================================
+  vec4 weak = vec4(equal(BLEND(info), vec4(3.0)));
+  if (max(max(info.x, info.y), max(info.z, info.w)) >= 128.0 || dot(weak, vec4(1.0)) > 0.0)
+  {
+    vec4 blocked = floor(info / 128.0);
+    info = mod(info, 128.0);
+    blendResult = BLEND(info);
+    // the same corner of the neighbours along the cut: top-left and bottom-right are cut along "/"
+    // (neighbours up-right and down-left), top-right and bottom-left along "\" (down-right, up-left).
+    // A corner counts as cut when it blends (type 1 or 2) and is not blocked
+    vec4 nA = INFO_AT( 1.0,-1.0);
+    vec4 nB = INFO_AT(-1.0, 1.0);
+    vec4 nC = INFO_AT( 1.0, 1.0);
+    vec4 nD = INFO_AT(-1.0,-1.0);
+    vec4 aA = vec4(greaterThan(BLEND(nA), vec4(0.0))) * vec4(lessThan(BLEND(nA), vec4(3.0))) * vec4(lessThan(nA, vec4(128.0)));
+    vec4 aB = vec4(greaterThan(BLEND(nB), vec4(0.0))) * vec4(lessThan(BLEND(nB), vec4(3.0))) * vec4(lessThan(nB, vec4(128.0)));
+    vec4 aC = vec4(greaterThan(BLEND(nC), vec4(0.0))) * vec4(lessThan(BLEND(nC), vec4(3.0))) * vec4(lessThan(nC, vec4(128.0)));
+    vec4 aD = vec4(greaterThan(BLEND(nD), vec4(0.0))) * vec4(lessThan(BLEND(nD), vec4(3.0))) * vec4(lessThan(nD, vec4(128.0)));
+
+    // ---- 2. Diagonal limit: a blocked corner is cut only where it continues a cut ----
+    // a chain: the same corner of a neighbour along the cut is cut, so diagonal lines are drawn to the end
+    vec4 chain = vec4(max(aA.x, aB.x), max(aC.y, aD.y), max(aA.z, aB.z), max(aC.w, aD.w));
+    // meeting lines: a blocked line corner is also cut where its blend color's pixel has a line at the
+    // other end of their shared edge that blends E's color: the two cuts are one diagonal running into
+    // a straight edge, like the end of a lock of hair
+    vec4 oL = INFO_AT(-1.0, 0.0);
+    vec4 oR = INFO_AT( 1.0, 0.0);
+    vec4 oU = INFO_AT( 0.0,-1.0);
+    vec4 oD = INFO_AT( 0.0, 1.0);
+    vec4 sec = FLAG(info, 8.0);
+    vec4 nO = vec4(mix(oL.z, oU.z, sec.x), mix(oU.w, oR.w, sec.y), mix(oR.x, oD.x, sec.z), mix(oD.y, oL.y, sec.w));
+    // the neighbour may also blend the pixel diagonal to E on the far side when it has E's color (a thin arm)
+    vec3 dX = sec.x > 0.5 ? P( 1.,-1.) : P(-1., 1.), dY = sec.y > 0.5 ? P( 1., 1.) : P(-1.,-1.);
+    vec3 dZ = sec.z > 0.5 ? P(-1., 1.) : P( 1.,-1.), dW = sec.w > 0.5 ? P(-1.,-1.) : P( 1., 1.);
+    vec4 sameE = vec4(float(distYCbCr(E, dX) * 255.0 <= 20.0), float(distYCbCr(E, dY) * 255.0 <= 20.0),
+                      float(distYCbCr(E, dZ) * 255.0 <= 20.0), float(distYCbCr(E, dW) * 255.0 <= 20.0));
+    vec4 meet = vec4(greaterThan(BLEND(nO), vec4(0.0))) * vec4(lessThan(nO, vec4(128.0))) * FLAG(nO, 4.0)
+              * max(1.0 - abs(FLAG(nO, 8.0) - sec), abs(FLAG(nO, 8.0) - sec) * sameE)
+              * FLAG(info, 4.0);
+    blendResult *= max(1.0 - blocked, max(chain, meet));
+
+    // ---- 1. Minimum contrast: a weak corner is cut only inside a cut diagonal ----
+    // the same corner of both neighbours along the cut must be cut
+    blendResult *= mix(vec4(1.0), vec4(min(aA.x, aB.x), min(aC.y, aD.y), min(aA.z, aB.z), min(aC.w, aD.w)), weak);
+  }
+
+  // most output pixels have no corner to blend, and only need these two reads
+  if (blendResult.x + blendResult.y + blendResult.z + blendResult.w <= 0.0)
+  {
+    FRAG_OUT = vec4(res, 1.0);
+    return;
+  }
+
+  vec4 doLineBlend = FLAG(info, 4.0);
+  vec4 secondPix = FLAG(info, 8.0);
+  vec4 haveShallowLine = FLAG(info, 16.0);
+  vec4 haveSteepLine = FLAG(info, 64.0);
+
+  // ============================================================================================
+  // 9. Line shapes, second part
+  // ============================================================================================
+  // a line flagged +32 by the first pass (found only by hue, between two different colors) is drawn
+  // as a plain line where the neighbour across its edge draws a line the same way: the two lines
+  // would run into each other, one bending around the other's end
+  vec4 tone = FLAG(info, 32.0);
+  if (tone.x + tone.y + tone.z + tone.w > 0.0)
+  {
+    vec4 nL = INFO_AT(-1.0, 0.0);
+    vec4 nR = INFO_AT( 1.0, 0.0);
+    vec4 nU = INFO_AT( 0.0,-1.0);
+    vec4 nD = INFO_AT( 0.0, 1.0);
+    // a neighbour corner draws a line when it blends, is not flagged (+128) and has the line bit (+4)
+    vec4 drawL = vec4(lessThan(nL, vec4(128.0))) * FLAG(nL, 4.0), drawR = vec4(lessThan(nR, vec4(128.0))) * FLAG(nR, 4.0);
+    vec4 drawU = vec4(lessThan(nU, vec4(128.0))) * FLAG(nU, 4.0), drawD = vec4(lessThan(nD, vec4(128.0))) * FLAG(nD, 4.0);
+    // the shallow and steep flags are in each corner's own rotated frame: at the top-left and
+    // bottom-right corners a steep line runs up and down and meets the left/right neighbour, at the
+    // top-right and bottom-left corners it runs sideways and meets the upper/lower one (and the
+    // other way round for shallow lines)
+    vec4 steepN = vec4(drawL.z * FLAG(nL.z, 64.0), drawU.w * FLAG(nU.w, 64.0),
+                       drawR.x * FLAG(nR.x, 64.0), drawD.y * FLAG(nD.y, 64.0));
+    vec4 shallowN = vec4(drawU.z * FLAG(nU.z, 16.0), drawR.w * FLAG(nR.w, 16.0),
+                         drawD.x * FLAG(nD.x, 16.0), drawL.y * FLAG(nL.y, 16.0));
+    haveSteepLine *= 1.0 - tone * steepN;
+    haveShallowLine *= 1.0 - tone * shallowN;
+  }
+
+  // ============================================================================================
+  // xBRZ: drawing the corners
+  // ============================================================================================
+  // Corners are applied in the same order as the original xBRZ (0, 90, 180, 270 degrees). The first
+  // pass picked each blend colour ("dist(e,f) <= dist(e,h) ? f : h").
+
+  // Pixel Tap Mapping: -|-|-
+  //                    -|E|F
+  //                    -|H|-
+  if(blendResult.z > 0.0)
+  {
+    vec2 origin = vec2(0.0, 1.0 / sqrt(2.0));
+    vec2 direction = vec2(1.0, -1.0);
+    if(doLineBlend.z > 0.0)
+    {
+      origin = haveShallowLine.z > 0.0? vec2(0.0, 0.25) : vec2(0.0, 0.5);
+      direction.x += haveShallowLine.z;
+      direction.y -= haveSteepLine.z;
+    }
+    vec3 blendPix = (secondPix.z > 0.0) ? P( 0., 1.) : P( 1., 0.);
+    res = mix(res, blendPix, get_left_ratio(pos, origin, direction, scale));
+  }
+
+  // Pixel Tap Mapping: -|B|-
+  //                    -|E|F
+  //                    -|-|-
+  if(blendResult.y > 0.0)
+  {
+    vec2 origin = vec2(1.0 / sqrt(2.0), 0.0);
+    vec2 direction = vec2(-1.0, -1.0);
+    if(doLineBlend.y > 0.0)
+    {
+      origin = haveShallowLine.y > 0.0? vec2(0.25, 0.0) : vec2(0.5, 0.0);
+      direction.y -= haveShallowLine.y;
+      direction.x -= haveSteepLine.y;
+    }
+    vec3 blendPix = (secondPix.y > 0.0) ? P( 1., 0.) : P( 0.,-1.);
+    res = mix(res, blendPix, get_left_ratio(pos, origin, direction, scale));
+  }
+
+  // Pixel Tap Mapping: -|B|-
+  //                    D|E|-
+  //                    -|-|-
+  if(blendResult.x > 0.0)
+  {
+    vec2 origin = vec2(0.0, -1.0 / sqrt(2.0));
+    vec2 direction = vec2(-1.0, 1.0);
+    if(doLineBlend.x > 0.0)
+    {
+      origin = haveShallowLine.x > 0.0? vec2(0.0, -0.25) : vec2(0.0, -0.5);
+      direction.x -= haveShallowLine.x;
+      direction.y += haveSteepLine.x;
+    }
+    vec3 blendPix = (secondPix.x > 0.0) ? P( 0.,-1.) : P(-1., 0.);
+    res = mix(res, blendPix, get_left_ratio(pos, origin, direction, scale));
+  }
+
+  // Pixel Tap Mapping: -|-|-
+  //                    D|E|-
+  //                    -|H|-
+  if(blendResult.w > 0.0)
+  {
+    vec2 origin = vec2(-1.0 / sqrt(2.0), 0.0);
+    vec2 direction = vec2(1.0, 1.0);
+    if(doLineBlend.w > 0.0)
+    {
+      origin = haveShallowLine.w > 0.0? vec2(-0.25, 0.0) : vec2(-0.5, 0.0);
+      direction.y += haveShallowLine.w;
+      direction.x += haveSteepLine.w;
+    }
+    vec3 blendPix = (secondPix.w > 0.0) ? P(-1., 0.) : P( 0., 1.);
+    res = mix(res, blendPix, get_left_ratio(pos, origin, direction, scale));
+  }
+
+  FRAG_OUT = vec4(res, 1.0);
+}

@@ -104,7 +104,7 @@ int main(int argc, char **argv)
     int frames = 0, headless = 0, no_audio = 0;
     int scale = -1, scanl = -1, fullscreen = 0;
     int want_w = 1920, want_h = 1080;   /* default window output 1920x1080 */
-    int enhance = 3;                    /* xBRZ curve smoothing by default */
+    int enhance = 4;                    /* xBRZ-Crisp two-pass by default */
     int netmode = 0, netport = 55300; const char *netaddr = NULL;
 
     for (int i = 1; i < argc; i++) {
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
                    "  --dump-keys    print effective key bindings and exit\n"
                    "  --scale N      window scale (overrides default 1920x1080 output)\n"
                    "  --size WxH     window pixel size (default 1920x1080, letterboxed)\n"
-                   "  --enhance N    pixel enhancement: 3 xBRZ (default), 2 xBR, 1 Scale2x, 0 nearest\n"
+                   "  --enhance N    pixel enhancement: 4 xBRZ-Crisp (default), 3 xBRZ, 2 xBR, 1 Scale2x, 0 nearest\n"
                    "  --backend NAME window backend: wayland | x11 | headless (auto-detect)\n"
                    "  --scanlines    scanline effect\n"
                    "  --fullscreen   start fullscreen (toggle: F11 or Alt+Enter)\n"

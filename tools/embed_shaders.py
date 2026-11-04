@@ -13,4 +13,6 @@ def arr(name, path):
 body = '#pragma once\n#include <stdint.h>\n#include <stddef.h>\n'
 body += arr('quad_vert_spv', sys.argv[1]) + '\n'
 body += arr('quad_frag_spv', sys.argv[2]) + '\n'
-open(sys.argv[3], 'w').write(body)
+body += arr('crisp0_frag_spv', sys.argv[3]) + '\n'
+body += arr('crisp1_frag_spv', sys.argv[4]) + '\n'
+open(sys.argv[5], 'w').write(body)
