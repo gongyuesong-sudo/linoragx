@@ -312,6 +312,11 @@ int main(int argc, char **argv)
             ng_set_buttons(ng, 1 - lplayer, remote);
         }
         ng_run_frame(ng);
+        if (getenv("PALDUMP")) {      /* debug: dump CRAM each frame, file = last frame */
+            extern uint16_t *ng_cram(neogeo *ng);
+            FILE *pf = fopen(getenv("PALDUMP"), "wb");
+            if (pf) { fwrite(ng_cram(ng), 2, 0x10000, pf); fclose(pf); }
+        }
         if ((n % 300) == 0) ng_flush_sram(ng);   /* periodic saveram checkpoint (~5s) */
         if (!vk) ng_render(ng, fb);   /* window mode already drew per line in ng_run_frame */
         {   /* LINDUMPF=N: at frame N dump vram+cram+zoomy to /tmp/lindump.bin and fb to /tmp/lindump.bmp */
