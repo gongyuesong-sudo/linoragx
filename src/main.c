@@ -322,14 +322,22 @@ int main(int argc, char **argv)
         {   /* LINDUMPF=N: at frame N dump vram+cram+zoomy to /tmp/lindump.bin and fb to /tmp/lindump.bmp */
             static int lindf = -2;
             if (lindf == -2) { const char *e = getenv("LINDUMPF"); lindf = e ? atoi(e) : -1; }
-            if (lindf >= 0 && (int)n == lindf) {
+            if (lindf >= 0 && ((int)n == lindf || (getenv("LINDUMPFALL") && n % 300 == 0))) {
+                char lpath[128];
+                if (getenv("LINDUMPFALL")) snprintf(lpath, sizeof lpath, "/tmp/ldumps/ld_%06d.bin", (int)n);
+                else snprintf(lpath, sizeof lpath, "/tmp/lindump.bin");
                 extern int dump_bmp(const uint32_t *fb, const char *path);
                 uint16_t *vr = ng_vram(ng), *cr = ng_cram(ng);
                 uint8_t *zy = ng_zoomy(ng);
-                FILE *f = fopen("/tmp/lindump.bin", "wb");
+                FILE *f = fopen(lpath, "wb");
                 if (f) {
                     for (int i = 0; i < 0x8800; i++) { uint8_t b[2]={(uint8_t)(vr[i]>>8),(uint8_t)vr[i]}; fwrite(b,1,2,f); }
                     for (int i = 0; i < 0x1000; i++) { uint8_t b[2]={(uint8_t)(cr[i]>>8),(uint8_t)cr[i]}; fwrite(b,1,2,f); }
+                    { uint32_t fsz; uint8_t *fx = ng_fixed(ng, &fsz);
+                      char fp[160]; snprintf(fp, sizeof fp, "%s", lpath);
+                      strcat(fp, ".fixed");
+                      FILE *ff = fopen(fp, "wb");
+                      if (ff) { fwrite(fx, 1, fsz, ff); fclose(ff); fprintf(stderr, "LINDUMP fixed=%x\n", fsz); } }
                     fwrite(zy, 1, 0x10000, f);
                     fclose(f);
                 }
@@ -370,6 +378,36 @@ int main(int argc, char **argv)
         }
         n++;
         if (!headless && (n % 60 == 0)) fprintf(stderr, "[fps] n=%d %.1f fps\n", n, n/(now_s()-t0));
+        if (getenv("DUMPOBJ") && (n % 30) == 0) {   /* debug: VRAM+CRAM dump every 30 frames */
+            extern uint16_t *ng_vram(neogeo *);
+            extern uint16_t *ng_cram(neogeo *);
+            char dp[600]; snprintf(dp, sizeof dp, "%s.%05ld", getenv("DUMPOBJ"), n);
+            FILE *fo = fopen(dp, "wb");
+            if (fo) { fwrite(ng_vram(ng), 2, 0x10000, fo);
+                      fwrite(ng_cram(ng), 2, 0x1000, fo); fclose(fo); }
+        }
+        if (getenv("DUMPOBJF")) {   /* trigger-dump: first 30 frames where an on-screen obj has bank>=0xc0 */
+            static int zc = 0;
+            extern uint16_t *ng_vram(neogeo *);
+            extern uint16_t *ng_cram(neogeo *);
+            uint16_t *vr = ng_vram(ng);
+            int hit = 0, yy = 0, rw = 0;
+            for (int zn = 0; zn < 381 && !hit; zn++) {
+                uint16_t yw = vr[0x8200 + zn];
+                if (!((yw >> 6) & 1)) { yy = 0x200 - (yw >> 7); rw = yw & 0x3f; }
+                if (rw == 0 || yy < 40 || yy > 200) continue;
+                for (int r = 0; r < (rw < 32 ? rw : 32); r++)
+                    if (((vr[zn*64 + r*2 + 1] >> 8) & 0xFF) >= 0xc0) { hit = 1; break; }
+            }
+            if (hit && zc < 30) {
+                char dp[600]; snprintf(dp, sizeof dp, "%s.%05d", getenv("DUMPOBJF"), zc);
+                FILE *fo = fopen(dp, "wb");
+                if (fo) { fwrite(vr, 2, 0x10000, fo);
+                          fwrite(ng_cram(ng), 2, 0x1000, fo); fclose(fo); }
+                fprintf(stderr, "[dumpobjf] %d at frame %ld\n", zc, n);
+                zc++;
+            }
+        }
         if (frames && n >= frames) {
             if (dump) {
                 /* write the emulated framebuffer directly: the Vulkan

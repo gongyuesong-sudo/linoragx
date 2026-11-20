@@ -1617,6 +1617,17 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
             if (f_vwdist()) { static unsigned long hist[64]; static int done=0;
                 hist[(ng->vram_offset>>10)&63]++;
                 if (done++ == 5000) { for (int q=0;q<64;q++) if (hist[q]) fprintf(stderr, "VWDIST %04x-%04x: %lu\n", q<<10, (q<<10)|0x3FF, hist[q]); done=-1; } }
+            { static int vtw = -2, vtl = 0, vth = 0; static long vtnc = 0;
+              if (vtw == -2) { const char *e = getenv("VTW"); vtw = e ? 1 : 0;
+                  if (e) { const char *h = strchr(e, '-'); vtl = (int)strtoul(e, 0, 16);
+                           vth = h ? (int)strtoul(h + 1, 0, 16) : vtl; } }
+              if (vtw && ng->vram_offset >= (uint32_t)vtl && ng->vram_offset <= (uint32_t)vth && vtnc++ < 400)
+                  fprintf(stderr, "VTW f=%lu off=%04x val=%04x pc=%08x a5=%08x bc=%04x c8=%04x ca=%04x b8=%04x e0=%08x e4=%04x\n", ng->frame,
+                          ng->vram_offset, d, m68k_get_reg(NULL, M68K_REG_PC),
+                          m68k_get_reg(NULL, M68K_REG_A5),
+                          m68k_read_memory_16(0x1064bc), m68k_read_memory_16(0x1064c8),
+                          m68k_read_memory_16(0x1064ca), m68k_read_memory_16(0x1064b8),
+                          m68k_read_memory_32(0x1064e0), m68k_read_memory_16(0x1064e4)); }
             ng->vram[ng->vram_offset] = d;
             if (f_vload()) ng->vload_count++;
             ng->vram_offset = (ng->vram_offset & 0x8000)
@@ -4791,6 +4802,55 @@ void ng_run_frame(neogeo *ng)
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
                       fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x a5=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6), (unsigned)m68k_get_reg(NULL, M68K_REG_A5)); } } }
+        { static int kt_on = -2; static long kt_n, kt_n2, kt_n3, kt_n4;
+          if (kt_on == -2) kt_on = getenv("KOFTRACE") ? 1 : 0;
+          if (kt_on) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
+              extern uint32_t m68k_read_memory_16(uint32_t);
+              extern uint32_t m68k_read_memory_32(uint32_t);
+              unsigned a4 = (unsigned)m68k_get_reg(NULL, M68K_REG_A4);
+              unsigned a0v = (unsigned)m68k_get_reg(NULL, M68K_REG_A0);
+              if (pc == 0x5dd6 && (ng->frame == 9600 || ng->frame == 3900) && (a4==0x108100||a4==0x108300) && kt_n4 < 60) {
+                  /* desc header read point: a6 = desc ptr (banked window addr) */
+                  unsigned a6v = (unsigned)m68k_get_reg(NULL, M68K_REG_A6);
+                  unsigned a0v2 = (unsigned)m68k_get_reg(NULL, M68K_REG_A0);
+                  fprintf(stderr, "KOFDESC f=%d a4=%06x a6=%08x pb=%06x a0=%08x shape:", ng->frame, a4, a6v, ng->prg_bank_base, a0v2);
+                  for (int q = 0; q < 6; q++) fprintf(stderr, " %02x", (unsigned)m68k_read_memory_8(a0v2 - 6 + q));
+                  fprintf(stderr, " bytes:");
+                  for (int q = 0; q < 48; q++) fprintf(stderr, " %02x", (unsigned)m68k_read_memory_8(a6v + q));
+                  fprintf(stderr, "\n"); kt_n4++; }
+              if (pc == 0x64ec && ng->frame == 3900 && (a4==0x108100||a4==0x108300) && kt_n4++ < 3) {
+                  unsigned a5v = (unsigned)m68k_get_reg(NULL, M68K_REG_A5);
+                  unsigned a3v = (unsigned)m68k_get_reg(NULL, M68K_REG_A3);
+                  fprintf(stderr, "KOFWS f=%d a4=%06x a5=%06x a3=%06x $64ba=%04x $64ea=%02x $64c0=%04x $64c8=%04x $64ca=%04x $64cc=%04x $64ce=%04x $64c3=%02x $64e8=%02x $30=%04x $3a=%04x\n",
+                      ng->frame, a4, a5v, a3v,
+                      (unsigned)m68k_read_memory_16(a5v+0x64ba), (unsigned)m68k_read_memory_8(a5v+0x64ea),
+                      (unsigned)m68k_read_memory_16(a5v+0x64c0), (unsigned)m68k_read_memory_16(a5v+0x64c8),
+                      (unsigned)m68k_read_memory_16(a5v+0x64ca), (unsigned)m68k_read_memory_16(a5v+0x64cc),
+                      (unsigned)m68k_read_memory_16(a5v+0x64ce), (unsigned)m68k_read_memory_8(a5v+0x64c3),
+                      (unsigned)m68k_read_memory_8(a5v+0x64e8),
+                      (unsigned)m68k_read_memory_16(a4+0x30), (unsigned)m68k_read_memory_16(a4+0x3a)); }
+              if (pc == 0x5aa0 && ng->frame == 3900 && (a4==0x108100||a4==0x108300) && kt_n3++ < 2) {
+                  fprintf(stderr, "KOFOBJ a4=%06x:", a4);
+                  for (int q = 0; q < 0x100; q += 2) fprintf(stderr, " $%02x=%04x", q, (unsigned)m68k_read_memory_16(a4+q));
+                  fprintf(stderr, "\n"); }
+              if (pc == 0x5aa0 && kt_n2++ < 200000)  /* rts of 5a3e: a0=result, [sp]=retaddr */
+                  fprintf(stderr, "KOFREC f=%d a4=%06x a0=%08x b0=%02x ret=%08x $70=%04x $72=%04x $74=%04x $28=%08x $3c=%08x\n",
+                      ng->frame, a4, a0v, (unsigned)m68k_read_memory_8(a0v),
+                      (unsigned)m68k_read_memory_32(m68k_get_reg(NULL,M68K_REG_A7)),
+                      (unsigned)m68k_read_memory_16(a4+0x70), (unsigned)m68k_read_memory_16(a4+0x72),
+                      (unsigned)m68k_read_memory_16(a4+0x74), (unsigned)m68k_read_memory_32(a4+0x28),
+                      (unsigned)m68k_read_memory_32(a4+0x3c));
+              if (pc == 0x5924 && kt_n2++ < 200000)  /* move.l a0,$28(a4) in 58aa */
+                  fprintf(stderr, "KOF28 f=%d n=%ld a4=%06x $70=%04x $72=%04x $74=%04x $28=%08x $3c=%08x\n",
+                      ng->frame, kt_n, a4,
+                      (unsigned)m68k_read_memory_16(a4+0x70), (unsigned)m68k_read_memory_16(a4+0x72),
+                      (unsigned)m68k_read_memory_16(a4+0x74), a0v,
+                      (unsigned)m68k_read_memory_32(a4+0x3c));
+              else if (pc == 0x5a72 && kt_n++ < 200000) { /* lea $250000,a0 in 5a3e: d1 reg holds idx */
+                  fprintf(stderr, "KOF3C f=%d n=%ld a4=%06x $70=%04x $72=%04x a0=%08x\n",
+                      ng->frame, kt_n, a4,
+                      (unsigned)m68k_read_memory_16(a4+0x70), (unsigned)m68k_read_memory_16(a4+0x72), a0v);
+              } } }
         { static int cd_a = -2;
           if (cd_a == -2) { const char *e = getenv("CODUMP"); cd_a = e ? (int)strtol(e, 0, 16) : -1;
               if (cd_a >= 0) { fprintf(stderr, "CODUMP %08x:", cd_a);
