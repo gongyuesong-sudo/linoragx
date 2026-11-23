@@ -1133,15 +1133,30 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           fprintf(stderr, "WA68 f=%llu a=%06x d=%04x m=%04x pc=%08x\n",
                   (unsigned long long)ng->frame, a, d, mem_mask,
                   m68k_get_reg(NULL,M68K_REG_PC)); } }
+    { static int w3422 = -2;
+      if (w3422 == -2) w3422 = getenv("WA3422") ? 1 : 0;
+      if (w3422 && a == 0x10b422) {
+          uint32_t a4 = m68k_get_reg(NULL, M68K_REG_A4);
+          uint32_t a7 = m68k_get_reg(NULL, M68K_REG_A7);
+          uint32_t d1 = m68k_get_reg(NULL, M68K_REG_D1);
+          uint32_t ra = m68k_read_memory_32(a7);
+          uint32_t ca = m68k_read_memory_16(a4 + 0xca);
+          uint32_t c2 = m68k_read_memory_32(a4 + 0xc2);
+          uint32_t b90 = m68k_read_memory_16(a4 + 0x90);
+          fprintf(stderr, "W3422 f=%llu d=%04x m=%04x pc=%08x a4=%08x ra=%08x d1=%04x ca=%04x c2=%08x b90=%04x\n",
+                  (unsigned long long)ng->frame, d, mem_mask,
+                  m68k_get_reg(NULL,M68K_REG_PC), a4, ra, d1, ca, c2, b90); } }
     { static int dmp = -2;
       if (dmp == -2) { const char *e = getenv("DUMP68"); dmp = e ? atoi(e) : 0; }
       if (dmp && ng->frame == (unsigned)dmp) {
           static int done = 0;
           if (!done) { done = 1;
               FILE *fp = fopen("/tmp/lin_68k_c1.bin", "wb");
-              if (fp) { for (uint32_t x = 0xC10000; x < 0xC20000; x += 2) {
+              if (fp) { if (getenv("DUMP68SMEM")) {
+                            fwrite(ng->smem, 1, 0x10000, fp); }
+                        else { for (uint32_t x = 0xC10000; x < 0xC20000; x += 2) {
                             uint16_t w = m68k_read_memory_16(x);
-                            fputc(w >> 8, fp); fputc(w & 0xFF, fp); }
+                            fputc(w >> 8, fp); fputc(w & 0xFF, fp); } }
                         fclose(fp);
                         fprintf(stderr, "DUMP68 done f=%d\n", dmp); } } } }
     if (a == 0x2F00) {
@@ -1301,6 +1316,11 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
           if ((ng->dbg_z80 == 5 || f_ramwa()) && (off) == (tgt & 0xFFFFu) &&
               (ng->frame > 3000 || f_ramwaf()))
               fprintf(stderr, "RAMWA f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC)); }
+        { static uint32_t wv = 0xFFFFFFFF; static int ini2 = 0;
+          if (!ini2) { const char *e = getenv("RAMWV"); wv = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; ini2 = 1; }
+          if (wv != 0xFFFFFFFF && (d & 0xFFFF) == (wv & 0xFFFF) && mem_mask != 0) {
+              fprintf(stderr, "RAMWV f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
+              if (++ng->cramw > 40) ng->dbg_z80 = 0; } }
         if (f_samctr() && (off) == (({ static uint32_t t2 = 0xFFFFFFFF; static int i2 = 0;
               if (!i2) { const char *e = getenv("RAMWA"); t2 = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; i2 = 1; } t2; }) & 0xFFFFu)) { uint32_t sp = m68k_get_reg(NULL,M68K_REG_A7);
             fprintf(stderr, "STK f=%d pc=%08x sp=%08x r=%08x,%08x,%08x,%08x\n", ng->frame,
@@ -1340,6 +1360,12 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
               (ng->frame > 3000 || f_ramwaf())) {
               fprintf(stderr, "RAMWA f=%d a=%06x d=%04x m=%04x pc=%08x\n", ng->frame, a, d, mem_mask, m68k_get_reg(NULL,M68K_REG_PC));
               if (++ng->cramw > 60) ng->dbg_z80 = 0; } }
+        { static uint32_t wv = 0xFFFFFFFF; static int ini2 = 0;
+          if (!ini2) { const char *e = getenv("RAMWV"); wv = e ? (uint32_t)strtoul(e, 0, 16) : 0xFFFFFFFF; ini2 = 1; }
+          if (wv != 0xFFFFFFFF && (d & 0xFFFF) == (wv & 0xFFFF) && mem_mask != 0
+              && ((a >= 0x100000 && a < 0x110000) || a >= 0xFF0000)) {
+              fprintf(stderr, "RAMWV f=%d a=%06x d=%08x pc=%08x\n", ng->frame, a, d, m68k_get_reg(NULL,M68K_REG_PC));
+              if (++ng->cramw > 40) ng->dbg_z80 = 0; } }
         uint32_t o = (a & 0xFFFF)>>1;
         if (f_scrw() && (a & 0xFFFF) >= 0x0100 && (a & 0xFFFF) <= 0x01FE && ng->frame >= 3600 && ng->frame < 4300)
         { static int done98=0; if(!done98){done98=1; fprintf(stderr,"AT4101 182=%08x 100=%08x w108=%04x w114=%04x w10a=%04x\n", m68k_read_memory_32(0x100182), m68k_read_memory_32(0x100100), m68k_read_memory_16(0x100108), m68k_read_memory_16(0x100114), m68k_read_memory_16(0x10010A)); }
@@ -1628,6 +1654,10 @@ static void w16(neogeo *ng, uint32_t a, uint16_t d, uint16_t mem_mask)
                           m68k_read_memory_16(0x1064bc), m68k_read_memory_16(0x1064c8),
                           m68k_read_memory_16(0x1064ca), m68k_read_memory_16(0x1064b8),
                           m68k_read_memory_32(0x1064e0), m68k_read_memory_16(0x1064e4)); }
+            { static int fl = -2; static long fln = 0;
+              if (fl == -2) { const char *e = getenv("FLOAD"); fl = e ? atoi(e) : -1; }
+              if (fl >= 0 && (int)ng->frame == fl && fln++ < 3000)
+                  fprintf(stderr, "FLOAD off=%04x val=%04x pc=%08x\n", ng->vram_offset, d, m68k_get_reg(NULL, M68K_REG_PC)); }
             ng->vram[ng->vram_offset] = d;
             if (f_vload()) ng->vload_count++;
             ng->vram_offset = (ng->vram_offset & 0x8000)
@@ -4801,7 +4831,7 @@ void ng_run_frame(neogeo *ng)
               for (int k = 0; k < 4 && pch[k]; k++) if (pc == (unsigned)pch[k]) {
                   long c = hcnt[k]++;
                   if (c < 5 || c % 500 == 0)
-                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x a5=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6), (unsigned)m68k_get_reg(NULL, M68K_REG_A5)); } } }
+                      fprintf(stderr, "PCHIT f=%d pc=%08x n=%ld a6=%08x a5=%08x a4=%08x a3=%08x\n", ng->frame, pc, c, (unsigned)m68k_get_reg(NULL, M68K_REG_A6), (unsigned)m68k_get_reg(NULL, M68K_REG_A5), (unsigned)m68k_get_reg(NULL, M68K_REG_A4), (unsigned)m68k_get_reg(NULL, M68K_REG_A3)); } } }
         { static int kt_on = -2; static long kt_n, kt_n2, kt_n3, kt_n4;
           if (kt_on == -2) kt_on = getenv("KOFTRACE") ? 1 : 0;
           if (kt_on) { unsigned pc = (unsigned)m68k_get_reg(NULL, M68K_REG_PC);
@@ -4809,6 +4839,12 @@ void ng_run_frame(neogeo *ng)
               extern uint32_t m68k_read_memory_32(uint32_t);
               unsigned a4 = (unsigned)m68k_get_reg(NULL, M68K_REG_A4);
               unsigned a0v = (unsigned)m68k_get_reg(NULL, M68K_REG_A0);
+              if ((pc == 0x5d68 || pc == 0x5bc0 || pc == 0x6064) && getenv("EMBLK") && ng->frame >= 3898 && ng->frame <= 3901 && (a4==0x108100||a4==0x108300)) {
+                  unsigned a5v = (unsigned)m68k_get_reg(NULL, M68K_REG_A5);
+                  fprintf(stderr, "EMBLK f=%d pc=%06x a4=%06x blk:", ng->frame, pc, a4);
+                  for (int q = 0xb4; q <= 0xea; q += 2) fprintf(stderr, " %04x", (unsigned)m68k_read_memory_16(a5v + q));
+                  fprintf(stderr, "\n");
+              }
               if (pc == 0x5dd6 && (ng->frame == 9600 || ng->frame == 3900) && (a4==0x108100||a4==0x108300) && kt_n4 < 60) {
                   /* desc header read point: a6 = desc ptr (banked window addr) */
                   unsigned a6v = (unsigned)m68k_get_reg(NULL, M68K_REG_A6);
@@ -5144,6 +5180,24 @@ void ng_run_frame(neogeo *ng)
                 m68k_get_reg(NULL,M68K_REG_A0), m68k_get_reg(NULL,M68K_REG_A1), m68k_get_reg(NULL,M68K_REG_A2),
                 m68k_get_reg(NULL,M68K_REG_D0), m68k_get_reg(NULL,M68K_REG_D1), m68k_get_reg(NULL,M68K_REG_D2),
                 m68k_get_reg(NULL,M68K_REG_D5), m68k_get_reg(NULL,M68K_REG_D6));
+        }
+        if (f_pcw() && (m68k_get_reg(NULL, M68K_REG_PC) == 0x9E8A || m68k_get_reg(NULL, M68K_REG_PC) == 0x9E68)) {
+            static int n9e = 0;
+            if (n9e++ < 40) {
+                uint32_t pc = m68k_get_reg(NULL, M68K_REG_PC);
+                fprintf(stderr, "T9E68 f=%d pc=%08x a5=%08x a0=%08x 6b8a=%02x 6b8b=%02x 6b86=%08x\n",
+                    ng->frame, pc, m68k_get_reg(NULL,M68K_REG_A5), m68k_get_reg(NULL,M68K_REG_A0),
+                    m68k_read_memory_8(0x100000+0x6b8a), m68k_read_memory_8(0x100000+0x6b8b),
+                    m68k_read_memory_32(0x100000+0x6b86));
+            }
+        }
+        if (f_pcw() && m68k_get_reg(NULL, M68K_REG_PC) == 0xA29C) {
+            static int n29c = 0;
+            if (n29c++ < 30) {
+                uint32_t sp = m68k_get_reg(NULL, M68K_REG_SP);
+                fprintf(stderr, "A29C f=%d ret=%08x sp=%08x\n", ng->frame,
+                    m68k_read_memory_32(sp), sp);
+            }
         }
         if (f_pcw() && m68k_get_reg(NULL, M68K_REG_PC) == 0xC10F70) {
             static int pcw_done = 0;
