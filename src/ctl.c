@@ -60,7 +60,8 @@ static void send_line(const char *s)
 static void write_u24(unsigned char *p, unsigned v) { p[0]=v; p[1]=v>>8; p[2]=v>>16; }
 static void write_u32(unsigned char *p, unsigned v) { p[0]=v; p[1]=v>>8; p[2]=v>>16; p[3]=v>>24; }
 
-/* 24-bit BMP writer from RGBA8888 fb (bottom-up rows) */
+/* 24-bit BMP writer from RGB32 0xAARRGGBB fb (MAME bitmap_t parity;
+   R is bits 16-23, B is bits 0-7 — bottom-up rows) */
 int dump_bmp(const uint32_t *fb, const char *path)
 {
     FILE *f = fopen(path, "wb");
@@ -79,9 +80,9 @@ int dump_bmp(const uint32_t *fb, const char *path)
     for (int y = h-1; y >= 0; y--) {
         for (int x = 0; x < w; x++) {
             uint32_t px = fb[y*w+x];
-            row[x*3+2] = px & 0xFF;          /* R (stored BGR) */
+            row[x*3+2] = (px>>16) & 0xFF;    /* R (fb is 0xAARRGGBB) */
             row[x*3+1] = (px>>8) & 0xFF;     /* G */
-            row[x*3+0] = (px>>16) & 0xFF;    /* B */
+            row[x*3+0] = px & 0xFF;          /* B */
         }
         fwrite(row, 1, rowsz, f);
     }
